@@ -104,7 +104,8 @@ def criar_rascunho_requisicao(
         beneficiario = User.objects.select_related('setor').get(pk=beneficiario_id)
         exigir_pode_criar_requisicao_para(ator, beneficiario)
 
-        if not beneficiario.setor_id:
+        setor_beneficiario = beneficiario.setor
+        if setor_beneficiario is None:
             raise DadosInvalidos(
                 'Beneficiário precisa pertencer a um setor ativo.',
                 code='beneficiario_sem_setor',
@@ -114,7 +115,7 @@ def criar_rascunho_requisicao(
         requisicao = Requisicao.objects.create(
             criador=ator,
             beneficiario=beneficiario,
-            setor_beneficiario=beneficiario.setor,
+            setor_beneficiario=setor_beneficiario,
             estado=EstadoRequisicao.RASCUNHO,
             observacao_geral=observacao_geral.strip(),
         )

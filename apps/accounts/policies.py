@@ -38,19 +38,21 @@ def pode_criar_requisicao_para(ator: User, beneficiario: User) -> bool:
         return False
     if ator.is_superuser:
         return True
-    if not beneficiario.setor_id or not beneficiario.setor.ativo:
+    setor_beneficiario = beneficiario.setor
+    if setor_beneficiario is None or not setor_beneficiario.ativo:
         return False
     if ator.id == beneficiario.id:
-        return bool(ator.setor_id and ator.setor.ativo)
+        setor_ator = ator.setor
+        return bool(setor_ator is not None and setor_ator.ativo)
     if _opera_almoxarifado(ator):
         return True
     if ator.setor_id == beneficiario.setor_id and _tem_vinculo_auxiliar_ativo(
         ator,
-        beneficiario.setor_id,
+        setor_beneficiario.id,
     ):
         return True
     return Setor.objects.filter(
-        id=beneficiario.setor_id,
+        id=setor_beneficiario.id,
         chefe=ator,
         ativo=True,
     ).exists()
