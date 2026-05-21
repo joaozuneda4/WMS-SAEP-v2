@@ -29,21 +29,87 @@
         {% endfor %}
       </div>
 
-      <div>
-        <label for="{{ form.material.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.material.label }}</label>
-        {{ form.material }}
-        {% for error in form.material.errors %}
-          <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+      <datalist id="materiais-disponiveis">
+        {% for material_label in form.material_choices_datalist %}
+          <option value="{{ material_label }}"></option>
         {% endfor %}
-      </div>
+      </datalist>
 
-      <div>
-        <label for="{{ form.quantidade_solicitada.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.quantidade_solicitada.label }}</label>
-        {{ form.quantidade_solicitada }}
-        {% for error in form.quantidade_solicitada.errors %}
-          <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
-        {% endfor %}
-      </div>
+      <fieldset class="space-y-5">
+        <legend class="text-sm font-medium text-slate-900">Itens</legend>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="{{ form.material_1.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.material_1.label }}</label>
+            {{ form.material_1 }}
+            {% for error in form.material_1.errors %}
+              <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.quantidade_solicitada_1.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.quantidade_solicitada_1.label }}</label>
+            {{ form.quantidade_solicitada_1 }}
+            {% for error in form.quantidade_solicitada_1.errors %}
+              <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.material_2.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.material_2.label }}</label>
+            {{ form.material_2 }}
+            {% for error in form.material_2.errors %}
+              <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.quantidade_solicitada_2.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.quantidade_solicitada_2.label }}</label>
+            {{ form.quantidade_solicitada_2 }}
+            {% for error in form.quantidade_solicitada_2.errors %}
+              <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.material_3.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.material_3.label }}</label>
+            {{ form.material_3 }}
+            {% for error in form.material_3.errors %}
+              <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.quantidade_solicitada_3.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.quantidade_solicitada_3.label }}</label>
+            {{ form.quantidade_solicitada_3 }}
+            {% for error in form.quantidade_solicitada_3.errors %}
+              <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.material_4.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.material_4.label }}</label>
+            {{ form.material_4 }}
+            {% for error in form.material_4.errors %}
+              <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.quantidade_solicitada_4.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.quantidade_solicitada_4.label }}</label>
+            {{ form.quantidade_solicitada_4 }}
+            {% for error in form.quantidade_solicitada_4.errors %}
+              <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.material_5.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.material_5.label }}</label>
+            {{ form.material_5 }}
+            {% for error in form.material_5.errors %}
+              <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+          <div>
+            <label for="{{ form.quantidade_solicitada_5.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.quantidade_solicitada_5.label }}</label>
+            {{ form.quantidade_solicitada_5 }}
+            {% for error in form.quantidade_solicitada_5.errors %}
+              <p class="mt-2 text-sm text-red-700" role="alert">{{ error }}</p>
+            {% endfor %}
+          </div>
+        </div>
+      </fieldset>
 
       <div>
         <label for="{{ form.observacao_geral.id_for_label }}" class="block text-sm font-medium text-slate-800">{{ form.observacao_geral.label }}</label>

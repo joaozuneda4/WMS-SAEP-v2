@@ -44,6 +44,8 @@ def pode_criar_requisicao_para(ator: User, beneficiario: User) -> bool:
     if ator.id == beneficiario.id:
         setor_ator = ator.setor
         return bool(setor_ator is not None and setor_ator.ativo)
+    if _opera_almoxarifado(beneficiario) and not _opera_almoxarifado(ator):
+        return False
     if _opera_almoxarifado(ator):
         return True
     if ator.setor_id == beneficiario.setor_id and _tem_vinculo_auxiliar_ativo(

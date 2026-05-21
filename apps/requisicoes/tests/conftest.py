@@ -103,3 +103,18 @@ def material_papel(estoque_principal):
         saldo_reservado=Decimal('2.000'),
     )
     return material
+
+
+@pytest.fixture
+def material_caneta(estoque_principal):
+    material = Material.objects.create(
+        codigo='MAT-002',
+        nome='Caneta esferográfica',
+        unidade=UnidadeMedida.UNIDADE,
+    )
+    SaldoEstoque.objects.create(
+        estoque=estoque_principal,
+        material=material,
+        saldo_fisico=Decimal('20.000'),
+    )
+    return material

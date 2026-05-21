@@ -159,6 +159,28 @@ def test_solicitante_nao_cria_para_terceiro(
 
 
 @pytest.mark.django_db
+def test_auxiliar_setor_nao_cria_para_auxiliar_almoxarifado(
+    auxiliar_obras,
+    auxiliar_almoxarifado,
+    material_papel,
+):
+    with pytest.raises(PermissaoNegada) as exc_info:
+        criar_rascunho_requisicao(
+            ator_id=auxiliar_obras.id,
+            beneficiario_id=auxiliar_almoxarifado.id,
+            itens=[
+                {
+                    'material_id': material_papel.id,
+                    'quantidade_solicitada': Decimal('1.000'),
+                }
+            ],
+        )
+
+    assert exc_info.value.code == 'criacao_beneficiario_negada'
+    assert Requisicao.objects.count() == 0
+
+
+@pytest.mark.django_db
 def test_recusa_material_inativo(user_obras, material_papel):
     material_papel.ativo = False
     material_papel.save(update_fields=['ativo'])

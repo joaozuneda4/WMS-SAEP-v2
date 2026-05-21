@@ -17,10 +17,27 @@ class NovaRequisicaoView(LoginRequiredMixin, View):
     form_class = CriarRascunhoRequisicaoForm
 
     def get(self, request):
-        return render(request, self.template_name, {'form': self.form_class()})
+        return render(
+            request,
+            self.template_name,
+            {'form': self.form_class(ator=request.user)},
+        )
 
     def post(self, request):
-        form = self.form_class(request.POST)
+        form = self.form_class(request.POST, ator=request.user)
+        beneficiario_id = request.POST.get('beneficiario')
+        if (
+            beneficiario_id
+            and beneficiario_id.isdecimal()
+            and not form.fields['beneficiario']
+            .queryset.filter(
+                id=int(beneficiario_id),
+            )
+            .exists()
+        ):
+            raise PermissionDenied(
+                'Você não pode criar requisição para este beneficiário.'
+            )
         if not form.is_valid():
             return render(request, self.template_name, {'form': form})
 
@@ -28,14 +45,7 @@ class NovaRequisicaoView(LoginRequiredMixin, View):
             requisicao = criar_rascunho_requisicao(
                 ator_id=request.user.id,
                 beneficiario_id=form.cleaned_data['beneficiario'].id,
-                itens=[
-                    {
-                        'material_id': form.cleaned_data['material'].id,
-                        'quantidade_solicitada': form.cleaned_data[
-                            'quantidade_solicitada'
-                        ],
-                    }
-                ],
+                itens=form.itens_limpos,
                 observacao_geral=form.cleaned_data['observacao_geral'],
             )
         except PermissaoNegada as exc:
