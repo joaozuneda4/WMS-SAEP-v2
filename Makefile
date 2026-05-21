@@ -85,6 +85,10 @@ css-dev: ## Compilar CSS Tailwind v4 em modo watch
 setup: clean compile ## Preparar projeto do zero para desenvolvimento
 	DJANGO_SETTINGS_MODULE=$(DJANGO_SETTINGS_MODULE) $(DJANGO_ADMIN) makemigrations
 	DJANGO_SETTINGS_MODULE=$(DJANGO_SETTINGS_MODULE) $(DJANGO_ADMIN) migrate --run-syncdb
+	$(MAKE) seed-dev
+
+seed-dev: ## Carregar seed canônico do piloto
+	SEED_DEV_HABILITADO=true DJANGO_SETTINGS_MODULE=$(DJANGO_SETTINGS_MODULE) $(DJANGO_ADMIN) seed_dev
 
 # ------------------------------------------------------------------------------
 # Cleaning
@@ -129,5 +133,5 @@ resetdb: resetpostgres ## Recriar schema do banco do zero sem apagar migrations 
 run: ## Subir servidor de desenvolvimento
 	DJANGO_SETTINGS_MODULE=$(DJANGO_SETTINGS_MODULE) $(DJANGO_ADMIN) runserver
 
-.PHONY: help prepare init setup clean veryclean test seed-pilot-minimo resetdb run resetpostgres css-build css-dev
+.PHONY: help prepare init setup clean veryclean test seed-dev resetdb run resetpostgres css-build css-dev
 .EXPORT_ALL_VARIABLES:
