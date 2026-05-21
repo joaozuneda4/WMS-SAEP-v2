@@ -1,19 +1,19 @@
-# Suggested commands
-- Last verified: 2026-05-21.
-- Prefix shell commands with `rtk` per `/Users/jmzr/.codex/RTK.md`.
-- Inspect repo files: `rtk rg --files`
-- Git status: `rtk git status -sb`
-- Install/sync locked dependencies: `rtk uv sync --frozen`
-- CI quality gates: `rtk uv run ruff format --check .`, `rtk uv run ruff check .`, `rtk uv run mypy apps`
-- Run full test suite: `rtk uv run pytest -q -ra --tb=short --strict-markers --disable-warnings`
-- Run focused tests: `rtk uv run pytest <path-or-nodeid> -q -ra --tb=short --strict-markers --disable-warnings`
-- Django check: `rtk uv run python manage.py check`
-- Migration check: `rtk uv run python manage.py makemigrations --check --dry-run`
-- Apply migrations locally: `rtk uv run python manage.py migrate --run-syncdb`
-- Dev setup/reset flow: `rtk make setup` (reset/compile/makemigrations/migrate/seed-dev per Makefile)
-- Run canonical dev seed only: `rtk make seed-dev`
-- Manual seed command shape: `SEED_DEV_HABILITADO=true DEBUG=true rtk uv run python manage.py seed_dev`
-- Run dev server: `rtk make run`
-- Build CSS: `rtk make css-build`; watch CSS: `rtk make css-dev`
-- Check whitespace: `rtk git diff --check`
-- Project test command rule from AGENTS.md: never use redirections, pipes, `tail`, `head`, `grep`, or output truncation for test commands; if command fails, inspect RTK `[full output: ...]` path instead of rerunning only for output.
+# Comandos sugeridos
+- Última verificação: 2026-05-21.
+- Prefixar comandos de shell com `rtk` conforme `/Users/jmzr/.codex/RTK.md`.
+- Inspecionar arquivos do repo: `rtk rg --files`
+- Status do Git: `rtk git status -sb`
+- Instalar/sincronizar dependências travadas: `rtk uv sync --frozen`
+- Regras de qualidade da CI: `rtk uv run ruff format --check .`, `rtk uv run ruff check .`, `rtk uv run mypy apps`
+- Rodar suíte completa: `rtk uv run pytest -q -ra --tb=short --strict-markers --disable-warnings`
+- Rodar testes focados: `rtk uv run pytest <path-or-nodeid> -q -ra --tb=short --strict-markers --disable-warnings`
+- Checagem Django: `rtk uv run python manage.py check`
+- Checagem de migrations: `rtk uv run python manage.py makemigrations --check --dry-run`
+- Aplicar migrations localmente: `rtk uv run python manage.py migrate --run-syncdb`
+- Fluxo de setup/reset dev: `rtk make setup` (reset/compile/makemigrations/migrate/seed-dev conforme Makefile)
+- Rodar apenas seed canônico dev: `rtk make seed-dev`
+- Formato manual do seed: `SEED_DEV_HABILITADO=true DEBUG=true rtk uv run python manage.py seed_dev`
+- Subir servidor dev: `rtk make run`
+- Compilar CSS: `rtk make css-build`; observar CSS em modo watch: `rtk make css-dev`
+- Checar whitespace: `rtk git diff --check`
+- Regra de comando de teste do AGENTS.md: nunca usar redirecionamentos, pipes, `tail`, `head`, `grep` ou truncamento de output em comandos de teste; se o comando falhar, inspecionar o path `[full output: ...]` do RTK em vez de rerodar só para output.
