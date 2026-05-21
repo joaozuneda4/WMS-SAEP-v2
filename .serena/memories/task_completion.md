@@ -1,6 +1,11 @@
 # Task completion checklist
-- Run the relevant Django validation command(s) after changes, at minimum `rtk python manage.py check` and any targeted tests available for the touched area.
-- If migrations or model changes were made, run `rtk python manage.py makemigrations --check` or create and review migrations as appropriate.
-- If new tooling is added later, record the exact lint/format/test commands in `suggested_commands.md`.
-- Keep changes aligned with Django scaffold conventions unless the repository adopts stronger local standards.
-- After onboarding, future work should use Serena symbol navigation for existing code instead of broad file reads when possible.
+- Last verified: 2026-05-21.
+- Confirm branch before commit. Never commit directly to `main`; branch names should use `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, or `chore/` per AGENTS.md.
+- Before coding, use Serena for project/code navigation and Context7 for current external library/framework docs when relevant.
+- For model/schema changes in this ephemeral dev context, run `rtk make setup` before final validation; local migrations are generated artifacts, not normal delivery artifacts.
+- For non-schema changes, run focused tests first, then full suite when feasible: `rtk uv run pytest -q -ra --tb=short --strict-markers --disable-warnings`.
+- Run `rtk uv run python manage.py check` after Django changes.
+- Run `rtk git diff --check` before finishing.
+- If seed/dev data contract changes, ensure ADR-0009 and `docs/CONVENTIONS.md#seed-bootstrap-exceptions` remain aligned.
+- Keep docs and Serena memory aligned when a durable architectural or workflow decision changes.
+- Report exact validation commands and pass/fail result in final response.

@@ -1,6 +1,11 @@
 # Code style and conventions
-- Python files use standard Django scaffold style: module docstrings, simple functions, no type hints in the initial scaffold.
-- Naming follows Django conventions: project package `config`, settings module `config.settings`, URL config `config.urls`.
-- Keep edits consistent with the existing scaffold style unless the repo later introduces stricter conventions.
-- Default file encoding is UTF-8.
-- Use ASCII by default when writing new files or edits unless the existing file clearly uses non-ASCII.
+- Last verified: 2026-05-21.
+- Follow root `AGENTS.md`, `docs/CONVENTIONS.md`, and ADRs before coding. Live docs/code override this memory if they disagree.
+- Domain identifiers use PT-BR: models, fields, choices, services, policies, selectors, domain functions/variables, URLs, docs, and code comments. Framework-imposed names stay English.
+- Django models must define `verbose_name` and `verbose_name_plural` in PT-BR.
+- Domain app layout: `models.py` for schema/choices/properties; `services.py` for mutations; `policies.py` for authorization; `selectors.py` for non-trivial reads; `forms.py`; thin `views.py`; tests under `apps/<app>/tests/` when more than one test module exists.
+- Services use keyword-only public signatures, receive IDs not ORM instances, open `transaction.atomic` for writes, call `exigir_pode_*`, validate transitions, and raise domain exceptions from `apps.core.exceptions` when present.
+- Views stay thin: read input, pass `request.user.id` to services, translate domain exceptions to HTTP/messages, render/redirect.
+- Tests should target the right layer per ADR-0010. Avoid duplicating policy matrix in service tests or selector matrix in view tests. Do not use `seed_dev` as a test fixture.
+- Frontend direction: server-rendered Django templates + Tailwind CSS + HTMX + Alpine.js; no SPA unless ADR changes.
+- Use ASCII by default for new code unless the file/domain text already requires PT-BR accents; this repo commonly uses UTF-8 PT-BR in docs/comments/labels.

@@ -1,10 +1,15 @@
 # Suggested commands
-- Shell commands should be prefixed with `rtk` on this machine, per `/Users/jmzr/.codex/RTK.md`.
+- Last verified: 2026-05-21.
+- Prefix shell commands with `rtk` per `/Users/jmzr/.codex/RTK.md`.
 - Inspect repo files: `rtk rg --files`
-- Run Django dev server: `rtk python manage.py runserver`
-- Run Django checks: `rtk python manage.py check`
-- Run migrations: `rtk python manage.py migrate`
-- Create migrations: `rtk python manage.py makemigrations`
-- Run tests: `rtk python -m pytest` if pytest is available in the environment, otherwise use the repo's chosen test command once defined.
-- Format/lint commands are not yet defined in the repository scaffold; add them when the project introduces tooling.
-- Useful system commands on Darwin: `rtk git status`, `rtk ls`, `rtk find`, `rtk sed`, `rtk rg`.
+- Git status: `rtk git status -sb`
+- Run full test suite: `rtk uv run pytest -q -ra --tb=short --strict-markers --disable-warnings`
+- Run focused tests: `rtk uv run pytest <path-or-nodeid> -q -ra --tb=short --strict-markers --disable-warnings`
+- Django check: `rtk uv run python manage.py check`
+- Dev setup/reset flow: `rtk make setup` (reset/compile/makemigrations/migrate/seed-dev per Makefile)
+- Run canonical dev seed only: `rtk make seed-dev`
+- Manual seed command shape: `SEED_DEV_HABILITADO=true DJANGO_SETTINGS_MODULE=config.settings.dev uv run python manage.py seed_dev`
+- Run dev server: `rtk make run`
+- Build CSS: `rtk make css-build`; watch CSS: `rtk make css-dev`
+- Check whitespace: `rtk git diff --check`
+- Project test command rule from AGENTS.md: never use redirections, pipes, `tail`, `head`, `grep`, or output truncation for test commands; if command fails, inspect RTK `[full output: ...]` path instead of rerunning only for output.
