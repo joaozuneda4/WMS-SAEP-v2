@@ -1,7 +1,9 @@
 """Testes da fatia de autenticação por matrícula."""
 import pytest
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 
+from apps.accounts.forms import MatriculaAuthenticationForm
 from apps.accounts.models import User
 
 SENHA = 'senha-forte-123'
@@ -83,6 +85,25 @@ def test_login_senha_invalida_exibe_erro_inline(client, usuario):
     assert 'role="alert"' in conteudo
     assert 'senha corretos' in conteudo
     assert 'aria-invalid="true"' in conteudo
+
+
+class FormularioComErroDeCampoEGlobal(MatriculaAuthenticationForm):
+    def clean(self):
+        raise ValidationError('Erro global de autenticação.')
+
+
+def test_login_preserva_ids_de_erros_aria(rf):
+    form = FormularioComErroDeCampoEGlobal(
+        request=rf.post(reverse('accounts:login')),
+        data={'username': '', 'password': ''},
+    )
+
+    form.is_valid()
+    username = str(form['username'])
+    password = str(form['password'])
+
+    assert 'aria-describedby="username-error login-error"' in username
+    assert 'aria-describedby="password-error login-error"' in password
 
 
 def test_login_usuario_inativo(client, usuario):
