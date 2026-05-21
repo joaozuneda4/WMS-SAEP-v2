@@ -1,4 +1,5 @@
 """Testes do seed canônico de desenvolvimento."""
+
 from decimal import Decimal
 
 import pytest
@@ -87,13 +88,16 @@ def test_seed_dev_cria_elenco_canonico_e_converge(settings, monkeypatch):
     estoque = Estoque.objects.get(codigo='EST-PRINCIPAL')
     assert SaldoEstoque.objects.count() == 3
     assert SaldoEstoque.objects.get(
-        estoque=estoque, material__codigo='MAT-001',
+        estoque=estoque,
+        material__codigo='MAT-001',
     ).saldo_fisico == Decimal('50.000')
     assert SaldoEstoque.objects.get(
-        estoque=estoque, material__codigo='MAT-002',
+        estoque=estoque,
+        material__codigo='MAT-002',
     ).saldo_fisico == Decimal('10.000')
     assert SaldoEstoque.objects.get(
-        estoque=estoque, material__codigo='MAT-003',
+        estoque=estoque,
+        material__codigo='MAT-003',
     ).saldo_reservado == Decimal('0.000')
 
     sequencia = SequenciaRequisicao.objects.get(ano=timezone.localdate().year)
@@ -105,7 +109,8 @@ def test_seed_dev_cria_elenco_canonico_e_converge(settings, monkeypatch):
 
 @pytest.mark.django_db
 def test_seed_dev_recusa_conflito_semantico_do_setor_almoxarifado(
-    settings, monkeypatch,
+    settings,
+    monkeypatch,
 ):
     settings.DEBUG = True
     monkeypatch.setenv('SEED_DEV_HABILITADO', 'true')

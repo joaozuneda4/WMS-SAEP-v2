@@ -4,6 +4,7 @@ Toda mutação de saldo deve ocorrer via ``estoque.services``, sob
 ``transaction.atomic`` e ``select_for_update`` sobre ``SaldoEstoque``, em
 ordem determinística (EST-06). Nenhum outro app escreve saldo diretamente.
 """
+
 from django.db import models
 
 
@@ -87,10 +88,16 @@ class SaldoEstoque(models.Model):
         verbose_name='material',
     )
     saldo_fisico = models.DecimalField(
-        'saldo físico', max_digits=12, decimal_places=3, default=0,
+        'saldo físico',
+        max_digits=12,
+        decimal_places=3,
+        default=0,
     )
     saldo_reservado = models.DecimalField(
-        'saldo reservado', max_digits=12, decimal_places=3, default=0,
+        'saldo reservado',
+        max_digits=12,
+        decimal_places=3,
+        default=0,
     )
 
     class Meta:

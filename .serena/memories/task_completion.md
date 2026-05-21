@@ -3,9 +3,12 @@
 - Confirm branch before commit. Never commit directly to `main`; branch names should use `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, or `chore/` per AGENTS.md.
 - Before coding, use Serena for project/code navigation and Context7 for current external library/framework docs when relevant.
 - For model/schema changes in this ephemeral dev context, run `rtk make setup` before final validation; local migrations are generated artifacts, not normal delivery artifacts.
+- For CI/tooling changes, keep `pyproject.toml`, `uv.lock`, `.github/workflows/ci.yml`, `docs/ci-pipeline.md`, and Serena command memories aligned.
+- Run quality gates when touching CI/tooling: `rtk uv run ruff format --check .`, `rtk uv run ruff check .`, `rtk uv run mypy apps`.
 - For non-schema changes, run focused tests first, then full suite when feasible: `rtk uv run pytest -q -ra --tb=short --strict-markers --disable-warnings`.
 - Run `rtk uv run python manage.py check` after Django changes.
 - Run `rtk git diff --check` before finishing.
+- For CI DB pipeline changes, verify `makemigrations --check --dry-run`, `migrate --run-syncdb`, and two consecutive `seed_dev` runs when local PostgreSQL is available.
 - If seed/dev data contract changes, ensure ADR-0009 and `docs/CONVENTIONS.md#seed-bootstrap-exceptions` remain aligned.
 - Keep docs and Serena memory aligned when a durable architectural or workflow decision changes.
 - Report exact validation commands and pass/fail result in final response.

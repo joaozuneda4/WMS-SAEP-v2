@@ -5,6 +5,7 @@ o model ``Requisicao`` guarda apenas o estado atual. Justificativas de
 transição (recusa, cancelamento, estorno) pertencem à futura
 ``TimelineRequisicao`` (ADR-0002), nunca a campos ``motivo_*`` aqui.
 """
+
 from django.conf import settings
 from django.db import models
 
@@ -116,15 +117,23 @@ class ItemRequisicao(models.Model):
         verbose_name='material',
     )
     quantidade_solicitada = models.DecimalField(
-        'quantidade solicitada', max_digits=12, decimal_places=3,
+        'quantidade solicitada',
+        max_digits=12,
+        decimal_places=3,
     )
     quantidade_autorizada = models.DecimalField(
-        'quantidade autorizada', max_digits=12, decimal_places=3,
-        null=True, blank=True,
+        'quantidade autorizada',
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
     )
     quantidade_entregue = models.DecimalField(
-        'quantidade entregue', max_digits=12, decimal_places=3,
-        null=True, blank=True,
+        'quantidade entregue',
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
     )
     justificativa_entrega = models.TextField('justificativa de entrega', blank=True)
 
@@ -159,7 +168,9 @@ class ItemRequisicao(models.Model):
                 condition=(
                     models.Q(quantidade_entregue__isnull=True)
                     | models.Q(quantidade_autorizada__isnull=True)
-                    | models.Q(quantidade_entregue__lte=models.F('quantidade_autorizada'))
+                    | models.Q(
+                        quantidade_entregue__lte=models.F('quantidade_autorizada')
+                    )
                 ),
                 name='item_entregue_ate_autorizada',
             ),
@@ -185,7 +196,8 @@ class EventoTimeline(models.TextChoices):
     DEVOLUCAO_REGISTRADA = 'devolucao_registrada', 'Devolução registrada'
     ESTORNO = 'estorno', 'Estorno'
     ATUALIZACAO_ESTOQUE_RELEVANTE = (
-        'atualizacao_estoque_relevante', 'Atualização de estoque relevante',
+        'atualizacao_estoque_relevante',
+        'Atualização de estoque relevante',
     )
 
 

@@ -1,4 +1,5 @@
 """Views do app accounts."""
+
 from django.contrib.auth.views import LoginView
 
 from apps.accounts.forms import MatriculaAuthenticationForm

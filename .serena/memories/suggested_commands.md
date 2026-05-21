@@ -3,12 +3,16 @@
 - Prefix shell commands with `rtk` per `/Users/jmzr/.codex/RTK.md`.
 - Inspect repo files: `rtk rg --files`
 - Git status: `rtk git status -sb`
+- Install/sync locked dependencies: `rtk uv sync --frozen`
+- CI quality gates: `rtk uv run ruff format --check .`, `rtk uv run ruff check .`, `rtk uv run mypy apps`
 - Run full test suite: `rtk uv run pytest -q -ra --tb=short --strict-markers --disable-warnings`
 - Run focused tests: `rtk uv run pytest <path-or-nodeid> -q -ra --tb=short --strict-markers --disable-warnings`
 - Django check: `rtk uv run python manage.py check`
+- Migration check: `rtk uv run python manage.py makemigrations --check --dry-run`
+- Apply migrations locally: `rtk uv run python manage.py migrate --run-syncdb`
 - Dev setup/reset flow: `rtk make setup` (reset/compile/makemigrations/migrate/seed-dev per Makefile)
 - Run canonical dev seed only: `rtk make seed-dev`
-- Manual seed command shape: `SEED_DEV_HABILITADO=true DJANGO_SETTINGS_MODULE=config.settings.dev uv run python manage.py seed_dev`
+- Manual seed command shape: `SEED_DEV_HABILITADO=true DEBUG=true rtk uv run python manage.py seed_dev`
 - Run dev server: `rtk make run`
 - Build CSS: `rtk make css-build`; watch CSS: `rtk make css-dev`
 - Check whitespace: `rtk git diff --check`

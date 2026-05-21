@@ -1,4 +1,5 @@
 """Manager do modelo de usuário, com criação baseada em matrícula."""
+
 from django.contrib.auth.base_user import BaseUserManager
 
 

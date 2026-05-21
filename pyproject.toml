@@ -11,10 +11,54 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "django-stubs>=5.2.7",
+    "mypy>=1.19.0",
     "pytest>=9.0.3",
     "pytest-django>=4.12.0",
+    "ruff>=0.14.8",
 ]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["tests.py", "test_*.py", "*_test.py"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint.per-file-ignores]
+"apps/**/admin.py" = ["F401"]
+"apps/**/models.py" = ["F401"]
+"apps/**/tests.py" = ["F401"]
+"apps/**/views.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.13"
+plugins = ["mypy_django_plugin.main"]
+ignore_missing_imports = true
+check_untyped_defs = true
+exclude = [
+    "apps/.*/admin.py",
+    "apps/.*/apps.py",
+    "apps/.*/forms.py",
+    "apps/.*/management/.*",
+    "apps/.*/managers.py",
+    "apps/.*/models.py",
+    "apps/.*/tests.py",
+    "apps/.*/tests/.*",
+    "apps/.*/urls.py",
+    "apps/.*/views.py",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "apps.accounts.managers",
+    "apps.accounts.models",
+]
+ignore_errors = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings.test"

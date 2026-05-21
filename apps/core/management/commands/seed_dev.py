@@ -1,4 +1,5 @@
 """Seed canônico para ambiente local de desenvolvimento."""
+
 import os
 from decimal import Decimal
 
@@ -135,9 +136,13 @@ def _exigir_ambiente_local():
 
 
 def _validar_conflito_almoxarifado():
-    conflito = Setor.objects.filter(
-        classificacao=SetorClassificacao.ALMOXARIFADO,
-    ).exclude(codigo='ALMOX').first()
+    conflito = (
+        Setor.objects.filter(
+            classificacao=SetorClassificacao.ALMOXARIFADO,
+        )
+        .exclude(codigo='ALMOX')
+        .first()
+    )
     if conflito is not None:
         raise CommandError(
             'Já existe setor classificado como Almoxarifado com código '

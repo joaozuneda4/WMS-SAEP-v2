@@ -1,4 +1,5 @@
 """Views da camada compartilhada de UI. Sem regra de domínio."""
+
 from django.shortcuts import render
 
 

@@ -4,6 +4,7 @@ Valores sensíveis e específicos de ambiente vêm de variáveis de ambiente
 (arquivo ``.env``), lidas via django-environ. Não há fallback para SQLite:
 ``DATABASE_URL`` deve apontar para um PostgreSQL.
 """
+
 from pathlib import Path
 
 import environ

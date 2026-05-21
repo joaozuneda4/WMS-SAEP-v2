@@ -1,4 +1,5 @@
 """Testes da fatia de autenticação por matrícula."""
+
 import pytest
 from django.core.exceptions import ValidationError
 from django.urls import reverse
@@ -12,7 +13,9 @@ SENHA = 'senha-forte-123'
 @pytest.fixture
 def usuario(db):
     return User.objects.create_user(
-        matricula='OP-001', password=SENHA, nome='Operador Teste',
+        matricula='OP-001',
+        password=SENHA,
+        nome='Operador Teste',
     )
 
 
@@ -49,7 +52,9 @@ def test_login_valido_por_matricula(client, usuario):
 
 
 def test_login_preserva_next_no_formulario_e_redirect(client, usuario):
-    resposta_get = client.get(reverse('accounts:login'), {'next': '/requisicoes/minhas/'})
+    resposta_get = client.get(
+        reverse('accounts:login'), {'next': '/requisicoes/minhas/'}
+    )
     conteudo = resposta_get.content.decode()
 
     assert 'name="next" value="/requisicoes/minhas/"' in conteudo

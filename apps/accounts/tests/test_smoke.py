@@ -1,4 +1,5 @@
 """Teste de fumaça: valida o setup pytest-django contra PostgreSQL."""
+
 import pytest
 
 from apps.accounts.models import Setor
