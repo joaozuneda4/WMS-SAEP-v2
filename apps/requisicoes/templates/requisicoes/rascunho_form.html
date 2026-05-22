@@ -186,6 +186,10 @@
 
 {% block extra_scripts %}
 <script>
+  function podRemoverItem() {
+    return document.querySelectorAll('.item-form-row:not([style*="display: none"])').length > 1;
+  }
+
   // Incrementa TOTAL_FORMS após adicionar nova linha via HTMX
   function incrementarTotalForms() {
     const input = document.getElementById('id_itens-TOTAL_FORMS');
@@ -202,16 +206,9 @@
       aberto: false,
       buscando: false,
       ativo: -1,
-      materialIdInput: null,
 
       init() {
-        // Associar ao campo hidden do material_id desta linha
-        this.materialIdInput = this.$el.closest('.item-form-row').querySelector('.material-id-input');
-        // Preencher query com valor já existente (edição)
-        const labelInput = this.$el.querySelector('input[type="text"]');
-        if (labelInput && labelInput.value) {
-          this.query = labelInput.value;
-        }
+        this.query = this.$refs.labelInput?.value || '';
       },
 
       async buscar(event) {
@@ -237,11 +234,9 @@
       },
 
       selecionar(item) {
-        this.$el.querySelector('input[type="text"]').value = item.label;
+        this.$refs.labelInput.value = item.label;
         this.query = item.label;
-        if (this.materialIdInput) {
-          this.materialIdInput.value = item.id;
-        }
+        this.$refs.materialIdInput.value = item.id;
         this.fecharDropdown();
       },
 
