@@ -93,15 +93,14 @@ class ItemRequisicaoForm(forms.Form):
             'placeholder': 'Buscar por código ou nome...',
         }),
     )
-    quantidade_solicitada = forms.DecimalField(
+    quantidade_solicitada = forms.IntegerField(
         label='Quantidade',
-        min_value=0,
-        decimal_places=3,
+        min_value=1,
         required=False,
         widget=forms.NumberInput(attrs={
             'class': 'w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none',
-            'step': '0.001',
-            'min': '0.001',
+            'step': '1',
+            'min': '1',
         }),
     )
 

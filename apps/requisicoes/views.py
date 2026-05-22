@@ -160,7 +160,7 @@ def editar_rascunho_view(request, pk: int):
         {
             'material_id': item.material_id,
             'material_label': str(item.material),
-            'quantidade_solicitada': item.quantidade_solicitada,
+            'quantidade_solicitada': int(item.quantidade_solicitada) if item.quantidade_solicitada else '',
         }
         for item in itens_existentes
     ]
