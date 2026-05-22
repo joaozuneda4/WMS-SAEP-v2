@@ -205,6 +205,11 @@ def nova_linha_item(request):
 @require_GET
 def buscar_materiais(request):
     """Retorna materiais elegíveis para autocomplete (JSON)."""
+    try:
+        resolver_escopo_criacao_requisicao(request.user)
+    except PermissaoNegada:
+        return JsonResponse({'error': 'Sem permissão para buscar materiais.'}, status=403)
+
     q = request.GET.get('q', '').strip()
     materiais = list(materiais_para_requisicao(q=q, limite=20))
     material_ids = [m.pk for m in materiais]

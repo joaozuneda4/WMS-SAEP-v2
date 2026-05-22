@@ -93,19 +93,21 @@ def test_nova_requisicao_post_sem_itens_retorna_form(client, solicitante):
 
 @pytest.mark.django_db
 def test_nova_requisicao_post_forjado_beneficiario_fora_escopo(client, solicitante, usuario_ti, material_disponivel):
-    """Solicitante tentando criar para outro usuário — deve receber erro."""
+    """Solicitante com modo='proprio' não pode forjar beneficiario_id via POST.
+
+    O form em modo 'proprio' remove os campos modo_criacao e beneficiario_id, de
+    forma que dados extra no payload são silenciosamente ignorados. A view cria a
+    requisição para o próprio solicitante e redireciona normalmente (302).
+    """
     _login(client, solicitante)
-    # Modo proprio: beneficiario_id ignorado na view, mas service revalida
-    data = _formset_post(material_disponivel.pk)
-    # Não há campo beneficiario_id no modo 'proprio' — o service usará o ator
-    # Se tentarmos POST com modo_criacao=other, form não vai ter esse campo para modo=proprio
-    # Testamos: solicitante pode só criar para si
+    data = _formset_post(material_disponivel.pk, extra={
+        'modo_criacao': 'other',
+        'beneficiario_id': str(usuario_ti.pk),
+    })
     resp = client.post(reverse('requisicoes:nova_requisicao'), data)
-    # Deve criar para si mesmo (válido) ou falhar se a view detectar tentativa forjada
-    # O rascunho criado (se criado) deve ter beneficiario=solicitante
-    req = Requisicao.objects.filter(criador=solicitante).first()
-    if req:
-        assert req.beneficiario_id == solicitante.pk
+    assert resp.status_code == 302
+    req = Requisicao.objects.get(criador=solicitante)
+    assert req.beneficiario_id == solicitante.pk
 
 
 @pytest.mark.django_db

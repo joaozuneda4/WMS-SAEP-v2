@@ -163,6 +163,8 @@ def resolver_escopo_criacao_requisicao(ator: User) -> EscopoCriacaoRequisicao:
 
 def pode_criar_para_beneficiario(ator: User, beneficiario: User) -> bool:
     """True se o ator pode criar requisição para o beneficiário dado."""
+    if not ator.is_active:
+        return False
     if not pode_ser_beneficiario(beneficiario):
         return False
     if ator.pk == beneficiario.pk:
@@ -195,7 +197,7 @@ def pode_editar_rascunho(ator: User, requisicao: Requisicao) -> bool:
     Verificação de estado (RASCUNHO) é feita pelo service via transitions.py,
     que lança EstadoInvalido. Esta policy só trata autorização de ator.
     """
-    return ator.pk == requisicao.criador_id
+    return ator.is_active and ator.pk == requisicao.criador_id
 
 
 def exigir_pode_editar_rascunho(ator: User, requisicao: Requisicao) -> None:
