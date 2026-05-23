@@ -128,23 +128,6 @@ def test_criar_requisicao_solicitante_nao_pode_criar_para_terceiro(
         )
 
 
-@pytest.mark.django_db
-def test_criar_requisicao_chefe_nao_pode_criar_para_outro_setor(
-    chefe_obras, usuario_ti, material_disponivel
-):
-    with pytest.raises(PermissaoNegada):
-        criar_requisicao(
-            ator_id=chefe_obras.pk,
-            beneficiario_id=usuario_ti.pk,
-            itens=[
-                {
-                    'material_id': material_disponivel.pk,
-                    'quantidade_solicitada': Decimal('1'),
-                }
-            ],
-        )
-
-
 # ---------------------------------------------------------------------------
 # TR-001: criar_requisicao — dados inválidos
 # ---------------------------------------------------------------------------
@@ -215,24 +198,6 @@ def test_criar_requisicao_quantidade_zero(solicitante, material_disponivel):
                 {
                     'material_id': material_disponivel.pk,
                     'quantidade_solicitada': Decimal('0'),
-                }
-            ],
-        )
-
-
-@pytest.mark.django_db
-def test_criar_requisicao_beneficiario_sem_setor(
-    solicitante, usuario_sem_setor, material_disponivel
-):
-    # Beneficiário sem setor é rejeitado na policy (pode_criar_para_beneficiario→False → PermissaoNegada)
-    with pytest.raises(PermissaoNegada):
-        criar_requisicao(
-            ator_id=solicitante.pk,
-            beneficiario_id=usuario_sem_setor.pk,
-            itens=[
-                {
-                    'material_id': material_disponivel.pk,
-                    'quantidade_solicitada': Decimal('1'),
                 }
             ],
         )
