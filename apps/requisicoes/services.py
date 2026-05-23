@@ -209,7 +209,11 @@ def _validar_itens(itens: list[ItemInput]) -> None:
     """
     material_ids: list[int] = []
     for item in itens:
-        if 'material_id' not in item or 'quantidade_solicitada' not in item:
+        if (
+            not isinstance(item, dict)
+            or 'material_id' not in item
+            or 'quantidade_solicitada' not in item
+        ):
             raise DadosInvalidos(
                 'Item inválido: material e quantidade são obrigatórios.',
                 code='item_invalido',
