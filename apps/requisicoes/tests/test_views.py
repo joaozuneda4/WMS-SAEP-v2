@@ -473,3 +473,148 @@ def test_detalhe_renderiza_timeline_e_itens(
     assert response.status_code == 200
     assert list(response.context['itens'])
     assert list(response.context['eventos'])
+
+
+
+# ---------------------------------------------------------------------------
+# Enviar rascunho — TR-005
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_enviar_rascunho_get_retorna_405(client, solicitante, setor_obras):
+    _login(client, solicitante)
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    response = client.get(reverse('requisicoes:enviar_rascunho', kwargs={'pk': req.pk}))
+    assert response.status_code == 405
+
+
+@pytest.mark.django_db
+def test_enviar_rascunho_post_sem_login_redireciona(client, solicitante, setor_obras):
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    response = client.post(reverse('requisicoes:enviar_rascunho', kwargs={'pk': req.pk}))
+    assert response.status_code == 302
+    assert '/login' in response.url or '/accounts/login' in response.url
+
+
+@pytest.mark.django_db
+def test_enviar_rascunho_post_nao_criador_retorna_403(
+    client, solicitante, outro_usuario_obras, setor_obras
+):
+    _login(client, outro_usuario_obras)
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    response = client.post(reverse('requisicoes:enviar_rascunho', kwargs={'pk': req.pk}))
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_enviar_rascunho_post_criador_redireciona_detalhe(
+    client, solicitante, material_disponivel
+):
+    _login(client, solicitante)
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[{'material_id': material_disponivel.pk, 'quantidade_solicitada': Decimal('1')}],
+    )
+    response = client.post(
+        reverse('requisicoes:enviar_rascunho', kwargs={'pk': req.pk})
+    )
+    assert response.status_code == 302
+    assert response.url == reverse('requisicoes:detalhe', kwargs={'pk': req.pk})
+    req.refresh_from_db()
+    assert req.estado == EstadoRequisicao.AGUARDANDO_AUTORIZACAO
+    assert req.numero_publico is not None
+
+
+@pytest.mark.django_db
+def test_enviar_rascunho_post_estado_invalido_mostra_erro(
+    client, solicitante, setor_obras, material_disponivel
+):
+    _login(client, solicitante)
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[{'material_id': material_disponivel.pk, 'quantidade_solicitada': Decimal('1')}],
+    )
+    req.estado = EstadoRequisicao.AGUARDANDO_AUTORIZACAO
+    req.numero_publico = 'REQ-2026-000777'
+    req.save(update_fields=['estado', 'numero_publico'])
+
+    response = client.post(
+        reverse('requisicoes:enviar_rascunho', kwargs={'pk': req.pk}),
+        follow=True,
+    )
+    assert response.status_code == 200
+    msgs = [str(m) for m in response.context['messages']]
+    assert any('não é permitida' in m or 'inválida' in m.lower() for m in msgs)
+
+
+@pytest.mark.django_db
+def test_enviar_rascunho_htmx_retorna_hx_redirect(
+    client, solicitante, material_disponivel
+):
+    _login(client, solicitante)
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[{'material_id': material_disponivel.pk, 'quantidade_solicitada': Decimal('1')}],
+    )
+    response = client.post(
+        reverse('requisicoes:enviar_rascunho', kwargs={'pk': req.pk}),
+        HTTP_HX_REQUEST='true',
+    )
+    assert response.status_code == 204
+    assert response['HX-Redirect'] == reverse(
+        'requisicoes:detalhe', kwargs={'pk': req.pk}
+    )
+
+
+@pytest.mark.django_db
+def test_detalhe_exibe_botao_enviar_para_criador_em_rascunho(
+    client, solicitante, material_disponivel
+):
+    _login(client, solicitante)
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[{'material_id': material_disponivel.pk, 'quantidade_solicitada': Decimal('1')}],
+    )
+    response = client.get(reverse('requisicoes:detalhe', kwargs={'pk': req.pk}))
+    assert response.status_code == 200
+    assert response.context['pode_enviar'] is True
+    assert b'Enviar para autoriza' in response.content
+
+
+@pytest.mark.django_db
+def test_detalhe_nao_exibe_botao_enviar_em_estado_nao_rascunho(
+    client, solicitante, material_disponivel
+):
+    _login(client, solicitante)
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[{'material_id': material_disponivel.pk, 'quantidade_solicitada': Decimal('1')}],
+    )
+    req.estado = EstadoRequisicao.AGUARDANDO_AUTORIZACAO
+    req.numero_publico = 'REQ-2026-000888'
+    req.save(update_fields=['estado', 'numero_publico'])
+
+    response = client.get(reverse('requisicoes:detalhe', kwargs={'pk': req.pk}))
+    assert response.status_code == 200
+    assert response.context['pode_enviar'] is False
