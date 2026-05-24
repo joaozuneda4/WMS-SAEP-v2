@@ -4,7 +4,6 @@
     <a
       href="{% url 'requisicoes:minhas' %}"
       class="app-bar__menu-item"
-      role="menuitem"
       {% if current == 'requisicoes:minhas' %}aria-current="page"{% endif %}
     >
       <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -15,7 +14,6 @@
     <a
       href="{% url 'requisicoes:nova_requisicao' %}"
       class="app-bar__menu-item"
-      role="menuitem"
       {% if current == 'requisicoes:nova_requisicao' %}aria-current="page"{% endif %}
     >
       <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
