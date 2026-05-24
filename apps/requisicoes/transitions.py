@@ -16,6 +16,7 @@ from apps.requisicoes.models import EstadoRequisicao
 TRANSICOES_VALIDAS: dict[str, set[str]] = {
     EstadoRequisicao.RASCUNHO: {
         EstadoRequisicao.RASCUNHO,  # TR-002: editar rascunho
+        EstadoRequisicao.AGUARDANDO_AUTORIZACAO,  # TR-005: enviar para autorização
     },
 }
 

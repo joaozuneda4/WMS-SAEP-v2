@@ -7,6 +7,7 @@ Nenhuma regra de domínio, query de escopo ou decisão de autorização própria
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import DecimalField, ExpressionWrapper, F, Sum
 from django.forms import BooleanField
 from django.forms.formsets import DELETION_FIELD_NAME
@@ -26,6 +27,8 @@ from apps.requisicoes.forms import (
 from apps.requisicoes.models import Requisicao
 from apps.requisicoes.policies import (
     exigir_pode_editar_rascunho,
+    pode_editar_rascunho,
+    pode_enviar_rascunho,
     resolver_escopo_criacao_requisicao,
 )
 from apps.requisicoes.selectors import (
@@ -33,7 +36,11 @@ from apps.requisicoes.selectors import (
     minhas_requisicoes,
     requisicoes_visiveis_para,
 )
-from apps.requisicoes.services import criar_requisicao, editar_rascunho
+from apps.requisicoes.services import (
+    criar_requisicao,
+    editar_rascunho,
+    enviar_para_autorizacao,
+)
 
 
 def _htmx_redirect(request, url: str) -> HttpResponse:
@@ -78,22 +85,37 @@ def nova_requisicao(request):
                     beneficiario_id = int(form.cleaned_data['beneficiario_id'])
 
             itens = formset.linhas_validas()
+            acao = request.POST.get('acao', 'rascunho')
 
             try:
-                req = criar_requisicao(
-                    ator_id=request.user.pk,
-                    beneficiario_id=beneficiario_id,
-                    itens=itens,
-                    observacao_geral=form.cleaned_data.get('observacao_geral', ''),
-                )
+                with transaction.atomic():
+                    req = criar_requisicao(
+                        ator_id=request.user.pk,
+                        beneficiario_id=beneficiario_id,
+                        itens=itens,
+                        observacao_geral=form.cleaned_data.get('observacao_geral', ''),
+                    )
+                    if acao == 'enviar':
+                        req = enviar_para_autorizacao(
+                            ator_id=request.user.pk,
+                            requisicao_id=req.pk,
+                        )
             except (PermissaoNegada, DadosInvalidos) as exc:
                 messages.error(request, str(exc))
+            except EstadoInvalido as exc:
+                messages.warning(request, str(exc))
             else:
+                if acao == 'enviar':
+                    messages.success(
+                        request,
+                        f'Requisição enviada para autorização. Número {req.numero_publico}.',
+                    )
+                    return redirect('requisicoes:detalhe', pk=req.pk)
                 messages.success(
                     request,
-                    'Rascunho criado com sucesso. Você pode continuar editando antes de enviar para autorização.',
+                    'Rascunho criado com sucesso. Revise os itens antes de enviar para autorização.',
                 )
-                return redirect('requisicoes:editar_rascunho', pk=req.pk)
+                return redirect('requisicoes:detalhe', pk=req.pk)
 
         return render(
             request,
@@ -163,7 +185,7 @@ def editar_rascunho_view(request, pk: int):
                 messages.error(request, str(exc))
             else:
                 messages.success(request, 'Rascunho salvo com sucesso.')
-                return redirect('requisicoes:editar_rascunho', pk=requisicao.pk)
+                return redirect('requisicoes:detalhe', pk=requisicao.pk)
 
         return render(
             request,
@@ -338,5 +360,47 @@ def detalhe_requisicao_view(request, pk: int):
             'itens': itens,
             'eventos': eventos,
             'voltar_url': next_url,
+            'pode_enviar': (
+                requisicao.estado == 'rascunho'
+                and pode_enviar_rascunho(request.user, requisicao)
+            ),
+            'pode_editar': (
+                requisicao.estado == 'rascunho'
+                and pode_editar_rascunho(request.user, requisicao)
+            ),
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Enviar rascunho para autorização — TR-005
+# ---------------------------------------------------------------------------
+
+
+@login_required
+@require_http_methods(['POST'])
+def enviar_rascunho_view(request, pk: int):
+    """Envia rascunho para autorização e redireciona para o detalhe.
+
+    A view não verifica estado nem ator: o service revalida sob lock
+    (ADR-0005) e lança PermissaoNegada / EstadoInvalido / DadosInvalidos.
+    """
+    try:
+        requisicao = enviar_para_autorizacao(
+            ator_id=request.user.pk,
+            requisicao_id=pk,
+        )
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+    except EstadoInvalido as exc:
+        messages.warning(request, str(exc))
+        return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
+    except DadosInvalidos as exc:
+        messages.error(request, str(exc))
+        return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
+
+    messages.success(
+        request,
+        f'Requisição enviada para autorização. Número {requisicao.numero_publico}.',
+    )
+    return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[requisicao.pk]))

@@ -2,22 +2,23 @@
 Badge de estado da requisição. Mapeia EstadoRequisicao -> cor + label.
 Parâmetro: requisicao (instância com .estado e .get_estado_display).
 {% endcomment %}
-{% with estado=requisicao.estado %}
+{% with estado=requisicao.estado label=requisicao.get_estado_display %}
+{% comment %}role=status + aria-label dá leitura completa para AT.{% endcomment %}
   {% if estado == 'rascunho' %}
-    <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{{ requisicao.get_estado_display }}</span>
+    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{{ label }}</span>
   {% elif estado == 'aguardando_autorizacao' %}
-    <span class="inline-flex items-center rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-300">{{ requisicao.get_estado_display }}</span>
+    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-300">{{ label }}</span>
   {% elif estado == 'autorizada' %}
-    <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 ring-1 ring-inset ring-blue-200">{{ requisicao.get_estado_display }}</span>
+    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 ring-1 ring-inset ring-blue-200">{{ label }}</span>
   {% elif estado == 'pronta_para_retirada' %}
-    <span class="inline-flex items-center rounded-full bg-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-900 ring-1 ring-inset ring-blue-300">{{ requisicao.get_estado_display }}</span>
+    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-900 ring-1 ring-inset ring-blue-300">{{ label }}</span>
   {% elif estado == 'atendida' %}
-    <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-200">{{ requisicao.get_estado_display }}</span>
+    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-200">{{ label }}</span>
   {% elif estado == 'recusada' or estado == 'cancelada' %}
-    <span class="inline-flex items-center rounded-full bg-red-200 px-2.5 py-0.5 text-xs font-semibold text-red-900 ring-1 ring-inset ring-red-300">{{ requisicao.get_estado_display }}</span>
+    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-red-200 px-2.5 py-0.5 text-xs font-semibold text-red-900 ring-1 ring-inset ring-red-300">{{ label }}</span>
   {% elif estado == 'estornada' %}
-    <span class="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-medium text-teal-800">{{ requisicao.get_estado_display }}</span>
+    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-medium text-teal-800">{{ label }}</span>
   {% else %}
-    <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{{ requisicao.get_estado_display }}</span>
+    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{{ label }}</span>
   {% endif %}
 {% endwith %}

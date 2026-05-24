@@ -15,6 +15,7 @@ from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING
 
 from django.db import transaction
+from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.core.exceptions import DadosInvalidos
@@ -24,11 +25,13 @@ from apps.requisicoes.models import (
     EventoTimeline,
     ItemRequisicao,
     Requisicao,
+    SequenciaRequisicao,
     TimelineRequisicao,
 )
 from apps.requisicoes.policies import (
     exigir_pode_criar_para_beneficiario,
     exigir_pode_editar_rascunho,
+    exigir_pode_enviar_rascunho,
     pode_ser_beneficiario,
 )
 from apps.requisicoes.selectors import material_eh_elegivel
@@ -200,6 +203,72 @@ def editar_rascunho(
 # ---------------------------------------------------------------------------
 # Helpers internos
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# TR-005: enviar rascunho para autorização
+# ---------------------------------------------------------------------------
+
+
+@transaction.atomic
+def enviar_para_autorizacao(
+    *,
+    ator_id: int,
+    requisicao_id: int,
+) -> Requisicao:
+    """Envia um rascunho para autorização (TR-005).
+
+    RASCUNHO → AGUARDANDO_AUTORIZACAO.
+
+    No primeiro envio emite ``REQ-AAAA-NNNNNN`` via SequenciaRequisicao sob
+    lock (ADR-0003). Reenvio de rascunho retornado preserva o número público
+    (REQ-04). Não reserva nem baixa estoque (TR-005, EST-02).
+    """
+    try:
+        ator = User.objects.get(pk=ator_id)
+    except User.DoesNotExist:
+        raise DadosInvalidos(
+            'Ator não encontrado.', code='ator_nao_encontrado'
+        ) from None
+    try:
+        requisicao = Requisicao.objects.select_for_update().get(pk=requisicao_id)
+    except Requisicao.DoesNotExist:
+        raise DadosInvalidos(
+            'Requisição não encontrada.', code='requisicao_nao_encontrada'
+        ) from None
+
+    exigir_pode_enviar_rascunho(ator, requisicao)
+
+    verificar_transicao_valida(
+        requisicao.estado, EstadoRequisicao.AGUARDANDO_AUTORIZACAO
+    )
+
+    if not requisicao.itens.exists():
+        raise DadosInvalidos(
+            'A requisição precisa ter ao menos um item para ser enviada.',
+            code='sem_itens',
+        )
+
+    if requisicao.numero_publico is None:
+        ano = timezone.now().year
+        sequencia, _ = SequenciaRequisicao.objects.select_for_update().get_or_create(
+            ano=ano
+        )
+        sequencia.ultimo_numero += 1
+        sequencia.save(update_fields=['ultimo_numero'])
+        requisicao.numero_publico = f'REQ-{ano}-{sequencia.ultimo_numero:06d}'
+
+    requisicao.estado = EstadoRequisicao.AGUARDANDO_AUTORIZACAO
+    requisicao.save(update_fields=['estado', 'numero_publico', 'atualizado_em'])
+
+    TimelineRequisicao.objects.create(
+        requisicao=requisicao,
+        evento=EventoTimeline.ENVIO_AUTORIZACAO,
+        ator=ator,
+        estado_resultante=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+    )
+
+    return requisicao
 
 
 def _validar_itens(itens: list[ItemInput]) -> None:

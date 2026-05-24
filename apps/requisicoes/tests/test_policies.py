@@ -223,3 +223,49 @@ def test_criador_retorna_true_independente_do_estado(solicitante, setor_obras):
         setor_beneficiario=setor_obras,
     )
     assert pode_editar_rascunho(solicitante, req) is True
+
+
+# ---------------------------------------------------------------------------
+# pode_enviar_rascunho
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_criador_pode_enviar_rascunho(solicitante, setor_obras):
+    from apps.requisicoes.policies import pode_enviar_rascunho
+
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    assert pode_enviar_rascunho(solicitante, req) is True
+
+
+@pytest.mark.django_db
+def test_nao_criador_nao_pode_enviar(solicitante, outro_usuario_obras, setor_obras):
+    from apps.requisicoes.policies import pode_enviar_rascunho
+
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    assert pode_enviar_rascunho(outro_usuario_obras, req) is False
+
+
+@pytest.mark.django_db
+def test_criador_inativo_nao_pode_enviar(solicitante, setor_obras):
+    from apps.requisicoes.policies import pode_enviar_rascunho
+
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    solicitante.is_active = False
+    solicitante.save(update_fields=['is_active'])
+    assert pode_enviar_rascunho(solicitante, req) is False

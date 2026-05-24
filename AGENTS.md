@@ -59,6 +59,11 @@ Do not duplicate project rules here. Use these sources:
 ## Project commands
 
 - Run tests: `uv run pytest -q -ra --tb=short --strict-markers --disable-warnings`
+- Format code: `uv run ruff format .`
+- Check format: `uv run ruff format --check .`
+- Lint: `uv run ruff check .`
+- Type check: `uv run mypy apps`
+
 > **Never use redirections, pipes, `tail`, `head`, `grep`, or output truncation.** When a command fails, use the `[full output: ...]` path emitted by the RTK Tee System to inspect the complete raw output without rerunning the command.
 
 ## Ephemeral development environment
