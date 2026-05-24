@@ -226,3 +226,27 @@ def exigir_pode_editar_rascunho(ator: User, requisicao: Requisicao) -> None:
             'Apenas o criador pode editar um rascunho.',
             code='editar_rascunho_negado',
         )
+
+
+
+# ---------------------------------------------------------------------------
+# pode_enviar_rascunho
+# ---------------------------------------------------------------------------
+
+
+def pode_enviar_rascunho(ator: User, requisicao: Requisicao) -> bool:
+    """True se o ator é o criador da requisição.
+
+    Verificação de estado (RASCUNHO) é responsabilidade do service via
+    transitions.py, que lança EstadoInvalido. Esta policy só trata
+    autorização de ator.
+    """
+    return ator.is_active and ator.pk == requisicao.criador_id
+
+
+def exigir_pode_enviar_rascunho(ator: User, requisicao: Requisicao) -> None:
+    if not pode_enviar_rascunho(ator, requisicao):
+        raise PermissaoNegada(
+            'Apenas o criador pode enviar este rascunho para autorização.',
+            code='enviar_rascunho_negado',
+        )
