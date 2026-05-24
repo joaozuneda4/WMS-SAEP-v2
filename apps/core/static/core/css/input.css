@@ -106,10 +106,63 @@
     flex-wrap: wrap;
   }
 
+  .site-header-leading {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* MD2: 32dp entre ícone leading e título */
+    min-width: 0;
+    flex: 0 1 auto; /* não cresce; permite shrink para ellipsis do título */
+  }
+
   .site-header-brand {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+  }
+
+  /* Ícone de navegação contextual (back) — MD2 navigation icon */
+  .site-header-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;            /* touch target ~ 48dp */
+    height: 2.5rem;
+    border-radius: 9999px;
+    color: var(--color-slate-100);
+    background: transparent;
+    margin-left: -0.5rem;     /* optical alignment com a borda */
+    flex-shrink: 0;
+    transition: color var(--duration-fast) var(--ease-default),
+                background-color var(--duration-fast) var(--ease-default);
+  }
+
+  .site-header-back:hover {
+    background-color: var(--color-slate-800);
+  }
+
+  .site-header-back:focus-visible {
+    outline: 2px solid var(--color-slate-100);
+    outline-offset: 2px;
+  }
+
+  /* Título da tela na topbar — MD2 title 20sp Medium, color onPrimary */
+  .site-header-title {
+    font-size: 1rem;          /* 16px — leve ajuste vs 20sp do MD para combinar com nav links */
+    font-weight: 500;
+    color: var(--color-slate-50);
+    letter-spacing: 0.0125em;
+    line-height: 1.25;
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (min-width: 40rem) {
+    .site-header-title {
+      font-size: 1.125rem;    /* 18px no desktop, mais próximo do MD */
+    }
   }
 
   .site-header-logo {

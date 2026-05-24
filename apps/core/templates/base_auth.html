@@ -1,18 +1,22 @@
 {% extends "base.html" %}
 
 {% block body %}
-  <header class="site-header" x-data="{ open: false }">
+  <header class="site-header" role="banner" x-data="{ open: false }">
     <div class="site-header-inner">
 
-      {# Marca / identidade do app #}
-      <div class="site-header-brand">
-        <div class="site-header-logo" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="white" aria-hidden="true">
-            <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
-            <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd"/>
-          </svg>
-        </div>
-        <span class="site-header-name" translate="no">WMS-SAEP</span>
+      {# Leading area: brand por padrão; páginas contextuais sobrescrevem com back + título. #}
+      <div class="site-header-leading">
+        {% block topbar_leading %}
+          <div class="site-header-brand">
+            <div class="site-header-logo" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="white" aria-hidden="true">
+                <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
+                <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd"/>
+              </svg>
+            </div>
+            <span class="site-header-name" translate="no">WMS-SAEP</span>
+          </div>
+        {% endblock %}
       </div>
 
       {# Toggle mobile #}

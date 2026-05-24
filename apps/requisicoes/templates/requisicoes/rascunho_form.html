@@ -9,41 +9,34 @@
 </style>
 {% endblock %}
 
+{% block topbar_leading %}
+  {% if modo == 'editar' and requisicao %}
+    <a href="{% url 'requisicoes:detalhe' requisicao.pk %}" class="site-header-back" aria-label="Voltar para o detalhe">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+      </svg>
+    </a>
+    <h1 class="site-header-title">Editar rascunho</h1>
+  {% else %}
+    <a href="{% url 'requisicoes:minhas' %}" class="site-header-back" aria-label="Voltar para minhas requisições">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+      </svg>
+    </a>
+    <h1 class="site-header-title">Nova requisição</h1>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="max-w-3xl mx-auto pb-20 sm:pb-0">
 
-  {# --- Voltar — compensa a remoção do 'Cancelar' das ações --- #}
-  <nav class="mb-4">
-    {% if modo == 'editar' and requisicao %}
-      <a
-        href="{% url 'requisicoes:detalhe' requisicao.pk %}"
-        class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-      >
-        <span aria-hidden="true">←</span> Voltar
-      </a>
-    {% else %}
-      <a
-        href="{% url 'requisicoes:minhas' %}"
-        class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-      >
-        <span aria-hidden="true">←</span> Voltar
-      </a>
-    {% endif %}
-  </nav>
-
-  {# Cabeçalho da página #}
-  <div class="mb-6">
-    <h1 class="text-2xl font-semibold text-slate-900">
-      {% if modo == 'criar' %}Nova Requisição{% else %}Editar Rascunho{% endif %}
-    </h1>
-    {% if modo == 'editar' and requisicao %}
-      <p class="mt-1 text-sm text-slate-500">
-        {{ requisicao }}
-        &nbsp;·&nbsp;
-        Criada em {{ requisicao.criado_em|date:"d/m/Y \à\s H:i" }}
-      </p>
-    {% endif %}
-  </div>
+  {% if modo == 'editar' and requisicao %}
+    <p class="mb-6 text-sm text-slate-500">
+      {{ requisicao }}
+      &nbsp;·&nbsp;
+      Criada em {{ requisicao.criado_em|date:"d/m/Y \à\s H:i" }}
+    </p>
+  {% endif %}
 
   <form method="post" novalidate data-prevent-double-submit>
     {% csrf_token %}
