@@ -18,7 +18,8 @@ Prover uma barra superior consistente para todas as telas autenticadas, oferecen
 | Elevação | Borda inferior + sombra sutil **estática** (sem listener de scroll) |
 | Acessibilidade | `role="banner"` no header, `<nav aria-label="Navegação principal">`, focus visível, labels PT-BR em ícones |
 | Cor | Mantém `slate-900` (continuidade de marca); texto `slate-50` |
-| Altura | `--app-bar-height` (CSS var) — 3rem mobile, 4rem ≥ sm |
+| Altura | `--app-bar-height` (CSS var) — 3.5rem mobile, 4rem ≥ sm |
+| Menu hamburger | Abre um **drawer** lateral (popover) com seções Navegação e Conta |
 
 ## API (slots)
 
