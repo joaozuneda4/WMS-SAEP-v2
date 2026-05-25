@@ -23,7 +23,7 @@
                 {{ req.numero_publico }}
               </h2>
               <p class="mt-1 text-xs text-slate-500">
-                Enviada em {{ req.atualizado_em|date:"d/m/Y H:i" }}
+                Atualizada em {{ req.atualizado_em|date:"d/m/Y H:i" }}
               </p>
             </div>
             <span class="shrink-0 rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-300">
@@ -48,9 +48,9 @@
           <a
             href="{% url 'requisicoes:detalhe' pk=req.pk %}?next={{ request.path|urlencode }}"
             class="mt-4 inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-            aria-label="Analisar requisição {{ req.numero_publico }}"
+            aria-label="Ver detalhe da requisição {{ req.numero_publico }}"
           >
-            Analisar
+            Ver detalhe
           </a>
         </article>
       {% endfor %}
@@ -86,9 +86,9 @@
                 <a
                   href="{% url 'requisicoes:detalhe' pk=req.pk %}?next={{ request.path|urlencode }}"
                   class="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-                  aria-label="Analisar requisição {{ req.numero_publico }}"
+                  aria-label="Ver detalhe da requisição {{ req.numero_publico }}"
                 >
-                  Analisar
+                  Ver detalhe
                 </a>
               </td>
             </tr>

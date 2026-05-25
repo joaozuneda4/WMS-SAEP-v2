@@ -874,7 +874,7 @@ def test_fila_autorizacao_chefe_renderiza_apenas_setor(
     assert req_outro_setor_view not in requisicoes
     html = response.content.decode('utf-8')
     assert 'Fila de autorização' in html
-    assert 'Analisar' in html
+    assert 'Ver detalhe' in html
 
 
 @pytest.mark.django_db
@@ -890,7 +890,7 @@ def test_fila_autorizacao_superuser_ve_todos_setores(
     assert req_outro_setor_view in requisicoes
     html = response.content.decode('utf-8')
     assert 'Fila de autorização' in html
-    assert 'Analisar' in html
+    assert 'Ver detalhe' in html
 
 
 @pytest.mark.django_db
