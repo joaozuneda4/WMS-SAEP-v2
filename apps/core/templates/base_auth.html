@@ -44,9 +44,35 @@
             x-cloak
             x-transition.opacity.duration.150ms
           >
-            {% block topbar_domain %}
-              {% include "requisicoes/_topbar_nav.html" %}
-            {% endblock %}
+            {% with current=request.resolver_match.view_name %}
+              <section class="app-bar__menu-section" aria-label="Navegação">
+                <p class="app-bar__menu-heading">Navegação</p>
+                {% if current != 'core:home' %}
+                  <a
+                    href="{% url 'core:home' %}"
+                    class="app-bar__menu-item"
+                  >
+                    <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M12 3 2 11h3v8h6v-6h2v6h6v-8h3L12 3z"/>
+                    </svg>
+                    Início
+                  </a>
+                {% endif %}
+                {% if current != 'requisicoes:home' %}
+                  <a
+                    href="{% url 'requisicoes:home' %}"
+                    class="app-bar__menu-item"
+                  >
+                    <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-1 15H6V6h12v12zM8 8h8v2H8V8zm0 4h8v2H8v-2z"/>
+                    </svg>
+                    Requisições
+                  </a>
+                {% endif %}
+              </section>
+
+              {% block topbar_domain %}{% endblock %}
+            {% endwith %}
 
             <div class="app-bar__menu-divider" role="separator"></div>
 
@@ -76,7 +102,7 @@
 
       <div class="app-bar__leading">
         {% block topbar_leading %}
-          <a href="{% url 'requisicoes:minhas' %}" class="app-bar__brand">
+          <a href="{% url 'core:home' %}" class="app-bar__brand">
             <span class="app-bar__logo" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="white" aria-hidden="true">
                 <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>

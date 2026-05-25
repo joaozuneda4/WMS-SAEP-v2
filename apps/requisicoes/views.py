@@ -32,6 +32,7 @@ from apps.requisicoes.policies import (
     pode_enviar_rascunho,
     pode_recusar_requisicao,
     pode_retornar_para_rascunho,
+    pode_ver_fila_autorizacao,
     resolver_escopo_criacao_requisicao,
 )
 from apps.requisicoes.selectors import (
@@ -109,6 +110,34 @@ def _render_detalhe(request, requisicao: Requisicao, **contexto_extra):
         request,
         'requisicoes/detalhe.html',
         _detalhe_context(request, requisicao, **contexto_extra),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Home do módulo
+# ---------------------------------------------------------------------------
+
+
+@login_required
+@require_GET
+def home(request):
+    """Landing page do módulo de requisições."""
+    can_create_requisicao = False
+    try:
+        resolver_escopo_criacao_requisicao(request.user)
+    except PermissaoNegada:
+        pass
+    else:
+        can_create_requisicao = True
+
+    return render(
+        request,
+        'requisicoes/home.html',
+        {
+            'can_view_minhas': True,
+            'can_create_requisicao': can_create_requisicao,
+            'can_view_fila': pode_ver_fila_autorizacao(request.user),
+        },
     )
 
 

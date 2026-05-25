@@ -39,6 +39,40 @@ def _formset_post(material_id, quantidade='5', extra=None):
 
 
 # ---------------------------------------------------------------------------
+# Home do módulo
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_requisicoes_home_sem_login_redireciona(client):
+    response = client.get(reverse('requisicoes:home'))
+    assert response.status_code == 302
+
+
+@pytest.mark.django_db
+def test_requisicoes_home_solicitante_exibe_atalhos(client, solicitante):
+    _login(client, solicitante)
+    response = client.get(reverse('requisicoes:home'))
+
+    assert response.status_code == 200
+    html = response.content.decode('utf-8')
+    assert 'Requisições' in html
+    assert 'Minhas requisições' in html
+    assert 'Nova requisição' in html
+    assert 'Fila de autorizações' not in html
+
+
+@pytest.mark.django_db
+def test_requisicoes_home_chefe_exibe_fila(client, chefe_obras):
+    _login(client, chefe_obras)
+    response = client.get(reverse('requisicoes:home'))
+
+    assert response.status_code == 200
+    html = response.content.decode('utf-8')
+    assert 'Fila de autorizações' in html
+
+
+# ---------------------------------------------------------------------------
 # GET /requisicoes/nova/
 # ---------------------------------------------------------------------------
 
@@ -410,6 +444,11 @@ def test_minhas_get_autenticado_200(client, solicitante, req_enviada_solicitante
     assert response.status_code == 200
     requisicoes = list(response.context['requisicoes'])
     assert req_enviada_solicitante in requisicoes
+    html = response.content.decode('utf-8')
+    menu_html = html[
+        html.index('aria-label="Navegação"') : html.index('app-bar__menu-divider')
+    ]
+    assert reverse('requisicoes:minhas') not in menu_html
 
 
 @pytest.mark.django_db
@@ -828,6 +867,22 @@ def test_fila_autorizacao_chefe_renderiza_apenas_setor(
 
 
 @pytest.mark.django_db
+def test_fila_autorizacao_superuser_ve_todos_setores(
+    client, superuser, req_enviada_solicitante, req_outro_setor_view
+):
+    _login(client, superuser)
+    response = client.get(reverse('requisicoes:autorizacoes'))
+
+    assert response.status_code == 200
+    requisicoes = list(response.context['requisicoes'])
+    assert req_enviada_solicitante in requisicoes
+    assert req_outro_setor_view in requisicoes
+    html = response.content.decode('utf-8')
+    assert 'Fila de autorização' in html
+    assert 'Analisar' in html
+
+
+@pytest.mark.django_db
 def test_fila_autorizacao_ator_sem_permissao_retorna_403(client, solicitante):
     _login(client, solicitante)
     response = client.get(reverse('requisicoes:autorizacoes'))
@@ -870,10 +925,48 @@ def test_retornar_rascunho_chefe_nao_pode_retornar(
 
 
 @pytest.mark.django_db
+def test_retornar_rascunho_post_superuser_redireciona_e_muda_estado(
+    client, superuser, req_enviada_solicitante
+):
+    _login(client, superuser)
+    response = client.post(
+        reverse(
+            'requisicoes:retornar_rascunho', kwargs={'pk': req_enviada_solicitante.pk}
+        ),
+        {'observacao': 'Corrigir item.'},
+    )
+
+    assert response.status_code == 302
+    assert response.url == reverse(
+        'requisicoes:detalhe', kwargs={'pk': req_enviada_solicitante.pk}
+    )
+    req_enviada_solicitante.refresh_from_db()
+    assert req_enviada_solicitante.estado == EstadoRequisicao.RASCUNHO
+
+
+@pytest.mark.django_db
 def test_recusar_requisicao_post_chefe_redireciona_e_muda_estado(
     client, chefe_obras, req_enviada_solicitante
 ):
     _login(client, chefe_obras)
+    response = client.post(
+        reverse('requisicoes:recusar', kwargs={'pk': req_enviada_solicitante.pk}),
+        {'motivo': 'Necessário revisar quantidades.'},
+    )
+
+    assert response.status_code == 302
+    assert response.url == reverse(
+        'requisicoes:detalhe', kwargs={'pk': req_enviada_solicitante.pk}
+    )
+    req_enviada_solicitante.refresh_from_db()
+    assert req_enviada_solicitante.estado == EstadoRequisicao.RECUSADA
+
+
+@pytest.mark.django_db
+def test_recusar_requisicao_post_superuser_redireciona_e_muda_estado(
+    client, superuser, req_enviada_solicitante
+):
+    _login(client, superuser)
     response = client.post(
         reverse('requisicoes:recusar', kwargs={'pk': req_enviada_solicitante.pk}),
         {'motivo': 'Necessário revisar quantidades.'},
@@ -956,6 +1049,22 @@ def test_recusar_requisicao_htmx_retorna_hx_redirect(
     client, chefe_obras, req_enviada_solicitante
 ):
     _login(client, chefe_obras)
+    response = client.post(
+        reverse('requisicoes:recusar', kwargs={'pk': req_enviada_solicitante.pk}),
+        {'motivo': 'Não aprovado.'},
+        HTTP_HX_REQUEST='true',
+    )
+    assert response.status_code == 204
+    assert response['HX-Redirect'] == reverse(
+        'requisicoes:detalhe', kwargs={'pk': req_enviada_solicitante.pk}
+    )
+
+
+@pytest.mark.django_db
+def test_recusar_requisicao_htmx_superuser_retorna_hx_redirect(
+    client, superuser, req_enviada_solicitante
+):
+    _login(client, superuser)
     response = client.post(
         reverse('requisicoes:recusar', kwargs={'pk': req_enviada_solicitante.pk}),
         {'motivo': 'Não aprovado.'},

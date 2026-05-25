@@ -1,37 +1,41 @@
 {% with current=request.resolver_match.view_name %}
   <nav class="app-bar__menu-section" aria-label="Navegação principal">
-    <p class="app-bar__menu-heading">Navegação</p>
-    <a
-      href="{% url 'requisicoes:minhas' %}"
-      class="app-bar__menu-item"
-      {% if current == 'requisicoes:minhas' %}aria-current="page"{% endif %}
-    >
-      <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
-      </svg>
-      Minhas requisições
-    </a>
-    <a
-      href="{% url 'requisicoes:nova_requisicao' %}"
-      class="app-bar__menu-item"
-      {% if current == 'requisicoes:nova_requisicao' %}aria-current="page"{% endif %}
-    >
-      <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-      </svg>
-      Nova requisição
-    </a>
-    {% if user.is_superuser or user.setor_chefiado and user.setor_chefiado.ativo %}
+    <p class="app-bar__menu-heading">Requisições</p>
       <a
-        href="{% url 'requisicoes:autorizacoes' %}"
+        href="{% url 'requisicoes:nova_requisicao' %}"
         class="app-bar__menu-item"
-        {% if current == 'requisicoes:autorizacoes' %}aria-current="page"{% endif %}
+        {% if current == 'requisicoes:nova_requisicao' %}aria-current="page"{% endif %}
       >
         <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm-1 14-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 7z"/>
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
         </svg>
-        Autorizações
+        Nova requisição
+      </a>
+    {% if current != 'requisicoes:minhas' %}
+      <a
+        href="{% url 'requisicoes:minhas' %}"
+        class="app-bar__menu-item"
+      > 
+        <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+        </svg>
+        Minhas requisições
       </a>
     {% endif %}
+
+    {% if current != 'requisicoes:autorizacoes' %}
+      {% if user.is_superuser or user.setor_chefiado and user.setor_chefiado.ativo %}
+        <a
+          href="{% url 'requisicoes:autorizacoes' %}"
+          class="app-bar__menu-item"
+          {% if current == 'requisicoes:autorizacoes' %}aria-current="page"{% endif %}
+        >
+          <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm-1 14-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 7z"/>
+          </svg>
+          Fila de Autorizações
+        </a>
+      {% endif %}
+    {% endif %}  
   </nav>
 {% endwith %}

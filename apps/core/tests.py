@@ -17,10 +17,14 @@ from apps.requisicoes.models import SequenciaRequisicao
 @pytest.mark.django_db
 def test_home_usa_layout_autenticado(client):
     User = get_user_model()
+    setor = Setor.objects.create(
+        codigo='OBR', nome='Obras', classificacao=SetorClassificacao.COMUM
+    )
     usuario = User.objects.create_user(
         matricula='HOME-001',
         password='senha-forte-123',
         nome='Operador Home',
+        setor=setor,
     )
     client.force_login(usuario)
 
@@ -31,11 +35,31 @@ def test_home_usa_layout_autenticado(client):
     assert '<header' in conteudo
     assert '<main' in conteudo
     assert 'max-w-screen-xl' in conteudo
-    assert 'p-6' in conteudo
+    assert 'Início' in conteudo
     assert 'Operador Home' in conteudo
     assert 'HOME-001' in conteudo
-    assert 'Minhas requisições' in conteudo
+    assert 'Requisições' in conteudo
+    assert 'Painel de requisições' in conteudo
     assert 'Nova requisição' in conteudo
+    assert reverse('requisicoes:home') in conteudo
+
+
+@pytest.mark.django_db
+def test_home_oculta_nova_requisicao_sem_setor(client):
+    User = get_user_model()
+    usuario = User.objects.create_user(
+        matricula='HOME-002',
+        password='senha-forte-123',
+        nome='Operador Sem Setor',
+    )
+    client.force_login(usuario)
+
+    resposta = client.get(reverse('core:home'))
+    conteudo = resposta.content.decode()
+
+    assert resposta.status_code == 200
+    assert 'Painel de requisições' in conteudo
+    assert 'Nova requisição' not in conteudo
 
 
 def test_seed_dev_exige_flag_de_ambiente_local(settings, monkeypatch):

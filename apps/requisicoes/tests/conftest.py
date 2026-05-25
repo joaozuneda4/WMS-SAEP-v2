@@ -130,6 +130,17 @@ def chefe_almoxarifado(db, setor_almoxarifado):
 
 
 @pytest.fixture
+def superuser(db, setor_obras):
+    """Superusuário técnico para testar bypass de permissão."""
+    return User.objects.create_superuser(
+        matricula='900',
+        nome='Super Usuário',
+        password='senha',
+        setor=setor_obras,
+    )
+
+
+@pytest.fixture
 def usuario_sem_setor(db):
     """Usuário ativo sem setor — não pode criar requisição para si."""
     return User.objects.create_user(
