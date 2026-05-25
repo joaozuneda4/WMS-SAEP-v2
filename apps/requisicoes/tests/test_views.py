@@ -1096,6 +1096,7 @@ def test_detalhe_exibe_recusa_para_chefe_e_nao_exibe_retorno(
     assert response.context['pode_retornar'] is False
     assert 'Confirmar recusa' in html
     assert 'Confirmar retorno' not in html
+    assert 'data-confirm-message' in html
 
 
 @pytest.mark.django_db

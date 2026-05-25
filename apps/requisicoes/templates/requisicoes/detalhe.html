@@ -239,6 +239,7 @@
             method="post"
             action="{% url 'requisicoes:recusar' requisicao.pk %}"
             data-prevent-double-submit
+            data-confirm-message="Confirma a recusa desta requisição? Esta ação encerra a requisição e não pode ser desfeita."
             class="rounded-lg border border-red-200 bg-red-50 p-4"
           >
             {% csrf_token %}
@@ -291,7 +292,16 @@
   // Anti double-submit: desabilita só após o tick para não descartar o
   // name/value do submitter clicado.
   document.querySelectorAll('form[data-prevent-double-submit]').forEach((form) => {
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (event) => {
+      const confirmMessage = form.dataset.confirmMessage;
+      if (confirmMessage && form.dataset.confirmed !== '1') {
+        if (!window.confirm(confirmMessage)) {
+          event.preventDefault();
+          return;
+        }
+        form.dataset.confirmed = '1';
+      }
+
       const targets = Array.from(form.querySelectorAll('button[type="submit"]'));
       targets.forEach((btn) => {
         if (btn.dataset.submitting === '1') return;
