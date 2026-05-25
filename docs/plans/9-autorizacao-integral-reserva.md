@@ -21,7 +21,7 @@
   - sem novos componentes globais nesta slice.
 - Testes por camada:
   - `test_policies.py` para permissão de autorização e auto-autorização permitida;
-  - `test_services.py` para caminho feliz, permissão negada, estado inválido, saldo insuficiente/estático e metadata de auto-autorização;
+  - `test_services.py` para caminho feliz, permissão negada, estado inválido, saldo insuficiente/inativo e metadata de auto-autorização;
   - `test_views.py` para contrato HTTP, botão no detalhe e redirect/HTMX.
 
 **Não inclui:**

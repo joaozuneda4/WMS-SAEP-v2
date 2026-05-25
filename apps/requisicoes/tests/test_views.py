@@ -1106,7 +1106,7 @@ def test_detalhe_exibe_recusa_para_chefe_e_nao_exibe_retorno(
 
 @pytest.mark.django_db
 def test_detalhe_exibe_autorizar_para_chefe_e_nao_exibe_para_outro_papel(
-    client, chefe_obras, material_disponivel
+    client, chefe_obras, aux_almoxarifado, material_disponivel
 ):
     from apps.requisicoes.services import enviar_para_autorizacao
 
@@ -1129,6 +1129,15 @@ def test_detalhe_exibe_autorizar_para_chefe_e_nao_exibe_para_outro_papel(
     assert response.status_code == 200
     assert response.context['pode_autorizar'] is True
     assert 'Autorizar' in html
+    assert 'Analisar' not in html
+
+    _login(client, aux_almoxarifado)
+    response = client.get(reverse('requisicoes:detalhe', kwargs={'pk': req.pk}))
+    html = response.content.decode('utf-8')
+
+    assert response.status_code == 200
+    assert response.context['pode_autorizar'] is False
+    assert 'Autorizar' not in html
     assert 'Analisar' not in html
 
 
