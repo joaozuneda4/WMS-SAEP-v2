@@ -1114,6 +1114,35 @@ def requisicao_pronta_retirada(requisicao_autorizada, aux_almoxarifado):
     )
 
 
+@pytest.fixture
+def requisicao_pronta_retirada_multi(
+    solicitante,
+    chefe_obras,
+    aux_almoxarifado,
+    material_disponivel,
+    material_disponivel_2,
+):
+    from apps.requisicoes.services import enviar_para_autorizacao
+
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('2'),
+            },
+            {
+                'material_id': material_disponivel_2.pk,
+                'quantidade_solicitada': Decimal('3'),
+            },
+        ],
+    )
+    enviar_para_autorizacao(ator_id=solicitante.pk, requisicao_id=req.pk)
+    autorizar_requisicao(ator_id=chefe_obras.pk, requisicao_id=req.pk)
+    return separar_para_retirada(ator_id=aux_almoxarifado.pk, requisicao_id=req.pk)
+
+
 def _payload_total(requisicao):
     return [
         {
@@ -1380,6 +1409,54 @@ def test_registrar_atendimento_ator_inexistente(requisicao_pronta_retirada):
             retirante_nome='X',
         )
     assert excinfo.value.code == 'ator_nao_encontrado'
+
+
+@pytest.mark.django_db
+def test_registrar_atendimento_item_zero_sem_justificativa_falha_no_parcial_multi_item(
+    requisicao_pronta_retirada_multi, aux_almoxarifado
+):
+    itens = list(requisicao_pronta_retirada_multi.itens.order_by('id'))
+    primeiro, segundo = itens[0], itens[1]
+    with pytest.raises(DadosInvalidos) as excinfo:
+        registrar_atendimento(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=requisicao_pronta_retirada_multi.pk,
+            itens=[
+                {
+                    'item_id': primeiro.id,
+                    'quantidade_entregue': primeiro.quantidade_autorizada,
+                    'justificativa': '',
+                },
+                {
+                    'item_id': segundo.id,
+                    'quantidade_entregue': Decimal('0'),
+                    'justificativa': '',
+                },
+            ],
+            retirante_nome='Carlos',
+        )
+    assert excinfo.value.code == 'justificativa_obrigatoria'
+
+
+@pytest.mark.django_db
+def test_registrar_atendimento_rejeita_nan_em_quantidade_entregue(
+    requisicao_pronta_retirada, aux_almoxarifado
+):
+    item = requisicao_pronta_retirada.itens.first()
+    with pytest.raises(DadosInvalidos) as excinfo:
+        registrar_atendimento(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=requisicao_pronta_retirada.pk,
+            itens=[
+                {
+                    'item_id': item.id,
+                    'quantidade_entregue': Decimal('NaN'),
+                    'justificativa': '',
+                }
+            ],
+            retirante_nome='X',
+        )
+    assert excinfo.value.code == 'quantidade_entregue_invalida'
 
 
 @pytest.mark.django_db

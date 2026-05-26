@@ -577,6 +577,11 @@ def registrar_atendimento(
                 'Item de atendimento inválido.',
                 code='item_invalido',
             ) from exc
+        if not entregue.is_finite():
+            raise DadosInvalidos(
+                'Quantidade entregue inválida.',
+                code='quantidade_entregue_invalida',
+            )
         if item_id in payload_por_item:
             raise DadosInvalidos(
                 'Item duplicado no atendimento.',
