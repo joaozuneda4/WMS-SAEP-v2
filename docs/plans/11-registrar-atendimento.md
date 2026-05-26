@@ -13,7 +13,7 @@ Estado: `PRONTA_PARA_RETIRADA -> ATENDIDA`.
 - View `registrar_atendimento_view` (GET formulário + POST) em `apps/requisicoes/views.py`.
 - URL `<int:pk>/atender/` em `apps/requisicoes/urls.py`.
 - Transição `PRONTA_PARA_RETIRADA -> ATENDIDA` em `transitions.py`.
-- Selector helper `consumir_e_liberar_reservas_para_atendimento` em `apps/estoque/services.py` (mutação física + reserva sob lock).
+- Helper de service `consumir_e_liberar_reservas_para_atendimento` em `apps/estoque/services.py` (mutação física + reserva sob lock). Selectors são read-only por convenção; este helper muta saldo e reserva.
 - Template `atender_retirada.html` + ajuste em `detalhe.html` (botão "Registrar atendimento" quando `pode_atender_retirada`).
 - Atualização do `_detalhe_context`: nova flag `pode_atender_retirada`.
 - Testes: services, policies, views, forms — cobertura TR-016, TR-017, TR-018, permissão, estado inválido, saldo insuficiente.
@@ -50,14 +50,14 @@ def registrar_atendimento(
     *,
     ator_id: int,
     requisicao_id: int,
-    itens: list[ItemAtendimentoInput],
+    itens: list[ItemAtendimentoEntrada],
     retirante_nome: str,
     observacao: str = '',
 ) -> Requisicao: ...
 ```
 
 ```python
-class ItemAtendimentoInput(TypedDict):
+class ItemAtendimentoEntrada(TypedDict):
     item_id: int
     quantidade_entregue: Decimal  # >= 0, <= quantidade_autorizada
     justificativa: str            # obrigatória quando entregue < autorizada (incl. 0)

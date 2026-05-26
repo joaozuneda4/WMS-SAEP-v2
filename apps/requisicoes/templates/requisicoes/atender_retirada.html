@@ -202,6 +202,16 @@
         class="inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
         data-submit-loading-label="Registrando…"
       >
+        <svg
+          data-submit-spinner
+          class="mr-2 hidden h-4 w-4 animate-spin"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
+        </svg>
         <span data-submit-text>Confirmar retirada</span>
       </button>
     </div>
@@ -226,6 +236,9 @@
         if (btn.dataset.submitting === '1') return;
         btn.dataset.submitting = '1';
         btn.setAttribute('aria-busy', 'true');
+        btn.querySelectorAll('[data-submit-spinner]').forEach((node) => {
+          node.classList.remove('hidden');
+        });
         const loading = btn.dataset.submitLoadingLabel;
         if (loading) {
           btn.querySelectorAll('[data-submit-text]').forEach((node) => {

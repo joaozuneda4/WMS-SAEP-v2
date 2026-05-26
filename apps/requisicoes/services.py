@@ -506,7 +506,7 @@ def separar_para_retirada(
     return requisicao
 
 
-class ItemAtendimentoInput(TypedDict):
+class ItemAtendimentoEntrada(TypedDict):
     item_id: int
     quantidade_entregue: Decimal
     justificativa: str
@@ -517,7 +517,7 @@ def registrar_atendimento(
     *,
     ator_id: int,
     requisicao_id: int,
-    itens: list[ItemAtendimentoInput],
+    itens: list[ItemAtendimentoEntrada],
     retirante_nome: str,
     observacao: str = '',
 ) -> Requisicao:
@@ -568,7 +568,7 @@ def registrar_atendimento(
             code='itens_autorizados_insuficientes',
         )
 
-    payload_por_item: dict[int, ItemAtendimentoInput] = {}
+    payload_por_item: dict[int, ItemAtendimentoEntrada] = {}
     for entrada in itens:
         try:
             item_id = int(entrada['item_id'])
@@ -633,17 +633,21 @@ def registrar_atendimento(
             {
                 'material_id': item.material_id,
                 'quantidade_autorizada': autorizada,
-                'quantidade_entregue': payload_por_item[item.id][
-                    'quantidade_entregue'
-                ],
+                'quantidade_entregue': payload_por_item[item.id]['quantidade_entregue'],
             }
         )
     consumir_e_liberar_reservas_para_atendimento(itens=payload_estoque)
 
     for item in itens_autorizados:
         entrada = payload_por_item[item.id]
+        autorizada = item.quantidade_autorizada
+        assert autorizada is not None  # filtrado por quantidade_autorizada__gt=0
         item.quantidade_entregue = entrada['quantidade_entregue']
-        item.justificativa_entrega = entrada['justificativa']
+        item.justificativa_entrega = (
+            entrada['justificativa']
+            if entrada['quantidade_entregue'] < autorizada
+            else ''
+        )
         item.save(update_fields=['quantidade_entregue', 'justificativa_entrega'])
 
     requisicao.estado = EstadoRequisicao.ATENDIDA

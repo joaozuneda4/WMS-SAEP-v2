@@ -1383,6 +1383,52 @@ def test_registrar_atendimento_ator_inexistente(requisicao_pronta_retirada):
 
 
 @pytest.mark.django_db
+def test_registrar_atendimento_total_zera_justificativa_existente(
+    requisicao_pronta_retirada, aux_almoxarifado
+):
+    """Atendimento total sobrescreve justificativa eventual com string vazia."""
+    item = requisicao_pronta_retirada.itens.first()
+    item.justificativa_entrega = 'antiga'
+    item.save(update_fields=['justificativa_entrega'])
+
+    registrar_atendimento(
+        ator_id=aux_almoxarifado.pk,
+        requisicao_id=requisicao_pronta_retirada.pk,
+        itens=[
+            {
+                'item_id': item.id,
+                'quantidade_entregue': item.quantidade_autorizada,
+                'justificativa': 'ignorada por ser total',
+            }
+        ],
+        retirante_nome='Carlos',
+    )
+
+    item.refresh_from_db()
+    assert item.justificativa_entrega == ''
+
+
+@pytest.mark.django_db
+def test_registrar_atendimento_bloqueia_material_inativo(
+    requisicao_pronta_retirada, aux_almoxarifado, material_disponivel
+):
+    """Material desativado entre autorização e atendimento bloqueia retirada."""
+    material_disponivel.ativo = False
+    material_disponivel.save(update_fields=['ativo'])
+
+    with pytest.raises(ConflitoDominio) as excinfo:
+        registrar_atendimento(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=requisicao_pronta_retirada.pk,
+            itens=_payload_total(requisicao_pronta_retirada),
+            retirante_nome='Carlos',
+        )
+    assert excinfo.value.code == 'material_inativo'
+    requisicao_pronta_retirada.refresh_from_db()
+    assert requisicao_pronta_retirada.estado == EstadoRequisicao.PRONTA_PARA_RETIRADA
+
+
+@pytest.mark.django_db
 def test_registrar_atendimento_requisicao_inexistente(aux_almoxarifado):
     with pytest.raises(DadosInvalidos) as excinfo:
         registrar_atendimento(

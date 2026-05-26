@@ -192,6 +192,11 @@ def consumir_e_liberar_reservas_para_atendimento(
                 code='saldo_ambiguo',
             )
         saldo = saldos_do_material[0]
+        if not saldo.material.ativo:
+            raise ConflitoDominio(
+                f"Material '{saldo.material.nome}' está inativo.",
+                code='material_inativo',
+            )
         entregue = entregue_por_material[material_id]
         autorizada = autorizada_por_material[material_id]
         if saldo.saldo_fisico < entregue:
