@@ -12,6 +12,7 @@ from apps.requisicoes.policies import (
     pode_criar_para_beneficiario,
     pode_editar_rascunho,
     pode_autorizar_requisicao,
+    pode_cancelar_requisicao,
     pode_recusar_requisicao,
     pode_retornar_para_rascunho,
     pode_atender_retirada,
@@ -317,6 +318,65 @@ def test_terceiro_nao_pode_retornar_para_rascunho(
         setor_beneficiario=setor_obras,
     )
     assert pode_retornar_para_rascunho(outro_usuario_obras, req) is False
+
+
+# ---------------------------------------------------------------------------
+# Cancelamento
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_criador_pode_cancelar_rascunho_numerado(solicitante, setor_obras):
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        numero_publico='REQ-2026-000200',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    assert pode_cancelar_requisicao(solicitante, req) is True
+
+
+@pytest.mark.django_db
+def test_beneficiario_pode_cancelar_aguardando_autorizacao(
+    solicitante, outro_usuario_obras, setor_obras
+):
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+        numero_publico='REQ-2026-000201',
+        criador=solicitante,
+        beneficiario=outro_usuario_obras,
+        setor_beneficiario=setor_obras,
+    )
+    assert pode_cancelar_requisicao(outro_usuario_obras, req) is True
+
+
+@pytest.mark.django_db
+def test_aux_almox_pode_cancelar_autorizada(
+    aux_almoxarifado, solicitante, setor_obras
+):
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.AUTORIZADA,
+        numero_publico='REQ-2026-000202',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    assert pode_cancelar_requisicao(aux_almoxarifado, req) is True
+
+
+@pytest.mark.django_db
+def test_chefe_setor_nao_pode_cancelar_autorizada_de_outro_setor(
+    chefe_obras, solicitante, setor_ti
+):
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.AUTORIZADA,
+        numero_publico='REQ-2026-000203',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_ti,
+    )
+    assert pode_cancelar_requisicao(chefe_obras, req) is False
 
 
 @pytest.mark.django_db

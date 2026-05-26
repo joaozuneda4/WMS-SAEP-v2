@@ -13,10 +13,17 @@ from apps.core.exceptions import (
     EstadoInvalido,
     PermissaoNegada,
 )
-from apps.requisicoes.models import EstadoRequisicao, EventoTimeline, Requisicao
+from apps.requisicoes.models import (
+    EstadoRequisicao,
+    EventoTimeline,
+    ItemRequisicao,
+    Requisicao,
+)
 from apps.requisicoes.services import (
     autorizar_requisicao,
     criar_requisicao,
+    cancelar_requisicao,
+    descartar_rascunho,
     editar_rascunho,
     recusar_requisicao,
     registrar_atendimento,
@@ -512,6 +519,123 @@ def test_enviar_nao_reserva_estoque(rascunho, solicitante, material_disponivel):
     saldo_depois = SaldoEstoque.objects.get(material=material_disponivel)
     assert saldo_depois.saldo_reservado == reservado_antes
     assert saldo_depois.saldo_fisico == fisico_antes
+
+
+# ---------------------------------------------------------------------------
+# TR-003 / TR-004 / TR-012 / TR-013 / TR-014: cancelamento e descarte
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_descartar_rascunho_nunca_enviado_remove_requisicao_e_nao_consumo_numero(
+    solicitante, material_disponivel
+):
+    from apps.requisicoes.models import SequenciaRequisicao, TimelineRequisicao
+
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('2'),
+            }
+        ],
+    )
+
+    descartar_rascunho(ator_id=solicitante.pk, requisicao_id=req.pk)
+
+    assert not Requisicao.objects.filter(pk=req.pk).exists()
+    assert not ItemRequisicao.objects.filter(requisicao_id=req.pk).exists()
+    assert not TimelineRequisicao.objects.filter(requisicao_id=req.pk).exists()
+    assert not SequenciaRequisicao.objects.exists()
+
+
+@pytest.mark.django_db
+def test_cancelar_rascunho_numerado_preserva_numero_publico_e_registra_timeline(
+    solicitante, setor_obras, material_disponivel
+):
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        numero_publico='REQ-2026-000301',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    ItemRequisicao.objects.create(
+        requisicao=req,
+        material=material_disponivel,
+        quantidade_solicitada=Decimal('2'),
+    )
+
+    req = cancelar_requisicao(
+        ator_id=solicitante.pk,
+        requisicao_id=req.pk,
+    )
+
+    assert req.estado == EstadoRequisicao.CANCELADA
+    assert req.numero_publico == 'REQ-2026-000301'
+    evento = req.eventos.filter(evento=EventoTimeline.CANCELAMENTO).get()
+    assert evento.ator_id == solicitante.pk
+    assert evento.estado_resultante == EstadoRequisicao.CANCELADA
+    assert evento.justificativa == ''
+    assert not req.eventos.filter(evento=EventoTimeline.LIBERACAO_RESERVA).exists()
+
+
+@pytest.mark.django_db
+def test_cancelar_requisicao_aguardando_autorizacao_sem_justificativa(
+    requisicao_aguardando, solicitante, material_disponivel
+):
+    from apps.estoque.models import SaldoEstoque
+
+    saldo_antes = SaldoEstoque.objects.get(material=material_disponivel)
+    reservado_antes = saldo_antes.saldo_reservado
+    fisico_antes = saldo_antes.saldo_fisico
+
+    req = cancelar_requisicao(
+        ator_id=solicitante.pk,
+        requisicao_id=requisicao_aguardando.pk,
+    )
+
+    saldo_depois = SaldoEstoque.objects.get(material=material_disponivel)
+    assert req.estado == EstadoRequisicao.CANCELADA
+    assert req.numero_publico is not None
+    assert saldo_depois.saldo_reservado == reservado_antes
+    assert saldo_depois.saldo_fisico == fisico_antes
+    evento = req.eventos.filter(evento=EventoTimeline.CANCELAMENTO).get()
+    assert evento.justificativa == ''
+    assert not req.eventos.filter(evento=EventoTimeline.LIBERACAO_RESERVA).exists()
+
+
+@pytest.mark.django_db
+def test_cancelar_requisicao_autorizada_libera_reserva_e_registra_timeline(
+    requisicao_aguardando, chefe_obras, material_disponivel
+):
+    from apps.estoque.models import SaldoEstoque
+
+    req = autorizar_requisicao(
+        ator_id=chefe_obras.pk,
+        requisicao_id=requisicao_aguardando.pk,
+    )
+    saldo_antes = SaldoEstoque.objects.get(material=material_disponivel)
+    reservado_antes = saldo_antes.saldo_reservado
+    fisico_antes = saldo_antes.saldo_fisico
+
+    req = cancelar_requisicao(
+        ator_id=requisicao_aguardando.criador_id,
+        requisicao_id=req.pk,
+        justificativa='Revisão interna do pedido.',
+    )
+
+    saldo_depois = SaldoEstoque.objects.get(material=material_disponivel)
+    assert req.estado == EstadoRequisicao.CANCELADA
+    assert saldo_depois.saldo_reservado == reservado_antes - Decimal('2')
+    assert saldo_depois.saldo_fisico == fisico_antes
+    cancelamento = req.eventos.filter(evento=EventoTimeline.CANCELAMENTO).get()
+    liberacao = req.eventos.filter(evento=EventoTimeline.LIBERACAO_RESERVA).get()
+    assert cancelamento.justificativa == 'Revisão interna do pedido.'
+    assert cancelamento.estado_resultante == EstadoRequisicao.CANCELADA
+    assert liberacao.estado_resultante == EstadoRequisicao.CANCELADA
 
 
 # ---------------------------------------------------------------------------

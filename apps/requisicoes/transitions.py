@@ -16,17 +16,21 @@ from apps.requisicoes.models import EstadoRequisicao
 TRANSICOES_VALIDAS: dict[str, set[str]] = {
     EstadoRequisicao.RASCUNHO: {
         EstadoRequisicao.RASCUNHO,  # TR-002: editar rascunho
+        EstadoRequisicao.CANCELADA,  # TR-004: cancelar rascunho numerado
         EstadoRequisicao.AGUARDANDO_AUTORIZACAO,  # TR-005: enviar para autorização
     },
     EstadoRequisicao.AGUARDANDO_AUTORIZACAO: {
         EstadoRequisicao.RASCUNHO,  # TR-006: retornar para rascunho
+        EstadoRequisicao.CANCELADA,  # TR-012: cancelar antes da autorização
         EstadoRequisicao.AUTORIZADA,  # TR-008: autorizar integralmente
         EstadoRequisicao.RECUSADA,  # TR-011: recusar inteira
     },
     EstadoRequisicao.AUTORIZADA: {
+        EstadoRequisicao.CANCELADA,  # TR-013: cancelar autorizada
         EstadoRequisicao.PRONTA_PARA_RETIRADA,  # TR-015: separar para retirada
     },
     EstadoRequisicao.PRONTA_PARA_RETIRADA: {
+        EstadoRequisicao.CANCELADA,  # TR-014: cancelar pronta para retirada
         EstadoRequisicao.ATENDIDA,  # TR-016/TR-017: registrar atendimento total/parcial
     },
 }

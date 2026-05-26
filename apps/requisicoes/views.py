@@ -38,6 +38,7 @@ from apps.requisicoes.policies import (
     exigir_pode_ver_fila_autorizacao,
     pode_atender_retirada,
     pode_autorizar_requisicao,
+    pode_cancelar_requisicao,
     pode_editar_rascunho,
     pode_enviar_rascunho,
     pode_recusar_requisicao,
@@ -56,6 +57,8 @@ from apps.requisicoes.selectors import (
 from apps.requisicoes.services import (
     autorizar_requisicao,
     criar_requisicao,
+    cancelar_requisicao,
+    descartar_rascunho,
     editar_rascunho,
     enviar_para_autorizacao,
     recusar_requisicao,
@@ -91,11 +94,66 @@ def _detalhe_context(
     *,
     recusa_erro: str = '',
     motivo_recusa: str = '',
+    cancelacao_erro: str = '',
+    justificativa_cancelamento: str = '',
+    cancelamento_modal_aberto: bool = False,
 ):
     itens = list(requisicao.itens.select_related('material').all())
     eventos = list(
         requisicao.eventos.select_related('ator').order_by('-criado_em', '-id')
     )
+    cancelavel = pode_cancelar_requisicao(request.user, requisicao)
+    if cancelavel:
+        if (
+            requisicao.estado == EstadoRequisicao.RASCUNHO
+            and requisicao.numero_publico is None
+        ):
+            cancelamento_titulo = 'Descartar rascunho'
+            cancelamento_descricao = (
+                'Este rascunho ainda não foi enviado. O descarte remove o registro '
+                'definitivamente e não consome número público nem reserva de estoque.'
+            )
+            cancelamento_trigger = 'Descartar rascunho'
+            cancelamento_confirmar = 'Descartar'
+            cancelamento_requer_justificativa = False
+            cancelamento_variacao = 'danger'
+        elif requisicao.estado == EstadoRequisicao.RASCUNHO:
+            cancelamento_titulo = 'Cancelar rascunho'
+            cancelamento_descricao = (
+                'Este rascunho já foi enviado alguma vez. O cancelamento encerra '
+                'a requisição sem nova reserva e preserva o número público.'
+            )
+            cancelamento_trigger = 'Cancelar rascunho'
+            cancelamento_confirmar = 'Confirmar cancelamento'
+            cancelamento_requer_justificativa = False
+            cancelamento_variacao = 'danger'
+        elif requisicao.estado == EstadoRequisicao.AGUARDANDO_AUTORIZACAO:
+            cancelamento_titulo = 'Cancelar requisição'
+            cancelamento_descricao = (
+                'A requisição será encerrada antes da autorização. Não há reserva '
+                'de estoque a liberar e a justificativa é opcional.'
+            )
+            cancelamento_trigger = 'Cancelar requisição'
+            cancelamento_confirmar = 'Confirmar cancelamento'
+            cancelamento_requer_justificativa = False
+            cancelamento_variacao = 'danger'
+        else:
+            cancelamento_titulo = 'Cancelar requisição'
+            cancelamento_descricao = (
+                'A requisição será encerrada e as reservas voltam ao saldo '
+                'disponível. O saldo físico permanece inalterado.'
+            )
+            cancelamento_trigger = 'Cancelar requisição'
+            cancelamento_confirmar = 'Confirmar cancelamento'
+            cancelamento_requer_justificativa = True
+            cancelamento_variacao = 'danger'
+    else:
+        cancelamento_titulo = ''
+        cancelamento_descricao = ''
+        cancelamento_trigger = ''
+        cancelamento_confirmar = ''
+        cancelamento_requer_justificativa = False
+        cancelamento_variacao = ''
     return {
         'requisicao': requisicao,
         'itens': itens,
@@ -129,6 +187,16 @@ def _detalhe_context(
             requisicao.estado == EstadoRequisicao.PRONTA_PARA_RETIRADA
             and pode_atender_retirada(request.user, requisicao)
         ),
+        'pode_cancelar': cancelavel,
+        'cancelamento_titulo': cancelamento_titulo,
+        'cancelamento_descricao': cancelamento_descricao,
+        'cancelamento_trigger': cancelamento_trigger,
+        'cancelamento_confirmar': cancelamento_confirmar,
+        'cancelamento_requer_justificativa': cancelamento_requer_justificativa,
+        'cancelamento_variacao': cancelamento_variacao,
+        'cancelamento_erro': cancelacao_erro,
+        'justificativa_cancelamento': justificativa_cancelamento,
+        'cancelamento_modal_aberto': cancelamento_modal_aberto or bool(cancelacao_erro),
         'recusa_erro': recusa_erro,
         'motivo_recusa': motivo_recusa,
     }
@@ -739,6 +807,68 @@ def retornar_rascunho_view(request, pk: int):
             request, default=reverse('requisicoes:detalhe', args=[requisicao.pk])
         ),
     )
+
+
+@login_required
+@require_http_methods(['POST'])
+def cancelar_requisicao_view(request, pk: int):
+    """Cancela ou descarta requisição antes da retirada final."""
+    requisicao = get_object_or_404(
+        requisicoes_visiveis_para(request.user.pk),
+        pk=pk,
+    )
+    estado_origem = requisicao.estado
+    numero_publico = requisicao.numero_publico
+    justificativa = request.POST.get('justificativa', '')
+
+    try:
+        if estado_origem == EstadoRequisicao.RASCUNHO and numero_publico is None:
+            descartar_rascunho(ator_id=request.user.pk, requisicao_id=pk)
+        else:
+            requisicao = cancelar_requisicao(
+                ator_id=request.user.pk,
+                requisicao_id=pk,
+                justificativa=justificativa,
+            )
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+    except DadosInvalidos as exc:
+        if exc.code == 'justificativa_cancelamento_obrigatoria':
+            return _render_detalhe(
+                request,
+                requisicao,
+                cancelacao_erro=str(exc),
+                justificativa_cancelamento=justificativa,
+                cancelamento_modal_aberto=True,
+            )
+        messages.error(request, str(exc))
+        return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
+    except EstadoInvalido as exc:
+        messages.warning(request, str(exc))
+        return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
+    except ConflitoDominio as exc:
+        messages.warning(request, str(exc))
+        return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
+
+    numero = numero_publico or f'#{pk}'
+    if estado_origem == EstadoRequisicao.RASCUNHO and numero_publico is None:
+        messages.success(request, f'Rascunho {numero} descartado com sucesso.')
+        return _htmx_redirect(
+            request,
+            _voltar_url(request, default=reverse('requisicoes:minhas')),
+        )
+
+    if estado_origem == EstadoRequisicao.RASCUNHO:
+        messages.success(request, f'Rascunho {numero} cancelado com sucesso.')
+    elif estado_origem == EstadoRequisicao.AGUARDANDO_AUTORIZACAO:
+        messages.success(request, f'Requisição {numero} cancelada.')
+    else:
+        messages.success(
+            request,
+            f'Requisição {numero} cancelada. Reservas liberadas.',
+        )
+
+    return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
 
 
 @login_required

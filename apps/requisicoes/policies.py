@@ -301,6 +301,38 @@ def exigir_pode_retornar_para_rascunho(ator: User, requisicao: Requisicao) -> No
         )
 
 
+def pode_cancelar_requisicao(ator: User, requisicao: Requisicao) -> bool:
+    """True se o ator pode cancelar a requisição no estado atual."""
+    if not ator.is_active:
+        return False
+    if ator.is_superuser:
+        return True
+
+    if requisicao.estado == EstadoRequisicao.RASCUNHO:
+        return ator.pk == requisicao.criador_id
+    if requisicao.estado == EstadoRequisicao.AGUARDANDO_AUTORIZACAO:
+        return (
+            ator.pk == requisicao.criador_id
+            or ator.pk == requisicao.beneficiario_id
+        )
+    if requisicao.estado in (
+        EstadoRequisicao.AUTORIZADA,
+        EstadoRequisicao.PRONTA_PARA_RETIRADA,
+    ):
+        if ator.pk == requisicao.criador_id or ator.pk == requisicao.beneficiario_id:
+            return True
+        return _eh_almoxarifado(ator)
+    return False
+
+
+def exigir_pode_cancelar_requisicao(ator: User, requisicao: Requisicao) -> None:
+    if not pode_cancelar_requisicao(ator, requisicao):
+        raise PermissaoNegada(
+            'Você não tem permissão para cancelar esta requisição.',
+            code='cancelar_requisicao_negada',
+        )
+
+
 def pode_recusar_requisicao(ator: User, requisicao: Requisicao) -> bool:
     """True se o ator chefia o setor do beneficiário."""
     if not ator.is_active:

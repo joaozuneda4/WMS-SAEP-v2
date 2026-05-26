@@ -12,6 +12,7 @@ urlpatterns = [
     path('nova/', views.nova_requisicao, name='nova_requisicao'),
     path('<int:pk>/', views.detalhe_requisicao_view, name='detalhe'),
     path('<int:pk>/autorizar/', views.autorizar_requisicao_view, name='autorizar'),
+    path('<int:pk>/cancelar/', views.cancelar_requisicao_view, name='cancelar'),
     path(
         '<int:pk>/separar-retirada/',
         views.separar_retirada_view,

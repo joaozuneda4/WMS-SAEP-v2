@@ -17,8 +17,36 @@
   </h1>
 {% endblock %}
 
+{% block extra_head %}
+  <style>
+    #cancelamento-dialog::backdrop {
+      background: rgba(15, 23, 42, 0.58);
+      backdrop-filter: blur(4px);
+    }
+
+    #cancelamento-dialog[open] {
+      animation: cancelamento-dialog-entrar 160ms ease-out;
+    }
+
+    @keyframes cancelamento-dialog-entrar {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-screen-xl mx-auto">
+<div
+  class="max-w-screen-xl mx-auto"
+  x-data="requisicaoDetalheCancelamento({{ cancelamento_modal_aberto|yesno:'true,false' }})"
+  x-init="init()"
+>
 
   {# --- 1. Cabeçalho --- #}
   <section class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
@@ -174,6 +202,18 @@
               </button>
             </form>
           {% endif %}
+          {% if pode_cancelar and requisicao.estado == 'rascunho' %}
+            <button
+              type="button"
+              class="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
+              @click="abrirCancelamento($event)"
+            >
+              <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M8.5 3.5a1.5 1.5 0 0 1 3 0V4H15a1 1 0 1 1 0 2h-1.1l-.5 8.1A2.5 2.5 0 0 1 10.9 16H9.1a2.5 2.5 0 0 1-2.49-1.9L6.1 6H5a1 1 0 1 1 0-2h3.5v-.5Zm-1.35 8.7.25 4.05a.5.5 0 0 0 .5.48h2.7a.5.5 0 0 0 .5-.48l.25-4.05H7.15Z"/>
+              </svg>
+              <span>{{ cancelamento_trigger }}</span>
+            </button>
+          {% endif %}
         </div>
       </div>
     </section>
@@ -302,6 +342,34 @@
     </section>
   {% endif %}
 
+  {% if pode_cancelar and requisicao.estado != 'rascunho' %}
+    <section
+      class="mb-6 rounded-xl border border-red-200 bg-red-50/70 p-4 shadow-sm sm:p-5"
+      aria-labelledby="cancelamento-titulo"
+    >
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <h2 id="cancelamento-titulo" class="text-sm font-semibold text-red-950">
+            {{ cancelamento_titulo }}
+          </h2>
+          <p class="mt-1 text-sm text-red-900/80">
+            {{ cancelamento_descricao }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
+          @click="abrirCancelamento($event)"
+        >
+          <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M8.5 3.5a1.5 1.5 0 0 1 3 0V4H15a1 1 0 1 1 0 2h-1.1l-.5 8.1A2.5 2.5 0 0 1 10.9 16H9.1a2.5 2.5 0 0 1-2.49-1.9L6.1 6H5a1 1 0 1 1 0-2h3.5v-.5Zm-1.35 8.7.25 4.05a.5.5 0 0 0 .5.48h2.7a.5.5 0 0 0 .5-.48l.25-4.05H7.15Z"/>
+          </svg>
+          <span>{{ cancelamento_trigger }}</span>
+        </button>
+      </div>
+    </section>
+  {% endif %}
+
   {% if pode_atender_retirada %}
     <section
       class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
@@ -361,6 +429,94 @@
     </section>
   {% endif %}
 
+  {% if pode_cancelar %}
+    <dialog
+      id="cancelamento-dialog"
+      x-ref="cancelDialog"
+      role="dialog"
+      aria-modal="true"
+      class="w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 text-left text-slate-900 shadow-2xl"
+      aria-labelledby="cancelamento-dialog-title"
+      aria-describedby="cancelamento-dialog-desc"
+      @close="onDialogClose()"
+    >
+      <form
+        method="post"
+        action="{% url 'requisicoes:cancelar' requisicao.pk %}"
+        data-prevent-double-submit
+        class="flex max-h-[calc(100dvh-2rem)] flex-col"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ voltar_url }}">
+
+        <div class="border-b border-slate-200 px-5 py-4 sm:px-6">
+          <div class="flex items-start gap-3">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
+              <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M8.5 3.5a1.5 1.5 0 0 1 3 0V4H15a1 1 0 1 1 0 2h-1.1l-.5 8.1A2.5 2.5 0 0 1 10.9 16H9.1a2.5 2.5 0 0 1-2.49-1.9L6.1 6H5a1 1 0 1 1 0-2h3.5v-.5Zm-1.35 8.7.25 4.05a.5.5 0 0 0 .5.48h2.7a.5.5 0 0 0 .5-.48l.25-4.05H7.15Z"/>
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <h2 id="cancelamento-dialog-title" class="text-lg font-semibold text-slate-900">
+                {{ cancelamento_titulo }}
+              </h2>
+              <p id="cancelamento-dialog-desc" class="mt-1 text-sm leading-6 text-slate-600">
+                {{ cancelamento_descricao }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="min-h-0 overflow-y-auto px-5 py-4 sm:px-6">
+          {% if cancelamento_requer_justificativa %}
+            <label for="justificativa-cancelamento" class="block text-sm font-medium text-slate-900">
+              Justificativa do cancelamento <span aria-hidden="true">*</span>
+            </label>
+            <p id="justificativa-cancelamento-hint" class="mt-1 text-xs text-slate-500">
+              Obrigatória para requisições autorizadas ou prontas para retirada.
+            </p>
+            <textarea
+              id="justificativa-cancelamento"
+              name="justificativa"
+              rows="4"
+              x-ref="justificativaCancelamento"
+              {% if cancelamento_erro %}autofocus{% endif %}
+              {% if cancelamento_erro %}aria-invalid="true" aria-describedby="justificativa-cancelamento-hint justificativa-cancelamento-erro"{% else %}aria-describedby="justificativa-cancelamento-hint"{% endif %}
+              class="mt-3 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
+            >{{ justificativa_cancelamento }}</textarea>
+            {% if cancelamento_erro %}
+              <p id="justificativa-cancelamento-erro" class="mt-2 text-sm font-medium text-red-700" role="alert">
+                {{ cancelamento_erro }}
+              </p>
+            {% endif %}
+          {% else %}
+            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              Confirme para continuar. Use <span class="font-semibold">Voltar</span> se quiser manter a requisição aberta.
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+          <button
+            type="button"
+            class="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1"
+            @click="fecharCancelamento()"
+          >
+            Voltar
+          </button>
+          <button
+            type="submit"
+            x-ref="botaoConfirmarCancelamento"
+            class="inline-flex min-h-11 items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
+            data-submit-loading-label="Processando…"
+          >
+            {{ cancelamento_confirmar }}
+          </button>
+        </div>
+      </form>
+    </dialog>
+  {% endif %}
+
   {# --- 3. Timeline (suporte/auditoria, peso secundário) --- #}
   <section class="mb-6 rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-6">
     <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Histórico</h2>
@@ -372,6 +528,45 @@
 
 {% block extra_scripts %}
 <script>
+  function requisicaoDetalheCancelamento(abrirAoCarregar = false) {
+    return {
+      lastTrigger: null,
+      init() {
+        if (abrirAoCarregar) {
+          this.$nextTick(() => this.abrirCancelamento());
+        }
+      },
+      abrirCancelamento(event) {
+        if (event?.currentTarget) {
+          this.lastTrigger = event.currentTarget;
+        }
+        const dialog = this.$refs.cancelDialog;
+        if (!dialog.open) {
+          dialog.showModal();
+        }
+        this.$nextTick(() => {
+          const foco =
+            this.$refs.justificativaCancelamento ||
+            this.$refs.botaoConfirmarCancelamento;
+          if (foco) {
+            foco.focus();
+          }
+        });
+      },
+      fecharCancelamento() {
+        const dialog = this.$refs.cancelDialog;
+        if (dialog.open) {
+          dialog.close();
+        }
+      },
+      onDialogClose() {
+        if (this.lastTrigger && typeof this.lastTrigger.focus === 'function') {
+          this.lastTrigger.focus();
+        }
+      },
+    };
+  }
+
   // Anti double-submit: desabilita só após o tick para não descartar o
   // name/value do submitter clicado.
   document.querySelectorAll('form[data-prevent-double-submit]').forEach((form) => {

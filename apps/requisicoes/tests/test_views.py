@@ -1254,6 +1254,125 @@ def test_detalhe_exibe_retorno_para_criador_e_nao_exibe_recusa(
 
 
 @pytest.mark.django_db
+def test_detalhe_exibe_descartar_rascunho_para_criador_em_rascunho(
+    client, solicitante, rascunho_solicitante
+):
+    _login(client, solicitante)
+    response = client.get(
+        reverse('requisicoes:detalhe', kwargs={'pk': rascunho_solicitante.pk})
+    )
+    html = response.content.decode('utf-8')
+
+    assert response.status_code == 200
+    assert response.context['pode_cancelar'] is True
+    assert response.context['cancelamento_titulo'] == 'Descartar rascunho'
+    assert response.context['cancelamento_requer_justificativa'] is False
+    assert 'role="dialog"' in html
+    assert 'Descartar rascunho' in html
+
+
+@pytest.mark.django_db
+def test_detalhe_exibe_cancelar_com_justificativa_para_autorizada(
+    client, solicitante, req_autorizada_view
+):
+    _login(client, solicitante)
+    response = client.get(
+        reverse('requisicoes:detalhe', kwargs={'pk': req_autorizada_view.pk})
+    )
+    html = response.content.decode('utf-8')
+
+    assert response.status_code == 200
+    assert response.context['pode_cancelar'] is True
+    assert response.context['cancelamento_titulo'] == 'Cancelar requisição'
+    assert response.context['cancelamento_requer_justificativa'] is True
+    assert 'Justificativa do cancelamento' in html
+    assert 'role="dialog"' in html
+
+
+@pytest.mark.django_db
+def test_descartar_rascunho_post_redireciona_para_lista(
+    client, solicitante, rascunho_solicitante
+):
+    _login(client, solicitante)
+    response = client.post(
+        reverse('requisicoes:cancelar', kwargs={'pk': rascunho_solicitante.pk})
+    )
+
+    assert response.status_code == 302
+    assert response.url == reverse('requisicoes:minhas')
+    assert not Requisicao.objects.filter(pk=rascunho_solicitante.pk).exists()
+
+
+@pytest.mark.django_db
+def test_cancelar_requisicao_post_autorizada_sem_justificativa_renderiza_modal_com_erro(
+    client, solicitante, req_autorizada_view
+):
+    _login(client, solicitante)
+    response = client.post(
+        reverse('requisicoes:cancelar', kwargs={'pk': req_autorizada_view.pk}),
+        {'justificativa': ' '},
+    )
+
+    assert response.status_code == 200
+    assert response.context['cancelamento_modal_aberto'] is True
+    assert response.context['cancelamento_erro'] == 'Informe a justificativa do cancelamento.'
+    assert response.context['cancelamento_requer_justificativa'] is True
+    req_autorizada_view.refresh_from_db()
+    assert req_autorizada_view.estado == EstadoRequisicao.AUTORIZADA
+    html = response.content.decode('utf-8')
+    assert 'justificativa-cancelamento-erro' in html
+    assert 'aria-invalid="true"' in html
+
+
+@pytest.mark.django_db
+def test_cancelar_requisicao_post_autorizada_redireciona_e_muda_estado(
+    client, solicitante, chefe_obras, material_disponivel
+):
+    from apps.estoque.models import SaldoEstoque
+    from apps.requisicoes.services import (
+        autorizar_requisicao,
+        criar_requisicao,
+        enviar_para_autorizacao,
+    )
+
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('2'),
+            }
+        ],
+    )
+    req = enviar_para_autorizacao(
+        ator_id=solicitante.pk,
+        requisicao_id=req.pk,
+    )
+    req = autorizar_requisicao(
+        ator_id=chefe_obras.pk,
+        requisicao_id=req.pk,
+    )
+    saldo_antes = SaldoEstoque.objects.get(material=material_disponivel)
+    reservado_antes = saldo_antes.saldo_reservado
+    fisico_antes = saldo_antes.saldo_fisico
+
+    _login(client, solicitante)
+    response = client.post(
+        reverse('requisicoes:cancelar', kwargs={'pk': req.pk}),
+        {'justificativa': 'Revisão interna do pedido.'},
+    )
+
+    assert response.status_code == 302
+    assert response.url == reverse('requisicoes:detalhe', kwargs={'pk': req.pk})
+    req.refresh_from_db()
+    saldo_depois = SaldoEstoque.objects.get(material=material_disponivel)
+    assert req.estado == EstadoRequisicao.CANCELADA
+    assert saldo_depois.saldo_reservado == reservado_antes - Decimal('2')
+    assert saldo_depois.saldo_fisico == fisico_antes
+
+
+@pytest.mark.django_db
 def test_recusar_requisicao_htmx_retorna_hx_redirect(
     client, chefe_obras, req_enviada_solicitante
 ):

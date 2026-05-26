@@ -22,6 +22,7 @@ from apps.core.exceptions import DadosInvalidos, EstadoInvalido
 from apps.estoque.models import Material
 from apps.estoque.services import (
     ItemAtendimentoSaldo,
+    liberar_reservas_para_cancelamento,
     consumir_e_liberar_reservas_para_atendimento,
     reservar_saldos_para_autorizacao,
 )
@@ -35,6 +36,7 @@ from apps.requisicoes.models import (
 )
 from apps.requisicoes.policies import (
     exigir_pode_autorizar_requisicao,
+    exigir_pode_cancelar_requisicao,
     exigir_pode_criar_para_beneficiario,
     exigir_pode_editar_rascunho,
     exigir_pode_enviar_rascunho,
@@ -290,8 +292,167 @@ def enviar_para_autorizacao(
 
 
 # ---------------------------------------------------------------------------
-# TR-006 / TR-011: retorno para rascunho e recusa
+# TR-003 / TR-004: descarte e cancelamento de rascunho
 # ---------------------------------------------------------------------------
+
+
+@transaction.atomic
+def descartar_rascunho(*, ator_id: int, requisicao_id: int) -> None:
+    """Descarta rascunho nunca enviado sem registrar timeline (TR-003)."""
+    try:
+        ator = User.objects.get(pk=ator_id)
+    except User.DoesNotExist:
+        raise DadosInvalidos(
+            'Ator não encontrado.', code='ator_nao_encontrado'
+        ) from None
+    try:
+        requisicao = Requisicao.objects.select_for_update().get(pk=requisicao_id)
+    except Requisicao.DoesNotExist:
+        raise DadosInvalidos(
+            'Requisição não encontrada.', code='requisicao_nao_encontrada'
+        ) from None
+
+    if requisicao.estado != EstadoRequisicao.RASCUNHO:
+        raise EstadoInvalido(
+            'Esta requisição não está em rascunho.',
+            code='estado_origem_invalido',
+        )
+    if requisicao.numero_publico is not None:
+        raise EstadoInvalido(
+            'Este rascunho já foi enviado e não pode ser descartado.',
+            code='estado_origem_invalido',
+        )
+
+    exigir_pode_cancelar_requisicao(ator, requisicao)
+    requisicao.delete()
+
+
+@transaction.atomic
+def cancelar_requisicao(
+    *,
+    ator_id: int,
+    requisicao_id: int,
+    justificativa: str = '',
+) -> Requisicao:
+    """Cancela requisição antes da retirada final (TR-004/TR-012/TR-013/TR-014)."""
+    try:
+        ator = User.objects.get(pk=ator_id)
+    except User.DoesNotExist:
+        raise DadosInvalidos(
+            'Ator não encontrado.', code='ator_nao_encontrado'
+        ) from None
+    try:
+        requisicao = Requisicao.objects.select_for_update().get(pk=requisicao_id)
+    except Requisicao.DoesNotExist:
+        raise DadosInvalidos(
+            'Requisição não encontrada.', code='requisicao_nao_encontrada'
+        ) from None
+
+    if requisicao.estado not in (
+        EstadoRequisicao.RASCUNHO,
+        EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+        EstadoRequisicao.AUTORIZADA,
+        EstadoRequisicao.PRONTA_PARA_RETIRADA,
+    ):
+        raise EstadoInvalido(
+            'Esta requisição não pode ser cancelada.',
+            code='estado_origem_invalido',
+        )
+
+    exigir_pode_cancelar_requisicao(ator, requisicao)
+
+    justificativa_limpa = (justificativa or '').strip()
+
+    if requisicao.estado == EstadoRequisicao.RASCUNHO:
+        if requisicao.numero_publico is None:
+            raise EstadoInvalido(
+                'Este rascunho ainda não foi enviado e deve ser descartado.',
+                code='estado_origem_invalido',
+            )
+        verificar_transicao_valida(requisicao.estado, EstadoRequisicao.CANCELADA)
+        requisicao.estado = EstadoRequisicao.CANCELADA
+        requisicao.save(update_fields=['estado', 'atualizado_em'])
+
+        TimelineRequisicao.objects.create(
+            requisicao=requisicao,
+            evento=EventoTimeline.CANCELAMENTO,
+            ator=ator,
+            estado_resultante=EstadoRequisicao.CANCELADA,
+            justificativa='',
+        )
+
+        return requisicao
+
+    if requisicao.estado == EstadoRequisicao.AGUARDANDO_AUTORIZACAO:
+        verificar_transicao_valida(requisicao.estado, EstadoRequisicao.CANCELADA)
+        requisicao.estado = EstadoRequisicao.CANCELADA
+        requisicao.save(update_fields=['estado', 'atualizado_em'])
+
+        TimelineRequisicao.objects.create(
+            requisicao=requisicao,
+            evento=EventoTimeline.CANCELAMENTO,
+            ator=ator,
+            estado_resultante=EstadoRequisicao.CANCELADA,
+            justificativa=justificativa_limpa,
+        )
+
+        return requisicao
+
+    if not justificativa_limpa:
+        raise DadosInvalidos(
+            'Informe a justificativa do cancelamento.',
+            code='justificativa_cancelamento_obrigatoria',
+        )
+
+    if requisicao.estado not in (
+        EstadoRequisicao.AUTORIZADA,
+        EstadoRequisicao.PRONTA_PARA_RETIRADA,
+    ):
+        raise EstadoInvalido(
+            'Esta requisição não pode ser cancelada.',
+            code='estado_origem_invalido',
+        )
+    verificar_transicao_valida(requisicao.estado, EstadoRequisicao.CANCELADA)
+
+    itens_reservados = list(
+        requisicao.itens.select_related('material')
+        .filter(quantidade_autorizada__gt=0)
+        .order_by('id')
+    )
+    if not itens_reservados:
+        raise DadosInvalidos(
+            'A requisição precisa ter itens autorizados para ser cancelada.',
+            code='sem_itens_autorizados',
+        )
+
+    liberar_reservas_para_cancelamento(
+        itens=[
+            {
+                'material_id': item.material_id,
+                'quantidade_reservada': item.quantidade_autorizada,
+            }
+            for item in itens_reservados
+        ]
+    )
+
+    requisicao.estado = EstadoRequisicao.CANCELADA
+    requisicao.save(update_fields=['estado', 'atualizado_em'])
+
+    TimelineRequisicao.objects.create(
+        requisicao=requisicao,
+        evento=EventoTimeline.CANCELAMENTO,
+        ator=ator,
+        estado_resultante=EstadoRequisicao.CANCELADA,
+        justificativa=justificativa_limpa,
+    )
+    TimelineRequisicao.objects.create(
+        requisicao=requisicao,
+        evento=EventoTimeline.LIBERACAO_RESERVA,
+        ator=ator,
+        estado_resultante=EstadoRequisicao.CANCELADA,
+    )
+
+    return requisicao
 
 
 @transaction.atomic
