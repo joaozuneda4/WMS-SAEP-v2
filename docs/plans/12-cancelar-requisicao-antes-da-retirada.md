@@ -7,7 +7,7 @@
   - rascunho nunca enviado: criador pode descartar;
   - rascunho numerado: criador pode cancelar logicamente;
   - `aguardando_autorizacao`: criador ou beneficiário podem cancelar sem justificativa obrigatória;
-  - `autorizada` e `pronta_para_retirada`: criador, beneficiário, Almoxarifado e superusuário podem cancelar com justificativa obrigatória.
+  - `autorizada` e `pronta_para_retirada`: criador, beneficiário, almoxarifado (aux/chefe) e superusuário podem cancelar com justificativa obrigatória.
 - Transições declarativas em `apps/requisicoes/transitions.py` para os cancelamentos lógicos que preservam requisição:
   - `rascunho -> cancelada` (rascunho numerado);
   - `aguardando_autorizacao -> cancelada`;
@@ -86,7 +86,7 @@ Regras aplicadas:
 - Criador pode descartar rascunho nunca enviado.
 - Criador pode cancelar rascunho numerado.
 - Criador ou beneficiário podem cancelar `aguardando_autorizacao`.
-- Criador, beneficiário, Almoxarifado e superuser podem cancelar `autorizada` ou `pronta_para_retirada`.
+- Criador, beneficiário, almoxarifado (aux/chefe) e superusuário podem cancelar `autorizada` ou `pronta_para_retirada`.
 - Usuário fora do papel ou estado final recebe `False`.
 
 ### Services

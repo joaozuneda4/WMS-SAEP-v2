@@ -1328,6 +1328,21 @@ def test_cancelar_requisicao_post_autorizada_sem_justificativa_renderiza_modal_c
 
 
 @pytest.mark.django_db
+def test_cancelar_requisicao_post_autorizada_403_para_nao_autorizado(
+    client, chefe_obras, req_autorizada_view
+):
+    _login(client, chefe_obras)
+    response = client.post(
+        reverse('requisicoes:cancelar', kwargs={'pk': req_autorizada_view.pk})
+    )
+
+    assert response.status_code == 403
+    req_autorizada_view.refresh_from_db()
+    assert req_autorizada_view.estado == EstadoRequisicao.AUTORIZADA
+    assert req_autorizada_view.numero_publico == 'REQ-2026-9001'
+
+
+@pytest.mark.django_db
 def test_cancelar_requisicao_post_autorizada_redireciona_e_muda_estado(
     client, solicitante, chefe_obras, material_disponivel
 ):

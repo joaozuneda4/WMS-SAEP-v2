@@ -329,6 +329,35 @@ def descartar_rascunho(*, ator_id: int, requisicao_id: int) -> None:
 
 
 @transaction.atomic
+def cancelar_ou_descartar_requisicao(
+    *,
+    ator_id: int,
+    requisicao_id: int,
+    justificativa: str | None = None,
+) -> Requisicao | None:
+    """Cancela ou descarta requisição antes da retirada final."""
+    try:
+        requisicao = Requisicao.objects.select_for_update().get(pk=requisicao_id)
+    except Requisicao.DoesNotExist:
+        raise DadosInvalidos(
+            'Requisição não encontrada.', code='requisicao_nao_encontrada'
+        ) from None
+
+    if (
+        requisicao.estado == EstadoRequisicao.RASCUNHO
+        and requisicao.numero_publico is None
+    ):
+        descartar_rascunho(ator_id=ator_id, requisicao_id=requisicao_id)
+        return None
+
+    return cancelar_requisicao(
+        ator_id=ator_id,
+        requisicao_id=requisicao_id,
+        justificativa=justificativa or '',
+    )
+
+
+@transaction.atomic
 def cancelar_requisicao(
     *,
     ator_id: int,

@@ -57,8 +57,7 @@ from apps.requisicoes.selectors import (
 from apps.requisicoes.services import (
     autorizar_requisicao,
     criar_requisicao,
-    cancelar_requisicao,
-    descartar_rascunho,
+    cancelar_ou_descartar_requisicao,
     editar_rascunho,
     enviar_para_autorizacao,
     recusar_requisicao,
@@ -822,14 +821,11 @@ def cancelar_requisicao_view(request, pk: int):
     justificativa = request.POST.get('justificativa', '')
 
     try:
-        if estado_origem == EstadoRequisicao.RASCUNHO and numero_publico is None:
-            descartar_rascunho(ator_id=request.user.pk, requisicao_id=pk)
-        else:
-            requisicao = cancelar_requisicao(
-                ator_id=request.user.pk,
-                requisicao_id=pk,
-                justificativa=justificativa,
-            )
+        resultado_cancelamento = cancelar_ou_descartar_requisicao(
+            ator_id=request.user.pk,
+            requisicao_id=pk,
+            justificativa=justificativa,
+        )
     except PermissaoNegada as exc:
         raise PermissionDenied(str(exc))
     except DadosInvalidos as exc:
@@ -851,7 +847,7 @@ def cancelar_requisicao_view(request, pk: int):
         return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
 
     numero = numero_publico or f'#{pk}'
-    if estado_origem == EstadoRequisicao.RASCUNHO and numero_publico is None:
+    if resultado_cancelamento is None:
         messages.success(request, f'Rascunho {numero} descartado com sucesso.')
         return _htmx_redirect(
             request,
