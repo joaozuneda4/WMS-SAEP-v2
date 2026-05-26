@@ -1313,9 +1313,7 @@ def test_registrar_atendimento_aceita_chefe_almox(
 
 
 @pytest.mark.django_db
-def test_registrar_atendimento_aceita_superuser(
-    requisicao_pronta_retirada, superuser
-):
+def test_registrar_atendimento_aceita_superuser(requisicao_pronta_retirada, superuser):
     req = registrar_atendimento(
         ator_id=superuser.pk,
         requisicao_id=requisicao_pronta_retirada.pk,

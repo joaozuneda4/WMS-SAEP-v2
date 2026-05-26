@@ -17,6 +17,11 @@ urlpatterns = [
         views.separar_retirada_view,
         name='separar_retirada',
     ),
+    path(
+        '<int:pk>/atender/',
+        views.registrar_atendimento_view,
+        name='registrar_atendimento',
+    ),
     path('<int:pk>/editar/', views.editar_rascunho_view, name='editar_rascunho'),
     path('<int:pk>/enviar/', views.enviar_rascunho_view, name='enviar_rascunho'),
     path(

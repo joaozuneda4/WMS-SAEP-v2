@@ -18,9 +18,10 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.core.exceptions import ConflitoDominio, DadosInvalidos, EstadoInvalido
+from apps.core.exceptions import DadosInvalidos, EstadoInvalido
 from apps.estoque.models import Material
 from apps.estoque.services import (
+    ItemAtendimentoSaldo,
     consumir_e_liberar_reservas_para_atendimento,
     reservar_saldos_para_autorizacao,
 )
@@ -505,7 +506,6 @@ def separar_para_retirada(
     return requisicao
 
 
-
 class ItemAtendimentoInput(TypedDict):
     item_id: int
     quantidade_entregue: Decimal
@@ -603,6 +603,7 @@ def registrar_atendimento(
         entrada = payload_por_item[item.id]
         entregue = entrada['quantidade_entregue']
         autorizada = item.quantidade_autorizada
+        assert autorizada is not None  # filtrado por quantidade_autorizada__gt=0
         if entregue < 0 or entregue > autorizada:
             raise DadosInvalidos(
                 'Quantidade entregue inválida.',
@@ -624,16 +625,20 @@ def registrar_atendimento(
             code='atendimento_sem_entrega',
         )
 
-    consumir_e_liberar_reservas_para_atendimento(
-        itens=[
+    payload_estoque: list[ItemAtendimentoSaldo] = []
+    for item in itens_autorizados:
+        autorizada = item.quantidade_autorizada
+        assert autorizada is not None  # filtrado por quantidade_autorizada__gt=0
+        payload_estoque.append(
             {
                 'material_id': item.material_id,
-                'quantidade_autorizada': item.quantidade_autorizada,
-                'quantidade_entregue': payload_por_item[item.id]['quantidade_entregue'],
+                'quantidade_autorizada': autorizada,
+                'quantidade_entregue': payload_por_item[item.id][
+                    'quantidade_entregue'
+                ],
             }
-            for item in itens_autorizados
-        ]
-    )
+        )
+    consumir_e_liberar_reservas_para_atendimento(itens=payload_estoque)
 
     for item in itens_autorizados:
         entrada = payload_por_item[item.id]

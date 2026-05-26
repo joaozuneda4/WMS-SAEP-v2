@@ -1,0 +1,239 @@
+{% extends "requisicoes/base.html" %}
+{% load static %}
+
+{% block title %}
+  Registrar atendimento — {% if requisicao.numero_publico %}{{ requisicao.numero_publico }}{% else %}Rascunho #{{ requisicao.pk }}{% endif %}
+{% endblock %}
+
+{% block topbar_menu %}{% endblock %}
+
+{% block topbar_leading %}
+  <a href="{{ voltar_url }}" class="app-bar__nav-icon" aria-label="Voltar">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+    </svg>
+  </a>
+  <h1 class="app-bar__title">Registrar atendimento</h1>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-screen-xl mx-auto">
+
+  <section class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <div class="flex items-start justify-between gap-3 flex-wrap">
+      <div class="min-w-0">
+        <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Requisição</p>
+        <p class="mt-0.5 text-lg font-semibold text-slate-900">
+          {% if requisicao.numero_publico %}{{ requisicao.numero_publico }}{% else %}#{{ requisicao.pk }}{% endif %}
+        </p>
+      </div>
+      <div class="shrink-0">
+        {% include "requisicoes/partials/_estado_badge.html" with requisicao=requisicao %}
+      </div>
+    </div>
+
+    <dl class="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2 sm:gap-y-4">
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Beneficiário</dt>
+        <dd class="mt-0.5 text-slate-900">
+          {{ requisicao.beneficiario.nome }}
+          <span class="text-slate-400">({{ requisicao.beneficiario.matricula }})</span>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Setor</dt>
+        <dd class="mt-0.5 text-slate-900">{{ requisicao.setor_beneficiario.nome }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  <form
+    method="post"
+    action="{% url 'requisicoes:registrar_atendimento' requisicao.pk %}"
+    novalidate
+    data-prevent-double-submit
+    data-confirm-message="Confirma o registro da retirada com as quantidades informadas?"
+    class="space-y-6"
+  >
+    {% csrf_token %}
+
+    <section
+      class="rounded-xl border border-slate-200 bg-white p-4 shadow-md ring-1 ring-slate-100 sm:p-6"
+      aria-labelledby="itens-titulo"
+    >
+      <div class="mb-4 flex items-baseline justify-between gap-3">
+        <h2 id="itens-titulo" class="text-xl font-semibold text-slate-900">Itens autorizados</h2>
+        <span class="text-xs font-medium text-slate-500">
+          {{ itens|length }} {{ itens|length|pluralize:"item,itens" }}
+        </span>
+      </div>
+      <p class="mb-4 text-sm text-slate-600">
+        Informe a quantidade efetivamente entregue para cada item. Quantidade
+        menor que a autorizada exige justificativa.
+      </p>
+
+      {{ formset.management_form }}
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <caption class="sr-only">Itens autorizados com quantidade autorizada e campos para entrega e justificativa.</caption>
+          <thead class="bg-slate-50">
+            <tr>
+              <th scope="col" class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Material</th>
+              <th scope="col" class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Autorizada</th>
+              <th scope="col" class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Entregue</th>
+              <th scope="col" class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Justificativa</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for item, form in linhas %}
+                <tr
+                  class="align-top"
+                  x-data="{
+                    autorizada: {{ item.quantidade_autorizada|stringformat:'s' }},
+                    entregue: '{{ form.quantidade_entregue.value|default_if_none:'' }}',
+                    get parcial() {
+                      const a = parseFloat(this.autorizada);
+                      const e = parseFloat(this.entregue);
+                      if (Number.isNaN(a) || Number.isNaN(e)) return false;
+                      return e < a;
+                    }
+                  }"
+                >
+                  <td class="px-3 py-3 text-slate-900">
+                    <div class="font-medium">{{ item.material.nome }}</div>
+                    <div class="text-xs text-slate-500">{{ item.material.codigo }}</div>
+                    {{ form.item_id }}
+                  </td>
+                  <td class="px-3 py-3 text-right text-slate-700 tabular-nums">{{ item.quantidade_autorizada }}</td>
+                  <td class="px-3 py-3 text-right">
+                    <label class="sr-only" for="{{ form.quantidade_entregue.id_for_label }}">
+                      Quantidade entregue para {{ item.material.nome }}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      min="0"
+                      max="{{ item.quantidade_autorizada }}"
+                      inputmode="decimal"
+                      name="{{ form.quantidade_entregue.html_name }}"
+                      id="{{ form.quantidade_entregue.id_for_label }}"
+                      value="{{ form.quantidade_entregue.value|default_if_none:'' }}"
+                      x-model="entregue"
+                      class="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      aria-describedby="hint-{{ form.quantidade_entregue.id_for_label }}"
+                      required
+                    />
+                    {% if form.quantidade_entregue.errors %}
+                      <p class="mt-1 text-xs text-red-600" role="alert">
+                        {{ form.quantidade_entregue.errors.0 }}
+                      </p>
+                    {% endif %}
+                  </td>
+                  <td class="px-3 py-3">
+                    <label class="sr-only" for="{{ form.justificativa.id_for_label }}">
+                      Justificativa para entrega menor que autorizada de {{ item.material.nome }}
+                    </label>
+                    <input
+                      type="text"
+                      name="{{ form.justificativa.html_name }}"
+                      id="{{ form.justificativa.id_for_label }}"
+                      value="{{ form.justificativa.value|default_if_none:'' }}"
+                      placeholder="Obrigatória quando entregue menor que autorizada"
+                      x-bind:required="parcial"
+                      x-bind:aria-required="parcial"
+                      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                    <p
+                      id="hint-{{ form.quantidade_entregue.id_for_label }}"
+                      class="mt-1 text-xs text-amber-700"
+                      x-show="parcial"
+                      x-cloak
+                    >
+                      Entrega menor que autorizada — justificativa obrigatória.
+                    </p>
+                    {% if form.justificativa.errors %}
+                      <p class="mt-1 text-xs text-red-600" role="alert">
+                        {{ form.justificativa.errors.0 }}
+                      </p>
+                    {% endif %}
+                  </td>
+                </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6" aria-labelledby="cabecalho-titulo">
+      <h2 id="cabecalho-titulo" class="mb-4 text-sm font-semibold text-slate-900">Dados da retirada</h2>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label for="{{ cabecalho.retirante_nome.id_for_label }}" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+            Retirante
+          </label>
+          {{ cabecalho.retirante_nome }}
+          {% if cabecalho.retirante_nome.errors %}
+            <p class="mt-1 text-xs text-red-600" role="alert">{{ cabecalho.retirante_nome.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div class="sm:col-span-2">
+          <label for="{{ cabecalho.observacao.id_for_label }}" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+            Observação
+          </label>
+          {{ cabecalho.observacao }}
+        </div>
+      </div>
+    </section>
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+      <a
+        href="{% url 'requisicoes:detalhe' requisicao.pk %}"
+        class="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+      >
+        Cancelar
+      </a>
+      <button
+        type="submit"
+        class="inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
+        data-submit-loading-label="Registrando…"
+      >
+        <span data-submit-text>Confirmar retirada</span>
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.querySelectorAll('form[data-prevent-double-submit]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      const confirmMessage = form.dataset.confirmMessage;
+      if (confirmMessage && form.dataset.confirmed !== '1') {
+        if (!window.confirm(confirmMessage)) {
+          event.preventDefault();
+          return;
+        }
+        form.dataset.confirmed = '1';
+      }
+      const targets = Array.from(form.querySelectorAll('button[type="submit"]'));
+      targets.forEach((btn) => {
+        if (btn.dataset.submitting === '1') return;
+        btn.dataset.submitting = '1';
+        btn.setAttribute('aria-busy', 'true');
+        const loading = btn.dataset.submitLoadingLabel;
+        if (loading) {
+          btn.querySelectorAll('[data-submit-text]').forEach((node) => {
+            node.textContent = loading;
+          });
+        }
+      });
+      setTimeout(() => {
+        targets.forEach((btn) => { btn.disabled = true; });
+      }, 0);
+    });
+  });
+</script>
+{% endblock %}

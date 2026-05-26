@@ -105,7 +105,6 @@ def reservar_saldos_para_autorizacao(*, itens: list[ItemReservaEstoque]) -> None
         saldo.save(update_fields=['saldo_reservado'])
 
 
-
 class ItemAtendimentoSaldo(TypedDict):
     material_id: int
     quantidade_autorizada: Decimal

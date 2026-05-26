@@ -1532,3 +1532,256 @@ def test_topbar_nao_exibe_link_atendimento_para_solicitante(client, solicitante)
     assert response.status_code == 200
     html = response.content.decode('utf-8')
     assert 'Fila de Atendimento' not in html
+
+
+# ---------------------------------------------------------------------------
+# registrar_atendimento_view (TR-016/017/018)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def req_pronta_view_com_itens(db, solicitante, setor_obras, material_disponivel):
+    from apps.estoque.models import SaldoEstoque
+
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.PRONTA_PARA_RETIRADA,
+        numero_publico='REQ-2026-9100',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    ItemRequisicao.objects.create(
+        requisicao=req,
+        material=material_disponivel,
+        quantidade_solicitada=Decimal('2'),
+        quantidade_autorizada=Decimal('2'),
+    )
+    saldo = SaldoEstoque.objects.get(material=material_disponivel)
+    saldo.saldo_reservado = (saldo.saldo_reservado or 0) + Decimal('2')
+    saldo.save(update_fields=['saldo_reservado'])
+    return req
+
+
+def _post_atendimento(
+    client, req, *, entregue, justificativa='', retirante='Carlos', observacao=''
+):
+    item = req.itens.first()
+    return client.post(
+        reverse('requisicoes:registrar_atendimento', kwargs={'pk': req.pk}),
+        data={
+            'itens-TOTAL_FORMS': '1',
+            'itens-INITIAL_FORMS': '1',
+            'itens-MIN_NUM_FORMS': '0',
+            'itens-MAX_NUM_FORMS': '1000',
+            'itens-0-item_id': str(item.id),
+            'itens-0-quantidade_entregue': str(entregue),
+            'itens-0-justificativa': justificativa,
+            'retirante_nome': retirante,
+            'observacao': observacao,
+        },
+    )
+
+
+@pytest.mark.django_db
+def test_atender_get_sem_login_redireciona(client, req_pronta_view_com_itens):
+    response = client.get(
+        reverse(
+            'requisicoes:registrar_atendimento',
+            kwargs={'pk': req_pronta_view_com_itens.pk},
+        )
+    )
+    assert response.status_code == 302
+
+
+@pytest.mark.django_db
+def test_atender_get_aux_almox_renderiza_form(
+    client, aux_almoxarifado, req_pronta_view_com_itens
+):
+    _login(client, aux_almoxarifado)
+    response = client.get(
+        reverse(
+            'requisicoes:registrar_atendimento',
+            kwargs={'pk': req_pronta_view_com_itens.pk},
+        )
+    )
+    assert response.status_code == 200
+    html = response.content.decode('utf-8')
+    assert 'Registrar atendimento' in html
+    assert 'Retirante' in html
+
+
+@pytest.mark.django_db
+def test_atender_get_solicitante_403(client, solicitante, req_pronta_view_com_itens):
+    _login(client, solicitante)
+    response = client.get(
+        reverse(
+            'requisicoes:registrar_atendimento',
+            kwargs={'pk': req_pronta_view_com_itens.pk},
+        )
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_atender_post_total_redireciona_e_muda_estado(
+    client, aux_almoxarifado, req_pronta_view_com_itens
+):
+    _login(client, aux_almoxarifado)
+    response = _post_atendimento(
+        client, req_pronta_view_com_itens, entregue=Decimal('2')
+    )
+    assert response.status_code == 302
+    assert response.url == reverse(
+        'requisicoes:detalhe', kwargs={'pk': req_pronta_view_com_itens.pk}
+    )
+    req_pronta_view_com_itens.refresh_from_db()
+    assert req_pronta_view_com_itens.estado == EstadoRequisicao.ATENDIDA
+
+
+@pytest.mark.django_db
+def test_atender_post_total_mensagem_sucesso(
+    client, aux_almoxarifado, req_pronta_view_com_itens
+):
+    _login(client, aux_almoxarifado)
+    response = _post_atendimento(
+        client, req_pronta_view_com_itens, entregue=Decimal('2')
+    )
+    response = client.get(response.url)
+    mensagens = [str(m) for m in response.context['messages']]
+    assert any(
+        'REQ-2026-9100' in m and 'registrada com sucesso' in m for m in mensagens
+    )
+
+
+@pytest.mark.django_db
+def test_atender_post_parcial_com_justificativa_ok(
+    client, aux_almoxarifado, req_pronta_view_com_itens
+):
+    _login(client, aux_almoxarifado)
+    response = _post_atendimento(
+        client,
+        req_pronta_view_com_itens,
+        entregue=Decimal('1'),
+        justificativa='Falta de material no carrinho.',
+    )
+    assert response.status_code == 302
+    req_pronta_view_com_itens.refresh_from_db()
+    assert req_pronta_view_com_itens.estado == EstadoRequisicao.ATENDIDA
+
+
+@pytest.mark.django_db
+def test_atender_post_sem_entrega_avisa(
+    client, aux_almoxarifado, req_pronta_view_com_itens
+):
+    _login(client, aux_almoxarifado)
+    response = _post_atendimento(
+        client,
+        req_pronta_view_com_itens,
+        entregue=Decimal('0'),
+        justificativa='Não compareceu',
+    )
+    assert response.status_code == 302
+    req_pronta_view_com_itens.refresh_from_db()
+    assert req_pronta_view_com_itens.estado == EstadoRequisicao.PRONTA_PARA_RETIRADA
+    response = client.get(response.url)
+    mensagens = [str(m) for m in response.context['messages']]
+    assert any('entregue maior que zero' in m for m in mensagens)
+
+
+@pytest.mark.django_db
+def test_atender_post_estado_origem_invalido_avisa(
+    client, aux_almoxarifado, req_autorizada_view
+):
+    _login(client, aux_almoxarifado)
+    response = client.post(
+        reverse(
+            'requisicoes:registrar_atendimento',
+            kwargs={'pk': req_autorizada_view.pk},
+        ),
+        data={
+            'itens-TOTAL_FORMS': '0',
+            'itens-INITIAL_FORMS': '0',
+            'itens-MIN_NUM_FORMS': '0',
+            'itens-MAX_NUM_FORMS': '1000',
+            'retirante_nome': 'X',
+        },
+    )
+    assert response.status_code == 302
+    assert response.url == reverse(
+        'requisicoes:detalhe', kwargs={'pk': req_autorizada_view.pk}
+    )
+
+
+@pytest.mark.django_db
+def test_atender_post_chefe_setor_403(client, chefe_obras, req_pronta_view_com_itens):
+    _login(client, chefe_obras)
+    response = client.post(
+        reverse(
+            'requisicoes:registrar_atendimento',
+            kwargs={'pk': req_pronta_view_com_itens.pk},
+        ),
+        data={
+            'itens-TOTAL_FORMS': '0',
+            'itens-INITIAL_FORMS': '0',
+            'itens-MIN_NUM_FORMS': '0',
+            'itens-MAX_NUM_FORMS': '1000',
+            'retirante_nome': 'X',
+        },
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_atender_post_form_invalido_renderiza_400(
+    client, aux_almoxarifado, req_pronta_view_com_itens
+):
+    """Retirante vazio dispara cabecalho.is_valid()=False."""
+    _login(client, aux_almoxarifado)
+    item = req_pronta_view_com_itens.itens.first()
+    response = client.post(
+        reverse(
+            'requisicoes:registrar_atendimento',
+            kwargs={'pk': req_pronta_view_com_itens.pk},
+        ),
+        data={
+            'itens-TOTAL_FORMS': '1',
+            'itens-INITIAL_FORMS': '1',
+            'itens-MIN_NUM_FORMS': '0',
+            'itens-MAX_NUM_FORMS': '1000',
+            'itens-0-item_id': str(item.id),
+            'itens-0-quantidade_entregue': '2',
+            'itens-0-justificativa': '',
+            'retirante_nome': '',
+        },
+    )
+    assert response.status_code == 400
+    html = response.content.decode('utf-8')
+    assert 'Corrija os campos destacados' in html or 'obrigatório' in html.lower()
+
+
+@pytest.mark.django_db
+def test_detalhe_exibe_botao_registrar_retirada_para_aux_almox(
+    client, aux_almoxarifado, req_pronta_view_com_itens
+):
+    _login(client, aux_almoxarifado)
+    response = client.get(
+        reverse('requisicoes:detalhe', kwargs={'pk': req_pronta_view_com_itens.pk})
+    )
+    assert response.status_code == 200
+    assert response.context['pode_atender_retirada'] is True
+    html = response.content.decode('utf-8')
+    assert 'Registrar retirada' in html
+
+
+@pytest.mark.django_db
+def test_detalhe_nao_exibe_botao_registrar_retirada_para_solicitante(
+    client, solicitante, req_pronta_view_com_itens
+):
+    _login(client, solicitante)
+    response = client.get(
+        reverse('requisicoes:detalhe', kwargs={'pk': req_pronta_view_com_itens.pk})
+    )
+    assert response.status_code == 200
+    assert response.context['pode_atender_retirada'] is False
+    html = response.content.decode('utf-8')
+    assert 'Registrar retirada' not in html

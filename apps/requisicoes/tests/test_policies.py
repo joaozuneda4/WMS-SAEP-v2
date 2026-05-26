@@ -499,7 +499,10 @@ def test_inativo_nao_pode_separar(usuario_inativo, solicitante, setor_obras):
 @pytest.mark.django_db
 def test_aux_almox_pode_atender(aux_almoxarifado, solicitante, setor_obras):
     req = _req_estado(
-        EstadoRequisicao.PRONTA_PARA_RETIRADA, solicitante, setor_obras, 'REQ-2026-000400'
+        EstadoRequisicao.PRONTA_PARA_RETIRADA,
+        solicitante,
+        setor_obras,
+        'REQ-2026-000400',
     )
     assert pode_atender_retirada(aux_almoxarifado, req) is True
 
@@ -507,7 +510,10 @@ def test_aux_almox_pode_atender(aux_almoxarifado, solicitante, setor_obras):
 @pytest.mark.django_db
 def test_chefe_almox_pode_atender(chefe_almoxarifado, solicitante, setor_obras):
     req = _req_estado(
-        EstadoRequisicao.PRONTA_PARA_RETIRADA, solicitante, setor_obras, 'REQ-2026-000401'
+        EstadoRequisicao.PRONTA_PARA_RETIRADA,
+        solicitante,
+        setor_obras,
+        'REQ-2026-000401',
     )
     assert pode_atender_retirada(chefe_almoxarifado, req) is True
 
@@ -515,7 +521,10 @@ def test_chefe_almox_pode_atender(chefe_almoxarifado, solicitante, setor_obras):
 @pytest.mark.django_db
 def test_superuser_pode_atender(superuser, solicitante, setor_obras):
     req = _req_estado(
-        EstadoRequisicao.PRONTA_PARA_RETIRADA, solicitante, setor_obras, 'REQ-2026-000402'
+        EstadoRequisicao.PRONTA_PARA_RETIRADA,
+        solicitante,
+        setor_obras,
+        'REQ-2026-000402',
     )
     assert pode_atender_retirada(superuser, req) is True
 
@@ -523,7 +532,10 @@ def test_superuser_pode_atender(superuser, solicitante, setor_obras):
 @pytest.mark.django_db
 def test_chefe_setor_nao_pode_atender(chefe_obras, solicitante, setor_obras):
     req = _req_estado(
-        EstadoRequisicao.PRONTA_PARA_RETIRADA, solicitante, setor_obras, 'REQ-2026-000403'
+        EstadoRequisicao.PRONTA_PARA_RETIRADA,
+        solicitante,
+        setor_obras,
+        'REQ-2026-000403',
     )
     assert pode_atender_retirada(chefe_obras, req) is False
 
@@ -531,7 +543,10 @@ def test_chefe_setor_nao_pode_atender(chefe_obras, solicitante, setor_obras):
 @pytest.mark.django_db
 def test_solicitante_nao_pode_atender(solicitante, setor_obras):
     req = _req_estado(
-        EstadoRequisicao.PRONTA_PARA_RETIRADA, solicitante, setor_obras, 'REQ-2026-000404'
+        EstadoRequisicao.PRONTA_PARA_RETIRADA,
+        solicitante,
+        setor_obras,
+        'REQ-2026-000404',
     )
     assert pode_atender_retirada(solicitante, req) is False
 
@@ -539,6 +554,9 @@ def test_solicitante_nao_pode_atender(solicitante, setor_obras):
 @pytest.mark.django_db
 def test_inativo_nao_pode_atender(usuario_inativo, solicitante, setor_obras):
     req = _req_estado(
-        EstadoRequisicao.PRONTA_PARA_RETIRADA, solicitante, setor_obras, 'REQ-2026-000405'
+        EstadoRequisicao.PRONTA_PARA_RETIRADA,
+        solicitante,
+        setor_obras,
+        'REQ-2026-000405',
     )
     assert pode_atender_retirada(usuario_inativo, req) is False

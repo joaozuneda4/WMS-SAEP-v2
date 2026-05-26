@@ -25,7 +25,9 @@ from apps.core.exceptions import (
 )
 from apps.estoque.models import SaldoEstoque
 from apps.requisicoes.forms import (
+    ItemAtendimentoFormSet,
     ItemRequisicaoFormSet,
+    RegistrarAtendimentoCabecalhoForm,
     RequisicaoCriacaoForm,
     RequisicaoForm,
 )
@@ -34,6 +36,7 @@ from apps.requisicoes.policies import (
     exigir_pode_editar_rascunho,
     exigir_pode_ver_fila_atendimento,
     exigir_pode_ver_fila_autorizacao,
+    pode_atender_retirada,
     pode_autorizar_requisicao,
     pode_editar_rascunho,
     pode_enviar_rascunho,
@@ -56,6 +59,7 @@ from apps.requisicoes.services import (
     editar_rascunho,
     enviar_para_autorizacao,
     recusar_requisicao,
+    registrar_atendimento,
     retornar_para_rascunho,
     separar_para_retirada,
 )
@@ -120,6 +124,10 @@ def _detalhe_context(
         'pode_separar_retirada': (
             requisicao.estado == EstadoRequisicao.AUTORIZADA
             and pode_separar_para_retirada(request.user, requisicao)
+        ),
+        'pode_atender_retirada': (
+            requisicao.estado == EstadoRequisicao.PRONTA_PARA_RETIRADA
+            and pode_atender_retirada(request.user, requisicao)
         ),
         'recusa_erro': recusa_erro,
         'motivo_recusa': motivo_recusa,
@@ -529,6 +537,108 @@ def separar_retirada_view(request, pk: int):
     messages.success(
         request,
         f'Requisição {numero} pronta para retirada.',
+    )
+    return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[requisicao.pk]))
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def registrar_atendimento_view(request, pk: int):
+    """Aplica TR-016/017 (pronta_para_retirada -> atendida) com total ou parcial."""
+    requisicao = get_object_or_404(requisicoes_visiveis_para(request.user.pk), pk=pk)
+
+    if not pode_atender_retirada(request.user, requisicao):
+        raise PermissionDenied(
+            'Você não tem permissão para registrar o atendimento desta requisição.'
+        )
+    if requisicao.estado != EstadoRequisicao.PRONTA_PARA_RETIRADA:
+        messages.warning(request, 'Esta requisição não está pronta para retirada.')
+        return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
+
+    itens_autorizados = list(
+        requisicao.itens.select_related('material')
+        .filter(quantidade_autorizada__gt=0)
+        .order_by('id')
+    )
+
+    def _render(cabecalho_form, formset_form, *, status=200):
+        linhas = list(zip(itens_autorizados, formset_form.forms))
+        return render(
+            request,
+            'requisicoes/atender_retirada.html',
+            {
+                'requisicao': requisicao,
+                'itens': itens_autorizados,
+                'cabecalho': cabecalho_form,
+                'formset': formset_form,
+                'linhas': linhas,
+                'voltar_url': _voltar_url(
+                    request, default=reverse('requisicoes:detalhe', args=[pk])
+                ),
+            },
+            status=status,
+        )
+
+    if request.method == 'GET':
+        cabecalho = RegistrarAtendimentoCabecalhoForm()
+        formset = ItemAtendimentoFormSet(
+            initial=[
+                {
+                    'item_id': item.id,
+                    'quantidade_entregue': item.quantidade_autorizada,
+                    'justificativa': '',
+                }
+                for item in itens_autorizados
+            ],
+            prefix='itens',
+        )
+        return _render(cabecalho, formset)
+
+    cabecalho = RegistrarAtendimentoCabecalhoForm(request.POST)
+    formset = ItemAtendimentoFormSet(request.POST, prefix='itens')
+
+    cabecalho_valido = cabecalho.is_valid()
+    formset_valido = formset.is_valid()
+    if not (cabecalho_valido and formset_valido):
+        messages.error(request, 'Corrija os campos destacados.')
+        return _render(cabecalho, formset, status=400)
+
+    itens_payload = []
+    for form in formset.forms:
+        if not form.cleaned_data:
+            continue
+        itens_payload.append(
+            {
+                'item_id': form.cleaned_data['item_id'],
+                'quantidade_entregue': form.cleaned_data['quantidade_entregue'],
+                'justificativa': form.cleaned_data.get('justificativa', ''),
+            }
+        )
+
+    try:
+        requisicao = registrar_atendimento(
+            ator_id=request.user.pk,
+            requisicao_id=pk,
+            itens=itens_payload,
+            retirante_nome=cabecalho.cleaned_data['retirante_nome'],
+            observacao=cabecalho.cleaned_data.get('observacao', ''),
+        )
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+    except EstadoInvalido as exc:
+        messages.warning(request, str(exc))
+        return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
+    except ConflitoDominio as exc:
+        messages.warning(request, str(exc))
+        return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
+    except DadosInvalidos as exc:
+        messages.error(request, str(exc))
+        return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
+
+    numero = requisicao.numero_publico or f'#{requisicao.pk}'
+    messages.success(
+        request,
+        f'Retirada da requisição {numero} registrada com sucesso.',
     )
     return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[requisicao.pk]))
 

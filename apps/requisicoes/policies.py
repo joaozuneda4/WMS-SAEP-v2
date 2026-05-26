@@ -371,7 +371,6 @@ def exigir_pode_separar_para_retirada(ator: User, requisicao: Requisicao) -> Non
         )
 
 
-
 def pode_atender_retirada(ator: User, requisicao: Requisicao) -> bool:
     """True se o ator está ativo e é almoxarifado (chefe/auxiliar) ou superusuário."""
     if not ator.is_active:
