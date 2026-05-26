@@ -236,6 +236,7 @@
         if (btn.dataset.submitting === '1') return;
         btn.dataset.submitting = '1';
         btn.setAttribute('aria-busy', 'true');
+        btn.classList.add('pointer-events-none', 'cursor-wait');
         btn.querySelectorAll('[data-submit-spinner]').forEach((node) => {
           node.classList.remove('hidden');
         });
