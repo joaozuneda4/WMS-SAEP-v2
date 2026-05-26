@@ -1007,12 +1007,12 @@ def test_separar_para_retirada_aceita_chefe_almox(
 
 
 @pytest.mark.django_db
-def test_separar_para_retirada_aceita_superuser(requisicao_autorizada, superuser):
-    req = separar_para_retirada(
-        ator_id=superuser.pk,
-        requisicao_id=requisicao_autorizada.pk,
-    )
-    assert req.estado == EstadoRequisicao.PRONTA_PARA_RETIRADA
+def test_separar_para_retirada_nega_superuser(requisicao_autorizada, superuser):
+    with pytest.raises(PermissaoNegada):
+        separar_para_retirada(
+            ator_id=superuser.pk,
+            requisicao_id=requisicao_autorizada.pk,
+        )
 
 
 @pytest.mark.django_db
@@ -1039,7 +1039,7 @@ def test_separar_para_retirada_permissao_negada_solicitante(
 
 @pytest.mark.django_db
 def test_separar_para_retirada_estado_invalido(requisicao_aguardando, aux_almoxarifado):
-    with pytest.raises(PermissaoNegada):
+    with pytest.raises(EstadoInvalido):
         separar_para_retirada(
             ator_id=aux_almoxarifado.pk,
             requisicao_id=requisicao_aguardando.pk,
@@ -1070,12 +1070,12 @@ def test_separar_para_retirada_requisicao_inexistente(aux_almoxarifado):
 def test_separar_para_retirada_idempotencia_bloqueia_segunda_execucao(
     requisicao_autorizada, aux_almoxarifado
 ):
-    """Após separar, repetir falha com PermissaoNegada (estado origem inválido)."""
+    """Após separar, repetir falha com EstadoInvalido (estado origem inválido)."""
     separar_para_retirada(
         ator_id=aux_almoxarifado.pk,
         requisicao_id=requisicao_autorizada.pk,
     )
-    with pytest.raises(PermissaoNegada):
+    with pytest.raises(EstadoInvalido):
         separar_para_retirada(
             ator_id=aux_almoxarifado.pk,
             requisicao_id=requisicao_autorizada.pk,
