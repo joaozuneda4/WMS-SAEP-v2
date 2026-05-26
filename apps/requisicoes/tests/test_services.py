@@ -621,8 +621,10 @@ def test_cancelar_requisicao_aguardando_autorizacao_ignora_justificativa(
         justificativa='Cancelamento solicitado pelo usuário.',
     )
 
+    assert req.estado == EstadoRequisicao.CANCELADA
     evento = req.eventos.filter(evento=EventoTimeline.CANCELAMENTO).get()
     assert evento.justificativa == ''
+    assert not req.eventos.filter(evento=EventoTimeline.LIBERACAO_RESERVA).exists()
 
 
 @pytest.mark.django_db
@@ -636,8 +638,10 @@ def test_cancelar_ou_descartar_requisicao_aguardando_autorizacao_ignora_justific
     )
 
     assert req is not None
+    assert req.estado == EstadoRequisicao.CANCELADA
     evento = req.eventos.filter(evento=EventoTimeline.CANCELAMENTO).get()
     assert evento.justificativa == ''
+    assert not req.eventos.filter(evento=EventoTimeline.LIBERACAO_RESERVA).exists()
 
 
 @pytest.mark.django_db

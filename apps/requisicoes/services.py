@@ -381,7 +381,7 @@ def _cancelar_requisicao_impl(
     *,
     requisicao: Requisicao,
     ator_id: int,
-    justificativa: str | None = '',
+    justificativa: str | None = None,
 ) -> Requisicao:
     try:
         ator = User.objects.get(pk=ator_id)
