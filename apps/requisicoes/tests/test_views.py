@@ -1069,8 +1069,48 @@ def test_recusar_requisicao_sem_motivo_retorna_erro_inline(
     req_enviada_solicitante.refresh_from_db()
     assert req_enviada_solicitante.estado == EstadoRequisicao.AGUARDANDO_AUTORIZACAO
     html = response.content.decode('utf-8')
-    assert 'motivo-recusa-erro' in html
+    assert 'modal-recusar-motivo' in html
+    assert 'aria-invalid="true"' in html
     assert 'Informe o motivo da recusa.' in html
+
+
+@pytest.mark.django_db
+def test_recusar_requisicao_sem_motivo_via_htmx_retorna_422_fragment(
+    client, chefe_obras, req_enviada_solicitante
+):
+    """HTMX request com motivo vazio retorna 422 + fragment do modal."""
+    _login(client, chefe_obras)
+    response = client.post(
+        reverse('requisicoes:recusar', kwargs={'pk': req_enviada_solicitante.pk}),
+        {'motivo': ' '},
+        HTTP_HX_REQUEST='true',
+    )
+
+    assert response.status_code == 422
+    html = response.content.decode('utf-8')
+    assert 'data-modal-body="confirmar-recusar"' in html
+    assert 'data-modal-erro' in html
+    assert 'Informe o motivo da recusa.' in html
+    assert 'modal-recusar-motivo' in html
+    assert '<!DOCTYPE html>' not in html
+
+
+@pytest.mark.django_db
+def test_recusar_requisicao_sucesso_via_htmx_retorna_hx_redirect(
+    client, chefe_obras, req_enviada_solicitante
+):
+    """HTMX request com motivo válido retorna 204 + HX-Redirect."""
+    _login(client, chefe_obras)
+    response = client.post(
+        reverse('requisicoes:recusar', kwargs={'pk': req_enviada_solicitante.pk}),
+        {'motivo': 'Sem orçamento aprovado.'},
+        HTTP_HX_REQUEST='true',
+    )
+
+    assert response.status_code == 204
+    assert 'HX-Redirect' in response.headers
+    req_enviada_solicitante.refresh_from_db()
+    assert req_enviada_solicitante.estado == EstadoRequisicao.RECUSADA
 
 
 @pytest.mark.django_db
@@ -1100,7 +1140,8 @@ def test_detalhe_exibe_recusa_para_chefe_e_nao_exibe_retorno(
     assert response.context['pode_retornar'] is False
     assert 'Confirmar recusa' in html
     assert 'Confirmar retorno' not in html
-    assert 'data-confirm-message' in html
+    assert 'data-modal-trigger="confirmar-recusar"' in html
+    assert 'window.confirm' not in html
     assert html.count('id="decisao-autorizacao-titulo"') == 1
 
 
@@ -1323,8 +1364,31 @@ def test_cancelar_requisicao_post_autorizada_sem_justificativa_renderiza_modal_c
     req_autorizada_view.refresh_from_db()
     assert req_autorizada_view.estado == EstadoRequisicao.AUTORIZADA
     html = response.content.decode('utf-8')
-    assert 'justificativa-cancelamento-erro' in html
+    assert 'modal-cancelar-justificativa' in html
     assert 'aria-invalid="true"' in html
+
+
+@pytest.mark.django_db
+def test_cancelar_requisicao_sem_justificativa_via_htmx_retorna_422_fragment(
+    client, solicitante, req_autorizada_view
+):
+    """HTMX request com justificativa vazia em autorizada retorna 422 + fragment."""
+    _login(client, solicitante)
+    response = client.post(
+        reverse('requisicoes:cancelar', kwargs={'pk': req_autorizada_view.pk}),
+        {'justificativa': ' '},
+        HTTP_HX_REQUEST='true',
+    )
+
+    assert response.status_code == 422
+    html = response.content.decode('utf-8')
+    assert 'data-modal-body="confirmar-cancelar"' in html
+    assert 'data-modal-erro' in html
+    assert 'Informe a justificativa do cancelamento.' in html
+    assert 'modal-cancelar-justificativa' in html
+    assert '<!DOCTYPE html>' not in html
+    req_autorizada_view.refresh_from_db()
+    assert req_autorizada_view.estado == EstadoRequisicao.AUTORIZADA
 
 
 @pytest.mark.django_db

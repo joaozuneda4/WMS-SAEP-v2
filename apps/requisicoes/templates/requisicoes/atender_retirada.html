@@ -48,11 +48,11 @@
   </section>
 
   <form
+    id="form-atender-retirada"
     method="post"
     action="{% url 'requisicoes:registrar_atendimento' requisicao.pk %}"
     novalidate
     data-prevent-double-submit
-    data-confirm-message="Confirma o registro da retirada com as quantidades informadas?"
     class="space-y-6"
   >
     {% csrf_token %}
@@ -190,7 +190,31 @@
       </div>
     </section>
 
-    <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+    <div
+      class="flex flex-col gap-3 sm:flex-row sm:justify-end"
+      x-data="{
+        open: false,
+        ultimoTrigger: null,
+        abrir(event) {
+          this.ultimoTrigger = event && event.currentTarget;
+          this.$refs.dlg.showModal();
+          this.open = true;
+        },
+        fechar() {
+          if (this.$refs.dlg.open) {
+            this.$refs.dlg.close();
+          }
+          this.open = false;
+          if (this.ultimoTrigger && document.contains(this.ultimoTrigger)) {
+            this.$nextTick(() => this.ultimoTrigger.focus());
+          }
+        },
+        confirmar() {
+          this.fechar();
+          document.getElementById('form-atender-retirada').requestSubmit();
+        }
+      }"
+    >
       <a
         href="{% url 'requisicoes:detalhe' requisicao.pk %}"
         class="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
@@ -198,22 +222,56 @@
         Cancelar
       </a>
       <button
-        type="submit"
+        type="button"
+        @click="abrir($event)"
         class="inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-        data-submit-loading-label="Registrando…"
       >
-        <svg
-          data-submit-spinner
-          class="mr-2 hidden h-4 w-4 animate-spin"
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden="true"
-        >
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
-        </svg>
-        <span data-submit-text>Confirmar retirada</span>
+        Confirmar retirada
       </button>
+
+      <dialog
+        x-ref="dlg"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirmar-atender-titulo"
+        @keydown.escape.prevent="fechar()"
+        @close="open = false"
+        class="m-auto w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-0 text-left text-slate-900 shadow-2xl backdrop:bg-slate-900/50 backdrop:backdrop-blur-sm"
+      >
+        <div x-trap.inert.noscroll="open" class="flex flex-col">
+          <header class="border-b border-slate-200 px-6 py-5">
+            <div class="flex items-start gap-4">
+              {% include "components/_modal_icon.html" with variant="info" %}
+              <div class="min-w-0 flex-1">
+                <h2 id="confirmar-atender-titulo" class="text-lg font-semibold leading-tight text-slate-900">
+                  Confirmar registro de retirada?
+                </h2>
+                <p class="mt-1.5 text-sm leading-relaxed text-slate-600">
+                  Esta ação baixa estoque das quantidades entregues e libera as reservas
+                  não entregues. Não pode ser desfeita.
+                </p>
+              </div>
+            </div>
+          </header>
+          <footer class="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50/60 px-6 py-4 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              @click="fechar()"
+              class="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+            >
+              Voltar
+            </button>
+            <button
+              type="button"
+              @click="confirmar()"
+              data-modal-confirm
+              class="inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              Confirmar retirada
+            </button>
+          </footer>
+        </div>
+      </dialog>
     </div>
   </form>
 </div>
@@ -222,16 +280,8 @@
 {% block extra_scripts %}
 <script>
   document.querySelectorAll('form[data-prevent-double-submit]').forEach((form) => {
-    form.addEventListener('submit', (event) => {
-      const confirmMessage = form.dataset.confirmMessage;
-      if (confirmMessage && form.dataset.confirmed !== '1') {
-        if (!window.confirm(confirmMessage)) {
-          event.preventDefault();
-          return;
-        }
-        form.dataset.confirmed = '1';
-      }
-      const targets = Array.from(form.querySelectorAll('button[type="submit"]'));
+    form.addEventListener('submit', () => {
+      const targets = Array.from(form.querySelectorAll('button[type="submit"], button[data-modal-confirm]'));
       targets.forEach((btn) => {
         if (btn.dataset.submitting === '1') return;
         btn.dataset.submitting = '1';
