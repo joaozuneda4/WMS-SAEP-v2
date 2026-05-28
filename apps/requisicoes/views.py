@@ -201,6 +201,9 @@ def _detalhe_context(
         'cancelamento_hidden_inputs': {'next': _voltar_url(request)},
         'recusar_hidden_inputs': {'next': _voltar_url(request)},
         'retornar_hidden_inputs': {'next': _voltar_url(request)},
+        'autorizar_hidden_inputs': {'next': _voltar_url(request)},
+        'enviar_hidden_inputs': {'next': _voltar_url(request)},
+        'separar_hidden_inputs': {'next': _voltar_url(request)},
     }
 
 
@@ -256,29 +259,6 @@ def _render_modal_erro(
 # ---------------------------------------------------------------------------
 # Home do módulo
 # ---------------------------------------------------------------------------
-
-
-@login_required
-@require_GET
-def home(request):
-    """Landing page do módulo de requisições."""
-    pode_criar_requisicao = False
-    try:
-        resolver_escopo_criacao_requisicao(request.user)
-    except PermissaoNegada:
-        pass
-    else:
-        pode_criar_requisicao = True
-
-    return render(
-        request,
-        'requisicoes/home.html',
-        {
-            'pode_ver_minhas': True,
-            'pode_criar_requisicao': pode_criar_requisicao,
-            'pode_ver_fila': pode_ver_fila_autorizacao(request.user),
-        },
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -638,7 +618,8 @@ def autorizar_requisicao_view(request, pk: int):
         request,
         f'Requisição {requisicao.numero_publico} autorizada com sucesso.',
     )
-    return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[requisicao.pk]))
+    detalhe_url = reverse('requisicoes:detalhe', args=[requisicao.pk])
+    return _htmx_redirect(request, _voltar_url(request, default=detalhe_url))
 
 
 @login_required
@@ -682,7 +663,8 @@ def separar_retirada_view(request, pk: int):
         request,
         f'Requisição {numero} pronta para retirada.',
     )
-    return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[requisicao.pk]))
+    detalhe_url = reverse('requisicoes:detalhe', args=[requisicao.pk])
+    return _htmx_redirect(request, _voltar_url(request, default=detalhe_url))
 
 
 @login_required
@@ -791,7 +773,8 @@ def registrar_atendimento_view(request, pk: int):
         request,
         f'Retirada da requisição {numero} registrada com sucesso.',
     )
-    return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[requisicao.pk]))
+    detalhe_url = reverse('requisicoes:detalhe', args=[requisicao.pk])
+    return _htmx_redirect(request, _voltar_url(request, default=detalhe_url))
 
 
 # ---------------------------------------------------------------------------
@@ -846,7 +829,8 @@ def enviar_rascunho_view(request, pk: int):
         request,
         f'Requisição enviada para autorização. Número {requisicao.numero_publico}.',
     )
-    return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[requisicao.pk]))
+    detalhe_url = reverse('requisicoes:detalhe', args=[requisicao.pk])
+    return _htmx_redirect(request, _voltar_url(request, default=detalhe_url))
 
 
 # ---------------------------------------------------------------------------

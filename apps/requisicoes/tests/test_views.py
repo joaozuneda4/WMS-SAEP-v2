@@ -39,40 +39,6 @@ def _formset_post(material_id, quantidade='5', extra=None):
 
 
 # ---------------------------------------------------------------------------
-# Home do módulo
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.django_db
-def test_requisicoes_home_sem_login_redireciona(client):
-    response = client.get(reverse('requisicoes:home'))
-    assert response.status_code == 302
-
-
-@pytest.mark.django_db
-def test_requisicoes_home_solicitante_exibe_atalhos(client, solicitante):
-    _login(client, solicitante)
-    response = client.get(reverse('requisicoes:home'))
-
-    assert response.status_code == 200
-    html = response.content.decode('utf-8')
-    assert 'Requisições' in html
-    assert 'Minhas requisições' in html
-    assert 'Nova requisição' in html
-    assert 'Fila de autorizações' not in html
-
-
-@pytest.mark.django_db
-def test_requisicoes_home_chefe_exibe_fila(client, chefe_obras):
-    _login(client, chefe_obras)
-    response = client.get(reverse('requisicoes:home'))
-
-    assert response.status_code == 200
-    html = response.content.decode('utf-8')
-    assert 'Fila de autorizações' in html
-
-
-# ---------------------------------------------------------------------------
 # GET /requisicoes/nova/
 # ---------------------------------------------------------------------------
 

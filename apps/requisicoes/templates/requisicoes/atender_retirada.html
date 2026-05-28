@@ -57,6 +57,7 @@
     class="space-y-6"
   >
     {% csrf_token %}
+    <input type="hidden" name="next" value="{{ voltar_url }}">
 
     <section
       class="rounded-xl border border-slate-200 bg-white p-4 shadow-md ring-1 ring-slate-100 sm:p-6"

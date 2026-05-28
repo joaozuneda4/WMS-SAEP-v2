@@ -15,51 +15,153 @@ from apps.requisicoes.models import SequenciaRequisicao
 
 
 @pytest.mark.django_db
-def test_home_usa_layout_autenticado(client):
-    User = get_user_model()
-    setor = Setor.objects.create(
-        codigo='OBR', nome='Obras', classificacao=SetorClassificacao.COMUM
-    )
-    usuario = User.objects.create_user(
-        matricula='HOME-001',
-        password='senha-forte-123',
-        nome='Operador Home',
-        setor=setor,
-    )
-    client.force_login(usuario)
-
+def test_home_nao_autenticado_redireciona_login(client):
     resposta = client.get(reverse('core:home'))
-    conteudo = resposta.content.decode()
-
-    assert resposta.status_code == 200
-    assert '<header' in conteudo
-    assert '<main' in conteudo
-    assert 'max-w-screen-xl' in conteudo
-    assert 'Início' in conteudo
-    assert 'Operador Home' in conteudo
-    assert 'HOME-001' in conteudo
-    assert 'Requisições' in conteudo
-    assert 'Painel de requisições' in conteudo
-    assert 'Nova requisição' in conteudo
-    assert reverse('requisicoes:home') in conteudo
+    assert resposta.status_code == 302
+    assert '/login' in resposta['Location'] or 'accounts' in resposta['Location']
 
 
 @pytest.mark.django_db
-def test_home_oculta_nova_requisicao_sem_setor(client):
+def test_home_superuser_redireciona_admin(client):
     User = get_user_model()
-    usuario = User.objects.create_user(
-        matricula='HOME-002',
+    usuario = User.objects.create_superuser(
+        matricula='SUPER-001',
         password='senha-forte-123',
-        nome='Operador Sem Setor',
+        nome='Super Admin',
     )
     client.force_login(usuario)
-
     resposta = client.get(reverse('core:home'))
-    conteudo = resposta.content.decode()
+    assert resposta.status_code == 302
+    assert resposta['Location'] == '/admin/'
 
-    assert resposta.status_code == 200
-    assert 'Painel de requisições' in conteudo
-    assert 'Nova requisição' not in conteudo
+
+@pytest.mark.django_db
+def test_home_chefe_almoxarifado_redireciona_atendimentos(client):
+    User = get_user_model()
+    setor = Setor.objects.create(
+        codigo='ALM', nome='Almoxarifado', classificacao=SetorClassificacao.ALMOXARIFADO
+    )
+    usuario = User.objects.create_user(
+        matricula='ALMX-001',
+        password='senha-forte-123',
+        nome='Chefe Almox',
+        setor=setor,
+    )
+    setor.chefe = usuario
+    setor.save(update_fields=['chefe'])
+    client.force_login(usuario)
+    resposta = client.get(reverse('core:home'))
+    assert resposta.status_code == 302
+    assert resposta['Location'] == reverse('requisicoes:atendimentos')
+
+
+@pytest.mark.django_db
+def test_home_auxiliar_almoxarifado_redireciona_atendimentos(client):
+    User = get_user_model()
+    setor = Setor.objects.create(
+        codigo='ALM2',
+        nome='Almoxarifado',
+        classificacao=SetorClassificacao.ALMOXARIFADO,
+    )
+    usuario = User.objects.create_user(
+        matricula='ALMX-002',
+        password='senha-forte-123',
+        nome='Aux Almox',
+        setor=setor,
+    )
+    VinculoAuxiliar.objects.create(usuario=usuario, setor=setor, ativo=True)
+    client.force_login(usuario)
+    resposta = client.get(reverse('core:home'))
+    assert resposta.status_code == 302
+    assert resposta['Location'] == reverse('requisicoes:atendimentos')
+
+
+@pytest.mark.django_db
+def test_home_chefe_setor_comum_redireciona_autorizacoes(client):
+    User = get_user_model()
+    setor = Setor.objects.create(
+        codigo='OBR2', nome='Obras', classificacao=SetorClassificacao.COMUM
+    )
+    usuario = User.objects.create_user(
+        matricula='CHEF-001',
+        password='senha-forte-123',
+        nome='Chefe Obras',
+        setor=setor,
+    )
+    setor.chefe = usuario
+    setor.save(update_fields=['chefe'])
+    client.force_login(usuario)
+    resposta = client.get(reverse('core:home'))
+    assert resposta.status_code == 302
+    assert resposta['Location'] == reverse('requisicoes:autorizacoes')
+
+
+@pytest.mark.django_db
+def test_home_solicitante_redireciona_minhas(client):
+    User = get_user_model()
+    setor = Setor.objects.create(
+        codigo='OBR3', nome='Obras', classificacao=SetorClassificacao.COMUM
+    )
+    usuario = User.objects.create_user(
+        matricula='SOL-001',
+        password='senha-forte-123',
+        nome='Solicitante',
+        setor=setor,
+    )
+    client.force_login(usuario)
+    resposta = client.get(reverse('core:home'))
+    assert resposta.status_code == 302
+    assert resposta['Location'] == reverse('requisicoes:minhas')
+
+
+@pytest.mark.django_db
+def test_home_staff_com_papel_almox_vai_para_atendimentos(client):
+    """is_staff não bypassa o dispatcher — papel operacional tem prioridade."""
+    User = get_user_model()
+    setor = Setor.objects.create(
+        codigo='ALM3',
+        nome='Almoxarifado',
+        classificacao=SetorClassificacao.ALMOXARIFADO,
+    )
+    usuario = User.objects.create_user(
+        matricula='STAF-001',
+        password='senha-forte-123',
+        nome='Staff Almox',
+        setor=setor,
+        is_staff=True,
+    )
+    VinculoAuxiliar.objects.create(usuario=usuario, setor=setor, ativo=True)
+    client.force_login(usuario)
+    resposta = client.get(reverse('core:home'))
+    assert resposta.status_code == 302
+    assert resposta['Location'] == reverse('requisicoes:atendimentos')
+
+
+@pytest.mark.django_db
+def test_home_multi_papel_almox_chefe_vai_para_atendimentos(client):
+    """Usuário com almoxarifado E chefe de setor comum → almox ganha (prioridade)."""
+    User = get_user_model()
+    setor_almox = Setor.objects.create(
+        codigo='ALM4',
+        nome='Almoxarifado',
+        classificacao=SetorClassificacao.ALMOXARIFADO,
+    )
+    setor_comum = Setor.objects.create(
+        codigo='OBR4', nome='Obras', classificacao=SetorClassificacao.COMUM
+    )
+    usuario = User.objects.create_user(
+        matricula='MULT-001',
+        password='senha-forte-123',
+        nome='Multi Papel',
+        setor=setor_almox,
+    )
+    VinculoAuxiliar.objects.create(usuario=usuario, setor=setor_almox, ativo=True)
+    setor_comum.chefe = usuario
+    setor_comum.save(update_fields=['chefe'])
+    client.force_login(usuario)
+    resposta = client.get(reverse('core:home'))
+    assert resposta.status_code == 302
+    assert resposta['Location'] == reverse('requisicoes:atendimentos')
 
 
 def test_seed_dev_exige_flag_de_ambiente_local(settings, monkeypatch):

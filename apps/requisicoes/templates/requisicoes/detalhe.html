@@ -211,7 +211,7 @@
                 <span>Enviar para autorização</span>
               </button>
               {% url 'requisicoes:enviar_rascunho' requisicao.pk as enviar_url %}
-              {% include "components/modal.html" with id="confirmar-enviar" titulo="Enviar para autorização?" descricao="O envio gera o número público da requisição e bloqueia edições até retornar para rascunho." action_url=enviar_url confirm_label="Confirmar envio" confirm_variant="primary" icon_variant="info" %}
+              {% include "components/modal.html" with id="confirmar-enviar" titulo="Enviar para autorização?" descricao="O envio gera o número público da requisição e bloqueia edições até retornar para rascunho." action_url=enviar_url confirm_label="Confirmar envio" confirm_variant="primary" icon_variant="info" hidden_inputs=enviar_hidden_inputs %}
             </div>
           {% endif %}
           {% if pode_cancelar and requisicao.estado == 'rascunho' %}
@@ -276,7 +276,7 @@
               Autorizar
             </button>
             {% url 'requisicoes:autorizar' requisicao.pk as autorizar_url %}
-            {% include "components/modal.html" with id="confirmar-autorizar" titulo="Autorizar requisição?" descricao="Reserva o saldo necessário para todos os itens sem alterar o saldo físico." action_url=autorizar_url confirm_label="Confirmar autorização" confirm_variant="primary" icon_variant="info" %}
+            {% include "components/modal.html" with id="confirmar-autorizar" titulo="Autorizar requisição?" descricao="Reserva o saldo necessário para todos os itens sem alterar o saldo físico." action_url=autorizar_url confirm_label="Confirmar autorização" confirm_variant="primary" icon_variant="info" hidden_inputs=autorizar_hidden_inputs %}
           </div>
         {% endif %}
 
@@ -372,7 +372,7 @@
         </p>
       </div>
       <a
-        href="{% url 'requisicoes:registrar_atendimento' requisicao.pk %}"
+        href="{% url 'requisicoes:registrar_atendimento' requisicao.pk %}?next={{ voltar_url|urlencode }}"
         class="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 sm:w-auto"
       >
         Registrar retirada
@@ -409,7 +409,7 @@
         </button>
       </div>
       {% url 'requisicoes:separar_retirada' requisicao.pk as separar_url %}
-      {% include "components/modal.html" with id="confirmar-separar" titulo="Marcar como pronta para retirada?" descricao="A requisição passa a aparecer como pronta para o beneficiário retirar no almoxarifado." action_url=separar_url confirm_label="Confirmar separação" confirm_variant="primary" icon_variant="info" %}
+      {% include "components/modal.html" with id="confirmar-separar" titulo="Marcar como pronta para retirada?" descricao="A requisição passa a aparecer como pronta para o beneficiário retirar no almoxarifado." action_url=separar_url confirm_label="Confirmar separação" confirm_variant="primary" icon_variant="info" hidden_inputs=separar_hidden_inputs %}
     </section>
   {% endif %}
 

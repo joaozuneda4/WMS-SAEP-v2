@@ -5,7 +5,6 @@ from apps.requisicoes import views
 app_name = 'requisicoes'
 
 urlpatterns = [
-    path('', views.home, name='home'),
     path('minhas/', views.minhas_requisicoes_view, name='minhas'),
     path('autorizacoes/', views.fila_autorizacao_view, name='autorizacoes'),
     path('atendimentos/', views.fila_atendimento_view, name='atendimentos'),

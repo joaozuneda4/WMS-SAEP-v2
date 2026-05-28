@@ -1,21 +1,23 @@
 """Views da camada compartilhada de UI. Sem regra de domínio."""
 
-from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+from django.urls import reverse
 
-from apps.requisicoes.policies import pode_ser_beneficiario
+from apps.requisicoes.policies import (
+    pode_ver_fila_atendimento,
+    pode_ver_fila_autorizacao,
+)
 
 
+@login_required
 def home(request):
-    pode_visualizar_requisicoes = request.user.is_authenticated
-    pode_criar_requisicao = False
-    if request.user.is_authenticated:
-        pode_criar_requisicao = pode_ser_beneficiario(request.user)
-
-    return render(
-        request,
-        'core/home.html',
-        {
-            'pode_visualizar_requisicoes': pode_visualizar_requisicoes,
-            'pode_criar_requisicao': pode_criar_requisicao,
-        },
-    )
+    """Dispatcher pós-login — redireciona por papel efetivo do usuário."""
+    user = request.user
+    if user.is_superuser:
+        return redirect('/admin/')
+    if pode_ver_fila_atendimento(user):
+        return redirect(reverse('requisicoes:atendimentos'))
+    if pode_ver_fila_autorizacao(user):
+        return redirect(reverse('requisicoes:autorizacoes'))
+    return redirect(reverse('requisicoes:minhas'))
