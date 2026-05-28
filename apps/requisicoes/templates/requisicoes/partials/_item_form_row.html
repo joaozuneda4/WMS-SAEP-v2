@@ -9,7 +9,7 @@ Parâmetros de contexto:
      data-index="{{ form_index }}">
 
   {# Autocomplete de material — hidden field dentro do escopo Alpine para $refs #}
-  <div class="min-w-0 flex-1 basis-full sm:basis-0" x-data="materialAutocomplete({{ form_index }})" @click.outside="fecharDropdown">
+  <div class="min-w-0 flex-1 basis-full sm:basis-0" x-data="materialAutocomplete({{ form_index }})" @click.outside="fecharDropdown()">
 
     {# Campo oculto dentro do escopo — acessível via $refs #}
     <input
@@ -20,7 +20,7 @@ Parâmetros de contexto:
       value="{{ form.material_id.value|default:'' }}"
     >
 
-    <label class="block text-xs font-medium text-slate-600 mb-1">Material</label>
+    <label class="block text-xs font-medium text-slate-600 mb-1" for="{{ form.material_label.id_for_label }}">Material</label>
     <div class="relative">
       <input
         type="search"
@@ -34,46 +34,56 @@ Parâmetros de contexto:
         spellcheck="false"
         data-lpignore="true"
         data-1p-ignore="true"
-        placeholder="Buscar por código ou descrição..."
+        placeholder="Buscar por código ou descrição…"
         @input.debounce.300ms="buscar"
-        @focus="abrirDropdown"
-        @keydown.escape="fecharDropdown"
-        @keydown.arrow-down.prevent="selecionarProximo"
-        @keydown.arrow-up.prevent="selecionarAnterior"
-        @keydown.enter.prevent="confirmarSelecao"
+        @focus="abrirDropdown()"
+        @keydown.escape="fecharDropdown()"
+        @keydown.arrow-down.prevent="selecionarProximo()"
+        @keydown.arrow-up.prevent="selecionarAnterior()"
+        @keydown.enter.prevent="confirmarSelecao()"
+        role="combobox"
+        aria-autocomplete="list"
+        :aria-expanded="aberto"
+        :aria-activedescendant="ativo >= 0 ? 'mat-opt-' + ativo + '-' + {{ form_index }} : false"
       >
-      {# Dropdown de resultados #}
+      <span x-show="buscando" x-cloak class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" aria-hidden="true">
+        <svg class="h-4 w-4 animate-spin motion-reduce:animate-none text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+      </span>
       <ul
-        x-show="aberto && resultados.length > 0"
+        x-show="aberto"
         x-cloak
-        class="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-md text-sm max-h-56 overflow-y-auto"
         role="listbox"
+        aria-label="Resultados de materiais"
+        class="absolute z-20 mt-1 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg"
+        style="max-height: 14rem"
       >
         <template x-for="(item, i) in resultados" :key="item.id">
           <li
+            :id="'mat-opt-' + i + '-' + {{ form_index }}"
             role="option"
-            :aria-selected="i === ativo"
-            :class="i === ativo ? 'bg-blue-50 text-blue-900' : 'text-slate-800 hover:bg-slate-50'"
-            class="cursor-pointer"
+            :aria-selected="ativo === i"
+            @mousedown.prevent="selecionar(item)"
+            @mouseover="ativo = i"
+            :class="ativo === i ? 'bg-blue-50' : 'hover:bg-slate-50'"
+            class="cursor-pointer px-3 py-2"
           >
-            <button
-              type="button"
-              class="w-full text-left px-3 py-2"
-              @mousedown.prevent="selecionar(item)"
-              @touchstart.prevent="selecionar(item)"
-            >
-              <span class="font-medium" x-text="item.codigo"></span>
-              — <span x-text="item.nome"></span>
-              <span class="text-slate-500 text-xs ml-1">(disp: <span x-text="item.saldo_disponivel"></span> <span x-text="item.unidade"></span>)</span>
-            </button>
+            <span class="font-medium text-slate-900" x-text="item.codigo"></span>
+            <span class="text-slate-600" x-text="' — ' + item.nome"></span>
+            <span class="ml-1 text-xs text-slate-400" x-text="'(disp: ' + item.saldo_disponivel + ' ' + item.unidade + ')'"></span>
           </li>
         </template>
+        <li
+          x-show="!buscando && query.length >= 2 && resultados.length === 0"
+          class="px-3 py-2 text-sm italic text-slate-500"
+          role="option"
+          aria-disabled="true"
+        >
+          Nenhum material elegível encontrado.
+        </li>
       </ul>
-      <p x-show="aberto && resultados.length === 0 && buscando === false && query.length >= 2"
-         x-cloak
-         class="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-md text-sm px-3 py-2 text-slate-500">
-        Nenhum material elegível encontrado.
-      </p>
     </div>
     {% if form.material_label.errors %}
       <p class="mt-1 text-xs text-red-600" role="alert">{{ form.material_label.errors|join:", " }}</p>
