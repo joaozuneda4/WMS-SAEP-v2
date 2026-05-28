@@ -9,7 +9,13 @@ from decimal import Decimal
 import pytest
 from django.urls import reverse
 
-from apps.requisicoes.models import EstadoRequisicao, ItemRequisicao, Requisicao
+from apps.requisicoes.models import (
+    EstadoRequisicao,
+    EventoTimeline,
+    ItemRequisicao,
+    Requisicao,
+    TimelineRequisicao,
+)
 from apps.requisicoes.services import criar_requisicao
 
 
@@ -898,8 +904,7 @@ def test_fila_autorizacao_chefe_renderiza_apenas_setor(
     html = response.content.decode('utf-8')
     assert 'Fila de autorização' in html
     assert 'Analisar' in html
-    assert 'Atualizada em' in html
-    assert 'Enviada em' not in html
+    assert 'Enviada em' in html
 
 
 @pytest.mark.django_db
@@ -916,8 +921,7 @@ def test_fila_autorizacao_superuser_ve_todos_setores(
     html = response.content.decode('utf-8')
     assert 'Fila de autorização' in html
     assert 'Analisar' in html
-    assert 'Atualizada em' in html
-    assert 'Enviada em' not in html
+    assert 'Enviada em' in html
 
 
 @pytest.mark.django_db
@@ -2034,3 +2038,162 @@ def test_detalhe_nao_exibe_botao_registrar_retirada_para_solicitante(
     assert response.context['pode_atender_retirada'] is False
     html = response.content.decode('utf-8')
     assert 'Registrar retirada' not in html
+
+
+# ---------------------------------------------------------------------------
+# Issue #9 — Cabeçalho, colunas de data, botão primário, a11y (Batch D)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def req_enviada_com_timeline(db, solicitante, setor_obras):
+    """Requisição em aguardando_autorizacao com evento ENVIO_AUTORIZACAO na timeline."""
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+        numero_publico='REQ-2026-D001',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    TimelineRequisicao.objects.create(
+        requisicao=req,
+        evento=EventoTimeline.ENVIO_AUTORIZACAO,
+        ator=solicitante,
+        estado_resultante=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+    )
+    return req
+
+
+@pytest.fixture
+def req_autorizada_com_timeline(db, solicitante, setor_obras, material_disponivel):
+    """Requisição autorizada com eventos ENVIO_AUTORIZACAO e AUTORIZACAO_TOTAL."""
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.AUTORIZADA,
+        numero_publico='REQ-2026-D002',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    ItemRequisicao.objects.create(
+        requisicao=req,
+        material=material_disponivel,
+        quantidade_solicitada=1,
+        quantidade_autorizada=1,
+    )
+    TimelineRequisicao.objects.create(
+        requisicao=req,
+        evento=EventoTimeline.ENVIO_AUTORIZACAO,
+        ator=solicitante,
+        estado_resultante=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+    )
+    TimelineRequisicao.objects.create(
+        requisicao=req,
+        evento=EventoTimeline.AUTORIZACAO_TOTAL,
+        ator=solicitante,
+        estado_resultante=EstadoRequisicao.AUTORIZADA,
+    )
+    return req
+
+
+@pytest.mark.django_db
+def test_detalhe_exibe_enviada_em_em_aguardando_autorizacao(
+    client, solicitante, req_enviada_com_timeline
+):
+    _login(client, solicitante)
+    response = client.get(
+        reverse('requisicoes:detalhe', kwargs={'pk': req_enviada_com_timeline.pk})
+    )
+    assert response.status_code == 200
+    assert response.context['enviada_em'] is not None
+    html = response.content.decode('utf-8')
+    assert 'Enviada em' in html
+
+
+@pytest.mark.django_db
+def test_detalhe_nao_exibe_enviada_em_em_rascunho(client, solicitante, setor_obras):
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    _login(client, solicitante)
+    response = client.get(reverse('requisicoes:detalhe', kwargs={'pk': req.pk}))
+    assert response.status_code == 200
+    assert response.context['enviada_em'] is None
+
+
+@pytest.mark.django_db
+def test_detalhe_titulo_rascunho_sem_pk(client, solicitante, setor_obras):
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    _login(client, solicitante)
+    response = client.get(reverse('requisicoes:detalhe', kwargs={'pk': req.pk}))
+    assert response.status_code == 200
+    html = response.content.decode('utf-8')
+    assert 'Rascunho' in html
+    assert f'Rascunho #{req.pk}' not in html
+
+
+@pytest.mark.django_db
+def test_fila_autorizacao_coluna_enviada_em(
+    client, chefe_obras, req_enviada_com_timeline
+):
+    _login(client, chefe_obras)
+    response = client.get(reverse('requisicoes:autorizacoes'))
+    assert response.status_code == 200
+    html = response.content.decode('utf-8')
+    assert 'Enviada em' in html
+    assert 'Atualizada em' not in html
+
+
+@pytest.mark.django_db
+def test_fila_atendimento_coluna_autorizada_em(
+    client, aux_almoxarifado, req_autorizada_com_timeline
+):
+    _login(client, aux_almoxarifado)
+    response = client.get(reverse('requisicoes:atendimentos'))
+    assert response.status_code == 200
+    html = response.content.decode('utf-8')
+    assert 'Autorizada em' in html
+    assert 'Atualizada em' not in html
+
+
+@pytest.mark.django_db
+def test_detalhe_registrar_retirada_botao_azul(
+    client, aux_almoxarifado, req_pronta_view_com_itens
+):
+    _login(client, aux_almoxarifado)
+    response = client.get(
+        reverse('requisicoes:detalhe', kwargs={'pk': req_pronta_view_com_itens.pk})
+    )
+    assert response.status_code == 200
+    html = response.content.decode('utf-8')
+    assert 'bg-blue-600' in html
+    assert 'bg-emerald-600' not in html
+
+
+def test_messages_html_aria_live_containers():
+    """Partial _messages.html renderiza containers aria-live por nível de mensagem."""
+    from django.contrib import messages as django_messages
+    from django.contrib.messages.storage.fallback import FallbackStorage
+    from django.template.loader import render_to_string
+    from django.test import RequestFactory
+
+    rf = RequestFactory()
+    request = rf.get('/')
+    request.session = {}
+    storage = FallbackStorage(request)
+    request._messages = storage
+    django_messages.error(request, 'Erro de teste')
+    django_messages.success(request, 'Sucesso de teste')
+
+    html = render_to_string('core/partials/_messages.html', request=request)
+    assert 'aria-live="assertive"' in html
+    assert 'aria-live="polite"' in html
+    assert 'Erro de teste' in html
+    assert 'Sucesso de teste' in html
