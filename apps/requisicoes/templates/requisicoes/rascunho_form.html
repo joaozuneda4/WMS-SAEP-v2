@@ -139,6 +139,8 @@
                   aria-label="Buscar beneficiário"
                   role="combobox"
                   aria-autocomplete="list"
+                  aria-haspopup="listbox"
+                  aria-controls="{{ form.beneficiario_id.id_for_label }}-listbox"
                   :aria-expanded="aberto"
                   :aria-activedescendant="ativo >= 0 ? 'benef-opt-' + ativo : null"
                 />
@@ -150,8 +152,9 @@
                 </span>
               </div>
               <ul
-                x-show="aberto || (!buscando && query.length >= 1 && resultados.length === 0)"
+                x-show="aberto"
                 x-cloak
+                id="{{ form.beneficiario_id.id_for_label }}-listbox"
                 role="listbox"
                 aria-label="Resultados de beneficiários"
                 class="absolute z-20 mt-1 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg"
@@ -369,7 +372,7 @@
           );
           const data = await res.json();
           this.resultados = data.resultados || [];
-          this.aberto = this.resultados.length > 0;
+          this.aberto = true;
           this.ativo = -1;
         } catch (_e) {
           this.resultados = [];
