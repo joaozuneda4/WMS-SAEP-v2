@@ -5,11 +5,16 @@ escopo de visibilidade de requisições por papel (ADR-0004).
 Leituras triviais podem usar o ORM direto na view.
 """
 
-from django.db.models import Count, F, Q, QuerySet
+from django.db.models import Count, F, OuterRef, Q, QuerySet, Subquery
 
 from apps.accounts.models import SetorClassificacao, User, VinculoAuxiliar
 from apps.estoque.models import Material
-from apps.requisicoes.models import EstadoRequisicao, Requisicao
+from apps.requisicoes.models import (
+    EstadoRequisicao,
+    EventoTimeline,
+    Requisicao,
+    TimelineRequisicao,
+)
 
 
 def materiais_para_requisicao(q: str = '', limite: int = 20) -> QuerySet:
@@ -111,12 +116,20 @@ def minhas_requisicoes(ator_id: int) -> QuerySet[Requisicao]:
 
 def fila_autorizacao(ator_id: int) -> QuerySet[Requisicao]:
     """Fila de requisições aguardando autorização para chefias autorizadoras."""
+    enviada_em_sq = Subquery(
+        TimelineRequisicao.objects.filter(
+            requisicao=OuterRef('pk'),
+            evento=EventoTimeline.ENVIO_AUTORIZACAO,
+        )
+        .order_by('-criado_em')
+        .values('criado_em')[:1]
+    )
     base_qs = (
         Requisicao.objects.select_related(
             'criador', 'beneficiario', 'setor_beneficiario'
         )
         .filter(estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO)
-        .annotate(quantidade_itens=Count('itens'))
+        .annotate(quantidade_itens=Count('itens'), enviada_em=enviada_em_sq)
         .order_by('atualizado_em', 'criado_em', 'id')
     )
     try:
@@ -143,6 +156,14 @@ def fila_autorizacao(ator_id: int) -> QuerySet[Requisicao]:
 
 def fila_atendimento(ator_id: int) -> QuerySet[Requisicao]:
     """Fila de requisições prontas para separação/retirada pelo almoxarifado."""
+    autorizada_em_sq = Subquery(
+        TimelineRequisicao.objects.filter(
+            requisicao=OuterRef('pk'),
+            evento=EventoTimeline.AUTORIZACAO_TOTAL,
+        )
+        .order_by('-criado_em')
+        .values('criado_em')[:1]
+    )
     base_qs = (
         Requisicao.objects.select_related(
             'criador', 'beneficiario', 'setor_beneficiario'
@@ -153,7 +174,7 @@ def fila_atendimento(ator_id: int) -> QuerySet[Requisicao]:
                 EstadoRequisicao.PRONTA_PARA_RETIRADA,
             ]
         )
-        .annotate(quantidade_itens=Count('itens'))
+        .annotate(quantidade_itens=Count('itens'), autorizada_em=autorizada_em_sq)
         .order_by('atualizado_em', 'criado_em', 'id')
     )
     try:

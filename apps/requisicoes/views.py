@@ -101,6 +101,10 @@ def _detalhe_context(
     eventos = list(
         requisicao.eventos.select_related('ator').order_by('-criado_em', '-id')
     )
+    enviada_em = next(
+        (e.criado_em for e in eventos if e.evento == 'envio_autorizacao'),
+        None,
+    )
     cancelavel = pode_cancelar_requisicao(request.user, requisicao)
     if cancelavel:
         if (
@@ -204,6 +208,7 @@ def _detalhe_context(
         'autorizar_hidden_inputs': {'next': _voltar_url(request)},
         'enviar_hidden_inputs': {'next': _voltar_url(request)},
         'separar_hidden_inputs': {'next': _voltar_url(request)},
+        'enviada_em': enviada_em,
     }
 
 
