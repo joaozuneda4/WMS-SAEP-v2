@@ -19,8 +19,8 @@ Referência rápida de papéis, escopos e ações permitidas para implementar `p
 | Solicitante | `solicitante` | Próprio usuário como criador/beneficiário | Criar para si; ver próprias requisições; agir nos estados permitidos se for criador/beneficiário | Terceiros, estoque, autorização, relatórios gerais |
 | Auxiliar de setor | `auxiliar_setor` | Próprio setor | Criar em nome de funcionários do próprio setor | Outros setores, autorização, estoque |
 | Chefe de setor | `chefe_setor` | Setor sob responsabilidade | Criar para o próprio setor; ver/autorizar/recusar requisições do setor | Outros setores, estoque, rascunhos de terceiros |
-| Auxiliar de Almoxarifado | `auxiliar_almoxarifado` | Todos os setores na operação de Almoxarifado | Criar para qualquer funcionário; ver todos; atender; devolver | Autorizar, saída excepcional, estorno |
-| Chefe de Almoxarifado | `chefe_almoxarifado` | Todos os setores para operação; setor Almoxarifado para autorização | Herda auxiliar; saída excepcional; estorno; inativação permitida; histórico importações | Autorizar outros setores; ajuste manual |
+| Auxiliar de Almoxarifado | `auxiliar_almoxarifado` | Todos os setores na operação de Almoxarifado | Criar para qualquer funcionário; ver todos; atender; devolver; consultar saídas excepcionais | Autorizar; registrar saída excepcional; estornar saída excepcional |
+| Chefe de Almoxarifado | `chefe_almoxarifado` | Todos os setores para operação; setor Almoxarifado para autorização | Herda auxiliar; consultar/registrar saída excepcional; estornar; inativação permitida; histórico importações | Autorizar outros setores; ajuste manual |
 | Superusuário | `superuser` | Superuser | Tudo | Nada |
 
 Conceitos de escopo:
@@ -31,6 +31,7 @@ Conceitos de escopo:
 | Beneficiário | Funcionário que receberá material; pode agir nos estados permitidos. |
 | Setor do beneficiário | Define setor da requisição e fila de autorização; nunca usar setor do criador. |
 | Chefe autorizador | Chefe do setor do beneficiário; chefe de Almoxarifado só autoriza setor Almoxarifado. |
+| Saída excepcional | Documento de estoque próprio, sem beneficiário/destinatário/setor de destino; consulta é mais ampla que mutação. |
 
 ## 4. Matriz geral
 
@@ -73,11 +74,12 @@ Valores: **Sim**, **Não**, **Apenas próprio setor**, **Qualquer setor**, **Ape
 | Inativar material | Não | Não | Não | Não | Sim | Sim | Exige físico e reservado zerados. |
 | Operar movimentação de estoque | Não | Não | Não | Sim | Sim | Sim | Só por operação formal. |
 | Ajustar estoque manualmente | Não | Não | Não | Não | Não | Não | Fora do MVP. |
-| Registrar saída excepcional | Não | Não | Não | Não | Sim | Sim | Justificativa obrigatória. |
+| Consultar saídas excepcionais | Não | Não | Não | Sim | Sim | Sim | Lista e detalhe do documento. |
+| Registrar saída excepcional | Não | Não | Não | Não | Sim | Sim (override técnico) | Documento próprio, número `SXP-AAAA-NNNNNN`, baixa física direta, motivo fechado e observação obrigatória. |
+| Estornar saída excepcional | Não | Não | Não | Não | Sim | Sim (override técnico) | Estorno total only; justificativa obrigatória; não cria novo número. |
 | Consultar histórico de movimentações | Não | Não | Não | Sim | Sim | Sim | Timeline da requisição segue visibilidade da requisição. |
 | Registrar devolução | Não | Não | Não | Sim | Sim | Sim | Vinculada a requisição `atendida`. |
 | Estornar requisição finalizada | Não | Não | Não | Não | Sim | Sim | Apenas chefe de Almoxarifado. |
-| Estornar saída excepcional | Não | Não | Não | Não | Sim | Sim | Apenas chefe de Almoxarifado. |
 | Estornar devolução | Não | Não | Não | Não | Sim | Sim | Exige saldo disponível suficiente. |
 | Executar carga inicial técnica | Não | Não | Não | Não | Não | Sim | Piloto pode usar script/modo técnico. |
 | Executar importação SCPI | Não | Não | Não | Não | Não | Sim | MVP: superusuário em fluxo técnico. |
@@ -100,6 +102,7 @@ Valores: **Sim**, **Não**, **Apenas próprio setor**, **Qualquer setor**, **Ape
 - Chefe de setor vê requisições do setor sob sua responsabilidade, exceto rascunhos de terceiros.
 - Almoxarifado vê requisições de todos os setores fora de rascunhos e vê a fila de atendimento (estados `autorizada` e `pronta_para_retirada`).
 - Chefe de setor vê fila de autorização do próprio setor; chefe de Almoxarifado vê apenas setor Almoxarifado.
+- Saídas excepcionais são consultáveis por chefe de Almoxarifado, auxiliar de Almoxarifado e superuser; registro e estorno ficam restritos ao chefe de Almoxarifado e ao override técnico do superuser.
 - Relatórios gerais: Almoxarifado e suporte/admin. Chefe de setor: apenas relatórios do próprio setor.
 - Superusuário vê todos os registros e pode executar ações administrativas, operacionais e de estoque.
 

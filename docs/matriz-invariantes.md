@@ -52,16 +52,27 @@ Para cada mudança, localizar o invariante aplicável, implementar na camada ind
 | EST-09 | Estoque | Divergência resolve quando físico >= reservado. | Recalcular após operação/importação. | Remover alerta e liberar se houver disponível. | Crit. 7.4 |
 | EST-10 | Estoque | Material inativo não entra em nova requisição. | Queryset/service. | Bloquear seleção; histórico preservado. | Crit. 7.1 |
 | EST-11 | Estoque | Material só inativa com físico e reservado zerados. | Service/policy. | Permitir zerado; bloquear com saldo. | Crit. 7.5-7.6 |
+| SAE-01 | Saída excepcional | Saída excepcional é fluxo próprio de estoque, fora de Requisição. | App/URLs/policies próprios em `estoque`. | Rotas em `/estoque/saidas-excepcionais/`; não usar `requisicoes`. | `docs/processos-saida-excepcional.md` |
+| SAE-02 | Saída excepcional | Número público segue `SXP-AAAA-NNNNNN` com contador anual próprio. | Model/service transacional. | Registro emite número uma vez; estorno não cria novo número. | `docs/processos-saida-excepcional.md` |
+| SAE-03 | Saída excepcional | Documento exige ao menos 1 linha por material, sem duplicidade no mesmo documento. | Form/service/constraint. | Rejeitar material repetido; rejeitar documento vazio. | `docs/processos-saida-excepcional.md` |
+| SAE-04 | Saída excepcional | Registro é indivisível e all-or-nothing. | `transaction.atomic()` + lock determinístico. | Se 1 item falha, nada é persistido nem numerado. | `docs/processos-saida-excepcional.md` |
+| SAE-05 | Saída excepcional | Registro baixa `saldo_fisico` e não altera `saldo_reservado`. | Service transacional. | Saldo físico reduzido; reserva intacta. | `docs/processos-saida-excepcional.md` |
+| SAE-06 | Saída excepcional | Saldo aplicável é único; ausência ou ambiguidade bloqueia o documento. | Selector/service. | `saldo_nao_encontrado` ou `saldo_ambiguo`. | `docs/processos-saida-excepcional.md` |
+| SAE-07 | Saída excepcional | Estorno é total only e recompõe integralmente o `saldo_fisico`. | Service transacional. | Sem estorno parcial; documento estornado preservado. | `docs/processos-saida-excepcional.md` |
+| SAE-08 | Saída excepcional | Consulta é mais ampla que mutação. | Policy/view/service. | Chefe/auxiliar/superuser consultam; só chefe ou override técnico registra/estorna. | `docs/processos-saida-excepcional.md` |
+| SAE-09 | Saída excepcional | Motivos do MVP são fechados e observação é obrigatória. | Form/service. | Rejeitar motivo fora do enum e observação vazia. | `docs/processos-saida-excepcional.md` |
 
 ## 4. Notas por tema
 
 - **Usuários/setores/papéis:** dados cadastrais definem escopo; permissões completas ficam em `matriz-permissoes.md`.
 - **Requisições/itens:** estados e transições ficam em `estado-transicoes-requisicao.md`; este arquivo lista invariantes que não podem ser contornados.
 - **Estoque:** qualquer mutação de saldo/reserva é transacional, auditável e recalcula disponibilidade no ponto crítico.
+- **Saída excepcional:** fluxo próprio de estoque; detalhes de ciclo, número, permissões e front-end ficam em `processos-saida-excepcional.md`.
 
 ## 5. Checklist para PRs
 
 - O PR altera invariante, permissão, status, saldo, reserva, auditoria ou contrato?
+- O PR altera o fluxo de Saída excepcional? Se sim, conferiu `processos-saida-excepcional.md`, `matriz-permissoes.md` e o ADR novo?
 - A documentação rápida e completa afetada foi atualizada?
 - Há testes de caminho feliz, permissão negada e violação de domínio?
 - Há teste PostgreSQL quando envolve estoque/reserva/concorrência?

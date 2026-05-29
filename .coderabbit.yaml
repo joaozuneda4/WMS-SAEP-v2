@@ -5,7 +5,7 @@ language: pt-BR
 reviews:
   profile: chill
   request_changes_workflow: false
-  path_filters: ["!.design/**", "!docs/plans/**"]
+  path_filters: ["!docs/plans/**"]
   
   high_level_summary: true
   high_level_summary_instructions: >
@@ -198,6 +198,16 @@ reviews:
         com CONTEXT.md, ADRs aceitas, docs/CONVENTIONS.md, matriz de permissões,
         matriz de invariantes, transições de requisição e design-system. Se docs
         e código divergem, sinalize explicitamente em vez de normalizar silêncio.
+
+    - path: ".design/**/*.md"
+      instructions: >
+        Design briefs usam PT-BR e definem contratos de UX. Verifique conflito
+        com CONTEXT.md, ADRs aceitas, docs/CONVENTIONS.md, docs/design-system.md,
+        matriz de permissões, matriz de invariantes, transições de requisição e
+        especificações de processo. Revise alinhamento
+        entre decisões de interface, fluxos de navegação, acessibilidade e
+        regras de domínio. Se design e documentação/código divergem, sinalize
+        explicitamente.
 
     - path: "pyproject.toml"
       instructions: >

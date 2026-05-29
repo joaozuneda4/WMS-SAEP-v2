@@ -60,6 +60,27 @@ _Avoid_: destinatário, solicitante
 Pessoa que coleta fisicamente o material no momento do atendimento; pode não
 ser o Beneficiário.
 
+**Saída excepcional**:
+Baixa administrativa de material fora do ciclo de uma Requisição. Nasce já
+registrada, tem documento próprio, número público próprio e trilha de
+auditoria própria. Movimenta o saldo físico diretamente e só pode ser
+revertida por estorno explícito do mesmo documento.
+
+**Número público da saída excepcional**:
+Identificador anual próprio da saída excepcional, no formato `SXP-AAAA-
+NNNNNN`, emitido no registro e imutável depois disso.
+
+**Estado da saída excepcional**:
+`registrada` ou `estornada`. O documento nasce registrado e só muda para
+estornada por estorno explícito.
+
+**Evento da saída excepcional**:
+`registro` ou `estorno`. Evento de timeline não é estado.
+
+**Item da saída excepcional**:
+Cada material aparece uma única vez por documento; a quantidade da linha é
+canônica e não deve ser somada silenciosamente com duplicatas.
+
 ### Quantidades
 
 **Entregue líquida**:
@@ -78,6 +99,18 @@ quantidade entregue menos o que voltou por **Devolução** ou **Estorno**.
   **Criador**.
 - O **Chefe de setor** autorizador de uma requisição é o chefe do **Setor do
   Beneficiário**.
+- **Saída excepcional** é independente do ciclo de vida de **Requisição** e
+  não usa reserva, autorização de setor, separação nem atendimento.
+- **Doação** e **empréstimo** são fluxos distintos de estoque, com regras
+  próprias, e não fazem parte do MVP de **Saída excepcional**.
+- O estado da **Saída excepcional** não se confunde com seus eventos de
+  auditoria: estado é `registrada`/`estornada`; evento é `registro`/`estorno`.
+- Cada **Saída excepcional** aceita uma única linha por **Material**; se o
+  material repetir no input, o documento deve ser rejeitado.
+- O vocabulário canônico da feature usa `SaidaExcepcional`,
+  `ItemSaidaExcepcional`, `SequenciaSaidaExcepcional`,
+  `registrar_saida_excepcional` e `estornar_saida_excepcional`.
+- A feature pertence ao app **estoque**, não ao app **requisicoes**.
 
 ## Example dialogue
 

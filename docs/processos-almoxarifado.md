@@ -4,6 +4,8 @@
 
 Descrever os fluxos operacionais do módulo de Almoxarifado do WMS-SAEP, incluindo criação de requisição, autorização, atendimento, cancelamento, devolução, saídas excepcionais e estornos.
 
+> Saída excepcional tem especificação própria em `docs/processos-saida-excepcional.md`.
+
 ## 1.2 Fluxo principal de requisição
 
 O fluxo principal de uma requisição de material no Almoxarifado segue a lógica abaixo:
@@ -104,5 +106,5 @@ Regras iniciais:
 - Estornos de saídas excepcionais só podem ser realizados pelo chefe de almoxarifado.
 - Todo estorno deve exigir justificativa obrigatória.
 - O estorno deve devolver automaticamente ao estoque a quantidade estornada.
-- O sistema deve permitir estorno parcial.
+- O sistema deve permitir estorno parcial de requisições (não se aplica a saídas excepcionais, cujo estorno é sempre total no MVP; ver `docs/processos-saida-excepcional.md`).
 - Uma requisição estornada não pode ser corrigida e atendida novamente; o estorno encerra definitivamente aquela requisição.
