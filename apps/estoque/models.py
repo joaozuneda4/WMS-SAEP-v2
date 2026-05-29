@@ -5,6 +5,7 @@ Toda mutação de saldo deve ocorrer via ``estoque.services``, sob
 ordem determinística (EST-06). Nenhum outro app escreve saldo diretamente.
 """
 
+from django.conf import settings
 from django.db import models
 
 
@@ -129,3 +130,102 @@ class SaldoEstoque(models.Model):
 
     def __str__(self):
         return f'{self.material} @ {self.estoque}'
+
+
+class EstadoSaidaExcepcional(models.TextChoices):
+    REGISTRADA = 'registrada', 'Registrada'
+    ESTORNADA = 'estornada', 'Estornada'
+
+
+class SaidaExcepcional(models.Model):
+    """Documento de baixa administrativa direta de material no estoque.
+
+    Independente do ciclo de vida de Requisição. Mutações apenas via
+    ``estoque.services`` (EST-saida-01).
+    """
+
+    numero_publico = models.CharField(
+        'número público',
+        max_length=30,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+    criado_em = models.DateTimeField('criado em', auto_now_add=True)
+    motivo = models.TextField('motivo')
+    observacao = models.TextField('observação', blank=True)
+    estado = models.CharField(
+        'estado',
+        max_length=20,
+        choices=EstadoSaidaExcepcional.choices,
+        default=EstadoSaidaExcepcional.REGISTRADA,
+    )
+    registrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='saidas_excepcionais_registradas',
+        verbose_name='registrado por',
+    )
+    estoque = models.ForeignKey(
+        Estoque,
+        on_delete=models.PROTECT,
+        related_name='saidas_excepcionais',
+        verbose_name='estoque',
+    )
+    estornado_em = models.DateTimeField('estornado em', null=True, blank=True)
+    estornado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='saidas_excepcionais_estornadas',
+        verbose_name='estornado por',
+        null=True,
+        blank=True,
+    )
+    justificativa_estorno = models.TextField('justificativa de estorno', blank=True)
+
+    class Meta:
+        verbose_name = 'saída excepcional'
+        verbose_name_plural = 'saídas excepcionais'
+        ordering = ('-criado_em',)
+
+    def __str__(self):
+        return self.numero_publico or f'Saída #{self.pk}'
+
+
+class ItemSaidaExcepcional(models.Model):
+    """Item de uma saída excepcional — um material e sua quantidade baixada."""
+
+    saida = models.ForeignKey(
+        SaidaExcepcional,
+        on_delete=models.CASCADE,
+        related_name='itens',
+        verbose_name='saída excepcional',
+    )
+    material = models.ForeignKey(
+        Material,
+        on_delete=models.PROTECT,
+        related_name='itens_saida_excepcional',
+        verbose_name='material',
+    )
+    quantidade = models.DecimalField(
+        'quantidade',
+        max_digits=12,
+        decimal_places=3,
+    )
+
+    class Meta:
+        verbose_name = 'item de saída excepcional'
+        verbose_name_plural = 'itens de saída excepcional'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['saida', 'material'],
+                name='unico_material_por_saida_excepcional',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(quantidade__gt=0),
+                name='quantidade_saida_excepcional_positiva',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.material} × {self.quantidade} ({self.saida})'

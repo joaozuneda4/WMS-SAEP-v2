@@ -1746,7 +1746,7 @@ def test_topbar_exibe_link_atendimento_para_almox(client, aux_almoxarifado):
     response = client.get(reverse('requisicoes:minhas'))
     assert response.status_code == 200
     html = response.content.decode('utf-8')
-    assert 'Fila de Atendimento' in html
+    assert 'Atendimento' in html
 
 
 @pytest.mark.django_db

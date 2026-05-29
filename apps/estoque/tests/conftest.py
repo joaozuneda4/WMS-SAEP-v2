@@ -85,3 +85,16 @@ def usuario_inativo(db, setor_almoxarifado):
 @pytest.fixture
 def estoque_principal(db):
     return Estoque.objects.create(codigo='EST01', nome='Estoque Principal')
+
+
+@pytest.fixture
+def material_disponivel(db, estoque_principal):
+    from apps.estoque.models import Material, SaldoEstoque, UnidadeMedida
+
+    m = Material.objects.create(
+        codigo='MAT001', nome='Parafuso M6', unidade=UnidadeMedida.UNIDADE, ativo=True
+    )
+    SaldoEstoque.objects.create(
+        estoque=estoque_principal, material=m, saldo_fisico=100, saldo_reservado=10
+    )
+    return m

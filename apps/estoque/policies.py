@@ -31,3 +31,21 @@ def pode_consultar_saidas_excepcionais(ator: User) -> bool:
 def exigir_pode_consultar_saidas_excepcionais(ator: User) -> None:
     if not pode_consultar_saidas_excepcionais(ator):
         raise PermissaoNegada('Apenas almoxarifado pode consultar saídas excepcionais.')
+
+
+def pode_registrar_saida_excepcional(ator: User) -> bool:
+    """Apenas chefe de almoxarifado e superuser podem registrar."""
+    if not ator.is_active:
+        return False
+    if ator.is_superuser:
+        return True
+    try:
+        setor_chefiado = ator.setor_chefiado
+        if (
+            setor_chefiado.classificacao == SetorClassificacao.ALMOXARIFADO
+            and setor_chefiado.ativo
+        ):
+            return True
+    except Exception:
+        pass
+    return False

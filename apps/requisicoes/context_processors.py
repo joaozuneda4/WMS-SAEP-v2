@@ -4,6 +4,7 @@ Expõem flags de capacidade do usuário autenticado para uso no chrome
 compartilhado (topbar), evitando duplicação de policy em templates.
 """
 
+from apps.estoque.policies import pode_consultar_saidas_excepcionais
 from apps.requisicoes.policies import (
     pode_ver_fila_atendimento,
     pode_ver_fila_autorizacao,
@@ -11,14 +12,18 @@ from apps.requisicoes.policies import (
 
 
 def flags_de_papel(request):
-    """Adiciona `pode_ver_fila_*` ao contexto para o chrome global."""
+    """Adiciona flags de capacidade ao contexto para o chrome global."""
     usuario = getattr(request, 'user', None)
     if usuario is None or not usuario.is_authenticated:
         return {
             'pode_ver_fila_autorizacao': False,
             'pode_ver_fila_atendimento': False,
+            'pode_consultar_saidas_excepcionais': False,
         }
     return {
         'pode_ver_fila_autorizacao': pode_ver_fila_autorizacao(usuario),
         'pode_ver_fila_atendimento': pode_ver_fila_atendimento(usuario),
+        'pode_consultar_saidas_excepcionais': pode_consultar_saidas_excepcionais(
+            usuario
+        ),
     }

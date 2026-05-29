@@ -1,7 +1,5 @@
 """Testes de policy para estoque.saidas_excepcionais."""
 
-import pytest
-
 from apps.estoque.policies import pode_consultar_saidas_excepcionais
 
 
