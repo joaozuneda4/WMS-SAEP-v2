@@ -51,3 +51,10 @@ def pode_registrar_saida_excepcional(ator: User) -> bool:
     except (AttributeError, ObjectDoesNotExist):
         pass
     return False
+
+
+def exigir_pode_registrar_saida_excepcional(ator: User) -> None:
+    if not pode_registrar_saida_excepcional(ator):
+        raise PermissaoNegada(
+            'Apenas chefe de almoxarifado pode registrar saídas excepcionais.'
+        )

@@ -246,3 +246,22 @@ class ItemSaidaExcepcional(models.Model):
 
     def __str__(self):
         return f'{self.material} × {self.quantidade} ({self.saida})'
+
+
+class SequenciaSaidaExcepcional(models.Model):
+    """Contador anual para emissão do número público da saída excepcional.
+
+    Emitido exclusivamente por ``estoque.services`` dentro de
+    ``transaction.atomic`` com ``select_for_update`` (EST-saida-01).
+    """
+
+    ano = models.PositiveIntegerField('ano', unique=True)
+    ultimo_numero = models.PositiveIntegerField('último número', default=0)
+
+    class Meta:
+        verbose_name = 'sequência de saída excepcional'
+        verbose_name_plural = 'sequências de saída excepcional'
+        ordering = ('-ano',)
+
+    def __str__(self) -> str:
+        return f'{self.ano}: {self.ultimo_numero}'

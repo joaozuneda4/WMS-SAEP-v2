@@ -18,3 +18,40 @@ class TestPodeConsultarSaidasExcepcionais:
 
     def test_inativo_almox_nao_pode(self, usuario_inativo):
         assert pode_consultar_saidas_excepcionais(usuario_inativo) is False
+
+
+class TestExigirPodeRegistrarSaidaExcepcional:
+    def test_chefe_almoxarifado_nao_lanca(self, chefe_almoxarifado):
+        from apps.estoque.policies import exigir_pode_registrar_saida_excepcional
+
+        exigir_pode_registrar_saida_excepcional(chefe_almoxarifado)
+
+    def test_superuser_nao_lanca(self, superuser):
+        from apps.estoque.policies import exigir_pode_registrar_saida_excepcional
+
+        exigir_pode_registrar_saida_excepcional(superuser)
+
+    def test_aux_almox_lanca_permissao_negada(self, aux_almoxarifado):
+        import pytest
+        from apps.core.exceptions import PermissaoNegada
+        from apps.estoque.policies import exigir_pode_registrar_saida_excepcional
+
+        with pytest.raises(PermissaoNegada):
+            exigir_pode_registrar_saida_excepcional(aux_almoxarifado)
+
+    def test_solicitante_lanca_permissao_negada(self, solicitante):
+        import pytest
+        from apps.core.exceptions import PermissaoNegada
+        from apps.estoque.policies import exigir_pode_registrar_saida_excepcional
+
+        with pytest.raises(PermissaoNegada):
+            exigir_pode_registrar_saida_excepcional(solicitante)
+
+    def test_usuario_inativo_lanca_permissao_negada(self, usuario_inativo):
+        import pytest
+
+        from apps.core.exceptions import PermissaoNegada
+        from apps.estoque.policies import exigir_pode_registrar_saida_excepcional
+
+        with pytest.raises(PermissaoNegada):
+            exigir_pode_registrar_saida_excepcional(usuario_inativo)

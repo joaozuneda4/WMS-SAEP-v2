@@ -6,10 +6,19 @@ Toda mutação de ``SaldoEstoque`` passa por este módulo.
 from decimal import Decimal
 from typing import TypedDict
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.utils import timezone
 
+from apps.accounts.models import User
 from apps.core.exceptions import ConflitoDominio, DadosInvalidos
-from apps.estoque.models import SaldoEstoque
+from apps.estoque.models import (
+    Estoque,
+    ItemSaidaExcepcional,
+    SaidaExcepcional,
+    SaldoEstoque,
+    SequenciaSaidaExcepcional,
+)
 
 
 class ItemReservaEstoque(TypedDict):
@@ -304,3 +313,107 @@ def consumir_e_liberar_reservas_para_atendimento(
             saldo.saldo_reservado - autorizada_por_material[material_id]
         )
         saldo.save(update_fields=['saldo_fisico', 'saldo_reservado'])
+
+
+@transaction.atomic
+def registrar_saida_excepcional(
+    *,
+    ator_id: int,
+    estoque_id: int,
+    motivo: str,
+    observacao: str,
+    itens: list[dict],
+) -> SaidaExcepcional:
+    """Registra baixa administrativa direta de materiais no estoque.
+
+    Cria SaidaExcepcional + ItemSaidaExcepcional, baixa saldo_fisico e emite
+    SXP-AAAA-NNNNNN. Totalmente atômico (EST-saida-01).
+    """
+    from apps.estoque.policies import exigir_pode_registrar_saida_excepcional
+
+    try:
+        ator = User.objects.get(pk=ator_id)
+        estoque = Estoque.objects.get(pk=estoque_id)
+    except ObjectDoesNotExist as exc:
+        raise DadosInvalidos(
+            'Ator ou estoque inválido.', code='referencia_invalida'
+        ) from exc
+
+    exigir_pode_registrar_saida_excepcional(ator)
+
+    if not itens:
+        raise DadosInvalidos('A saída precisa ter ao menos um item.', code='sem_itens')
+
+    material_ids: list[int] = []
+    quantidade_por_material: dict[int, Decimal] = {}
+    for item in itens:
+        try:
+            material_id = int(item['material_id'])
+            quantidade = Decimal(str(item['quantidade']))
+        except (KeyError, TypeError, ValueError, ArithmeticError) as exc:
+            raise DadosInvalidos('Item inválido.', code='item_invalido') from exc
+
+        if quantidade <= 0:
+            raise DadosInvalidos(
+                'Quantidade deve ser maior que zero.', code='quantidade_invalida'
+            )
+        if material_id in quantidade_por_material:
+            raise DadosInvalidos(
+                'Material duplicado no mesmo documento.', code='material_duplicado'
+            )
+        material_ids.append(material_id)
+        quantidade_por_material[material_id] = quantidade
+
+    saldos = list(
+        SaldoEstoque.objects.select_for_update()
+        .select_related('material')
+        .filter(material_id__in=material_ids, estoque_id=estoque_id)
+        .order_by('material_id')
+    )
+
+    saldos_por_material: dict[int, SaldoEstoque] = {s.material_id: s for s in saldos}
+
+    for material_id, quantidade in quantidade_por_material.items():
+        saldo = saldos_por_material.get(material_id)
+        if saldo is None:
+            raise ConflitoDominio(
+                'Saldo não encontrado para material.', code='saldo_nao_encontrado'
+            )
+        if not saldo.material.ativo:
+            raise ConflitoDominio(
+                f"Material '{saldo.material.nome}' está inativo.",
+                code='material_inativo',
+            )
+        if saldo.saldo_fisico < quantidade:
+            raise ConflitoDominio(
+                f"Saldo físico insuficiente para '{saldo.material.nome}'.",
+                code='saldo_insuficiente',
+            )
+
+    saida = SaidaExcepcional.objects.create(
+        motivo=motivo,
+        observacao=observacao,
+        registrado_por=ator,
+        estoque=estoque,
+    )
+
+    for material_id, quantidade in quantidade_por_material.items():
+        ItemSaidaExcepcional.objects.create(
+            saida=saida,
+            material_id=material_id,
+            quantidade=quantidade,
+        )
+        saldo = saldos_por_material[material_id]
+        saldo.saldo_fisico = saldo.saldo_fisico - quantidade
+        saldo.save(update_fields=['saldo_fisico'])
+
+    ano = timezone.localdate().year
+    sequencia, _ = SequenciaSaidaExcepcional.objects.select_for_update().get_or_create(
+        ano=ano
+    )
+    sequencia.ultimo_numero += 1
+    sequencia.save(update_fields=['ultimo_numero'])
+    saida.numero_publico = f'SXP-{ano}-{sequencia.ultimo_numero:06d}'
+    saida.save(update_fields=['numero_publico'])
+
+    return saida
