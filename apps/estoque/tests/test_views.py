@@ -62,3 +62,121 @@ class TestListarSaidasExcepcionaisView:
         client.force_login(superuser)
         response = client.get(URL)
         assert response.context['pode_registrar'] is True
+
+
+URL_NOVA = reverse('estoque:nova_saida_excepcional')
+URL_BUSCAR = reverse('estoque:buscar_materiais_saida_excepcional')
+
+
+class TestNovaSaidaExcepcionalView:
+    def test_chefe_acessa_formulario(self, client, chefe_almoxarifado):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_NOVA)
+        assert response.status_code == 200
+
+    def test_superuser_acessa_formulario(self, client, superuser):
+        client.force_login(superuser)
+        response = client.get(URL_NOVA)
+        assert response.status_code == 200
+
+    def test_aux_recebe_403(self, client, aux_almoxarifado):
+        client.force_login(aux_almoxarifado)
+        response = client.get(URL_NOVA)
+        assert response.status_code == 403
+
+    def test_solicitante_recebe_403(self, client, solicitante):
+        client.force_login(solicitante)
+        response = client.get(URL_NOVA)
+        assert response.status_code == 403
+
+    def test_anonimo_redirecionado_para_login(self, client):
+        response = client.get(URL_NOVA)
+        assert response.status_code == 302
+        assert 'login' in response['Location']
+
+    def test_post_valido_cria_saida_e_redireciona(
+        self, client, chefe_almoxarifado, estoque_principal, material_disponivel
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            URL_NOVA,
+            data={
+                'motivo': 'avaria',
+                'observacao': 'Caixas molhadas',
+                'itens-TOTAL_FORMS': '1',
+                'itens-INITIAL_FORMS': '0',
+                'itens-MIN_NUM_FORMS': '0',
+                'itens-MAX_NUM_FORMS': '1000',
+                'itens-0-material_id': str(material_disponivel.pk),
+                'itens-0-quantidade': '5',
+            },
+        )
+        assert response.status_code == 302
+        from apps.estoque.models import SaidaExcepcional
+
+        assert SaidaExcepcional.objects.count() == 1
+        saida = SaidaExcepcional.objects.get()
+        assert saida.numero_publico.startswith('SXP-')
+
+    def test_post_sem_motivo_retorna_form_com_erro(
+        self, client, chefe_almoxarifado, estoque_principal, material_disponivel
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            URL_NOVA,
+            data={
+                'motivo': '',
+                'observacao': '',
+                'itens-TOTAL_FORMS': '1',
+                'itens-INITIAL_FORMS': '0',
+                'itens-MIN_NUM_FORMS': '0',
+                'itens-MAX_NUM_FORMS': '1000',
+                'itens-0-material_id': str(material_disponivel.pk),
+                'itens-0-quantidade': '5',
+            },
+        )
+        assert response.status_code == 200
+
+    def test_post_sem_itens_retorna_form_com_erro(
+        self, client, chefe_almoxarifado, estoque_principal
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            URL_NOVA,
+            data={
+                'motivo': 'Teste',
+                'observacao': '',
+                'itens-TOTAL_FORMS': '0',
+                'itens-INITIAL_FORMS': '0',
+                'itens-MIN_NUM_FORMS': '0',
+                'itens-MAX_NUM_FORMS': '1000',
+            },
+        )
+        assert response.status_code == 200
+
+
+class TestBuscarMateriasSaidaExcepcionalView:
+    def test_chefe_recebe_json(self, client, chefe_almoxarifado, material_disponivel):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_BUSCAR, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        assert response.status_code == 200
+        data = response.json()
+        assert 'resultados' in data
+
+    def test_filtra_por_q(self, client, chefe_almoxarifado, material_disponivel):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(
+            URL_BUSCAR + '?q=Parafuso', HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert any('Parafuso' in r['nome'] for r in data['resultados'])
+
+    def test_aux_recebe_403(self, client, aux_almoxarifado):
+        client.force_login(aux_almoxarifado)
+        response = client.get(URL_BUSCAR, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        assert response.status_code == 403
+
+    def test_anonimo_redirecionado(self, client):
+        response = client.get(URL_BUSCAR)
+        assert response.status_code == 302

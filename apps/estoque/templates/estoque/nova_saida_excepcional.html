@@ -1,0 +1,454 @@
+{% extends "estoque/base.html" %}
+
+{% block title %}Nova saída excepcional — WMS-SAEP{% endblock %}
+
+{% block extra_head %}
+<style>
+  [x-cloak] { display: none !important; }
+</style>
+{% endblock %}
+
+{% block topbar_leading %}
+  <a
+    href="{% url 'estoque:listar_saidas_excepcionais' %}"
+    class="app-bar__nav-icon"
+    aria-label="Voltar para lista de saídas excepcionais"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+    </svg>
+  </a>
+  <h1 class="app-bar__title">Nova saída excepcional</h1>
+{% endblock %}
+
+{% block content %}
+<div
+  class="max-w-3xl mx-auto pb-20 sm:pb-0"
+  x-data="novaSaidaExcepcional()"
+>
+
+  {% if erro_geral %}
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+      {{ erro_geral }}
+    </div>
+  {% endif %}
+
+  <form method="post" novalidate data-prevent-double-submit>
+    {% csrf_token %}
+
+    {# Management form — itens dinâmicos #}
+    <input type="hidden" name="itens-TOTAL_FORMS" :value="itens.length">
+    <input type="hidden" name="itens-INITIAL_FORMS" value="0">
+    <input type="hidden" name="itens-MIN_NUM_FORMS" value="0">
+    <input type="hidden" name="itens-MAX_NUM_FORMS" value="1000">
+
+    {# --- Seção 1: Dados da saída --- #}
+    <section
+      aria-labelledby="sec-dados-titulo"
+      class="mb-6 rounded-xl border {% if erros.motivo or erros.observacao %}border-red-300 bg-red-50{% else %}border-slate-200 bg-white{% endif %} p-5 shadow-sm"
+    >
+      <h2 id="sec-dados-titulo" class="mb-4 text-base font-medium text-slate-800">
+        <span class="mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">1</span>
+        Dados da saída
+      </h2>
+
+      <div class="space-y-4">
+
+        {# Motivo — enum fechado #}
+        <div>
+          <label class="mb-1 block text-xs font-medium text-slate-600" for="id_motivo">
+            Motivo
+            <span class="ml-0.5 text-red-500" aria-hidden="true">*</span>
+          </label>
+          <select
+            name="motivo"
+            id="id_motivo"
+            required
+            class="w-full rounded-lg border {% if erros.motivo %}border-red-400 bg-red-50{% else %}border-slate-300 bg-white{% endif %} px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            autocomplete="off"
+            aria-required="true"
+            {% if erros.motivo %}aria-invalid="true" aria-describedby="motivo-erro"{% endif %}
+          >
+            <option value="">Selecione o motivo…</option>
+            {% for valor, label in motivo_choices %}
+              <option value="{{ valor }}" {% if motivo == valor %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% if erros.motivo %}
+            <p id="motivo-erro" class="mt-1 text-xs text-red-600" role="alert">{{ erros.motivo }}</p>
+          {% endif %}
+        </div>
+
+        {# Observação — obrigatória #}
+        <div>
+          <label class="mb-1 block text-xs font-medium text-slate-600" for="id_observacao">
+            Observação
+            <span class="ml-0.5 text-red-500" aria-hidden="true">*</span>
+          </label>
+          <textarea
+            name="observacao"
+            id="id_observacao"
+            rows="3"
+            required
+            class="w-full rounded-lg border {% if erros.observacao %}border-red-400 bg-red-50{% else %}border-slate-300{% endif %} px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Descreva o contexto e justificativa para esta saída…"
+            autocomplete="off"
+            aria-required="true"
+            {% if erros.observacao %}aria-invalid="true" aria-describedby="obs-erro"{% endif %}
+          >{{ observacao|default:'' }}</textarea>
+          {% if erros.observacao %}
+            <p id="obs-erro" class="mt-1 text-xs text-red-600" role="alert">{{ erros.observacao }}</p>
+          {% endif %}
+        </div>
+
+      </div>
+    </section>
+
+    {# --- Seção 2: Materiais --- #}
+    <section
+      aria-labelledby="sec-materiais-titulo"
+      class="mb-6 rounded-xl border {% if erros.itens %}border-red-300 bg-red-50{% else %}border-slate-200 bg-white{% endif %} p-5 shadow-sm"
+    >
+      <h2 id="sec-materiais-titulo" class="mb-1 text-base font-medium text-slate-800">
+        <span class="mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">2</span>
+        Materiais
+      </h2>
+      <p class="mb-4 text-xs text-slate-500">Adicione ao menos um material com quantidade a baixar.</p>
+
+      {% if erros.itens %}
+        <div class="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">
+          {{ erros.itens }}
+        </div>
+      {% endif %}
+
+      {# Aviso de material duplicado — Alpine #}
+      <div
+        x-show="erroDuplicado"
+        x-cloak
+        class="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
+        role="alert"
+        aria-live="assertive"
+        x-text="erroDuplicado"
+      ></div>
+
+      {# Linhas de item #}
+      <div class="flex flex-col gap-3">
+        <template x-for="(item, idx) in itens" :key="item._uid">
+          <div
+            class="item-form-row flex flex-wrap items-start gap-3 rounded-lg border border-slate-200 bg-white p-3"
+          >
+            {# Hidden: material_id para POST #}
+            <input type="hidden" :name="'itens-' + idx + '-material_id'" :value="item.material_id">
+
+            {# Autocomplete de material #}
+            <div class="min-w-0 flex-1 basis-full sm:basis-0">
+              <label
+                class="mb-1 block text-xs font-medium text-slate-600"
+                :for="'mat-busca-' + idx"
+              >
+                Material
+              </label>
+              <div class="relative" @click.outside="fecharDropdown(idx)">
+                <input
+                  type="search"
+                  :id="'mat-busca-' + idx"
+                  :value="item.query"
+                  class="material-autocomplete w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autocomplete="new-password"
+                  autocorrect="off"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  placeholder="Buscar por código ou descrição…"
+                  @input.debounce.300ms="buscarMateriais(idx, $event.target.value)"
+                  @focus="abrirOuBuscar(idx)"
+                  @keydown.escape="fecharDropdown(idx)"
+                  @keydown.arrow-down.prevent="proximo(idx)"
+                  @keydown.arrow-up.prevent="anterior(idx)"
+                  @keydown.enter.prevent="confirmar(idx)"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-haspopup="listbox"
+                  :aria-controls="'mat-listbox-' + idx"
+                  :aria-expanded="item.aberto"
+                  :aria-activedescendant="item.ativo >= 0 ? 'mat-opt-' + item.ativo + '-' + idx : null"
+                >
+                <span
+                  x-show="item.buscando"
+                  x-cloak
+                  class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+                  aria-hidden="true"
+                >
+                  <svg class="h-4 w-4 animate-spin motion-reduce:animate-none text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                  </svg>
+                </span>
+                <ul
+                  x-show="item.aberto"
+                  x-cloak
+                  :id="'mat-listbox-' + idx"
+                  role="listbox"
+                  aria-label="Resultados de materiais"
+                  class="absolute z-20 mt-1 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg"
+                  style="max-height: 14rem"
+                >
+                  <template x-for="(mat, i) in item.resultados" :key="mat.id">
+                    <li
+                      :id="'mat-opt-' + i + '-' + idx"
+                      role="option"
+                      :aria-selected="item.ativo === i"
+                      @mousedown.prevent="selecionarMaterial(idx, mat)"
+                      @mouseover="item.ativo = i"
+                      :class="item.ativo === i ? 'bg-blue-50' : 'hover:bg-slate-50'"
+                      class="cursor-pointer px-3 py-2"
+                    >
+                      <span class="font-medium text-slate-900" x-text="mat.codigo"></span>
+                      <span class="text-slate-600" x-text="' — ' + mat.nome"></span>
+                      <span class="ml-1 text-xs text-slate-400" x-text="'(saldo: ' + mat.saldo_fisico + ' ' + mat.unidade + ')'"></span>
+                    </li>
+                  </template>
+                  <li
+                    x-show="!item.buscando && item.query.length >= 2 && item.resultados.length === 0"
+                    class="px-3 py-2 text-sm italic text-slate-500"
+                    role="option"
+                    aria-disabled="true"
+                  >
+                    Nenhum material elegível encontrado.
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {# Quantidade #}
+            <div class="w-28 shrink-0">
+              <label
+                class="mb-1 block text-xs font-medium text-slate-600"
+                :for="'itens-' + idx + '-quantidade'"
+              >
+                Quantidade
+              </label>
+              <input
+                type="number"
+                :name="'itens-' + idx + '-quantidade'"
+                :id="'itens-' + idx + '-quantidade'"
+                x-model="item.quantidade"
+                min="0.001"
+                step="any"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :aria-label="'Quantidade do material ' + (item.label || (idx + 1))"
+              >
+            </div>
+
+            {# Botão remover #}
+            <div class="shrink-0 pt-5">
+              <button
+                type="button"
+                @click="removerItem(idx)"
+                :disabled="itens.length <= 1"
+                :class="itens.length <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:text-red-700'"
+                class="flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium text-slate-600 transition-colors focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-1"
+                :aria-label="'Remover item ' + (idx + 1)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M9 2a1 1 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 012 0v6a1 1 11-2 0V8zm5-1a1 1 00-1 1v6a1 1 102 0V8a1 1 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <span class="hidden sm:inline">Remover</span>
+              </button>
+            </div>
+
+          </div>
+        </template>
+      </div>
+
+      {# Botão adicionar material #}
+      <button
+        type="button"
+        @click="adicionarItem()"
+        class="mt-6 flex items-center gap-2 text-sm font-medium text-blue-600 transition-colors hover:text-blue-800"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M10 3a1 1 011 1v5h5a1 1 110 2h-5v5a1 1 11-2 0v-5H4a1 1 110-2h5V4a1 1 011-1z" clip-rule="evenodd"/>
+        </svg>
+        Adicionar material
+      </button>
+
+    </section>
+
+    {# Ações — sticky no mobile, static no sm+ #}
+    <div class="fixed inset-x-0 bottom-0 z-30 flex flex-nowrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-4 py-2 sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+      <a
+        href="{% url 'estoque:listar_saidas_excepcionais' %}"
+        class="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+      >
+        Cancelar
+      </a>
+      <button
+        type="submit"
+        data-submit-loading-label="Registrando…"
+        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <svg aria-hidden="true" class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 010 1.414l-8 8a1 1 01-1.414 0l-4-4a1 1 011.414-1.414L8 12.586l7.293-7.293a1 1 011.414 0z" clip-rule="evenodd"/>
+        </svg>
+        <span data-submit-text>Registrar saída excepcional</span>
+      </button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    let _uid = 0;
+
+    function novoItem() {
+      return {
+        _uid: ++_uid,
+        material_id: '',
+        label: '',
+        query: '',
+        quantidade: '',
+        resultados: [],
+        aberto: false,
+        buscando: false,
+        ativo: -1,
+      };
+    }
+
+    window.novaSaidaExcepcional = function () {
+      return {
+        itens: [novoItem()],
+        erroDuplicado: '',
+
+        adicionarItem() {
+          this.itens.push(novoItem());
+          this.erroDuplicado = '';
+        },
+
+        removerItem(idx) {
+          if (this.itens.length <= 1) return;
+          this.itens.splice(idx, 1);
+          this.erroDuplicado = '';
+        },
+
+        abrirOuBuscar(idx) {
+          const item = this.itens[idx];
+          if (!item.query) {
+            this.buscarMateriais(idx, '');
+          } else if (item.resultados.length > 0) {
+            item.aberto = true;
+          } else {
+            this.buscarMateriais(idx, item.query);
+          }
+        },
+
+        async buscarMateriais(idx, q) {
+          const item = this.itens[idx];
+          item.query = q;
+
+          if (q.length > 0 && q.length < 2) {
+            item.material_id = '';
+            item.label = '';
+            item.resultados = [];
+            item.aberto = false;
+            return;
+          }
+
+          // Digitar limpa seleção anterior
+          item.material_id = '';
+          item.label = '';
+          item.buscando = true;
+
+          try {
+            const res = await fetch(
+              `{% url 'estoque:buscar_materiais_saida_excepcional' %}?q=${encodeURIComponent(q || '')}`,
+              { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
+            );
+            const data = await res.json();
+            item.resultados = data.resultados || [];
+            item.aberto = item.resultados.length > 0;
+            item.ativo = -1;
+          } catch (_e) {
+            item.resultados = [];
+          } finally {
+            item.buscando = false;
+          }
+        },
+
+        selecionarMaterial(idx, mat) {
+          // Guarda de duplicidade — um material por documento
+          const duplicado = this.itens.some(
+            (it, i) => i !== idx && it.material_id === String(mat.id)
+          );
+          if (duplicado) {
+            this.erroDuplicado =
+              'Este material já foi adicionado. Cada material pode aparecer apenas uma vez no documento.';
+            return;
+          }
+          this.erroDuplicado = '';
+
+          const item = this.itens[idx];
+          item.material_id = String(mat.id);
+          item.label = mat.label;
+          item.query = mat.label;
+          item.aberto = false;
+          item.ativo = -1;
+        },
+
+        fecharDropdown(idx) {
+          this.itens[idx].aberto = false;
+          this.itens[idx].ativo = -1;
+        },
+
+        proximo(idx) {
+          const item = this.itens[idx];
+          if (item.ativo < item.resultados.length - 1) item.ativo++;
+        },
+
+        anterior(idx) {
+          const item = this.itens[idx];
+          if (item.ativo > 0) item.ativo--;
+        },
+
+        confirmar(idx) {
+          const item = this.itens[idx];
+          if (item.ativo >= 0 && item.resultados[item.ativo]) {
+            this.selecionarMaterial(idx, item.resultados[item.ativo]);
+          }
+        },
+      };
+    };
+  })();
+
+  // Anti double-submit — mesma lógica do rascunho_form
+  document.querySelectorAll('form[data-prevent-double-submit]').forEach((form) => {
+    let submitter = null;
+    form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+      btn.addEventListener('click', () => { submitter = btn; });
+    });
+    form.addEventListener('submit', () => {
+      const targets = submitter
+        ? [submitter]
+        : Array.from(form.querySelectorAll('button[type="submit"]'));
+      targets.forEach((btn) => {
+        if (btn.dataset.submitting === '1') return;
+        btn.dataset.submitting = '1';
+        btn.setAttribute('aria-busy', 'true');
+        const loading = btn.dataset.submitLoadingLabel;
+        if (loading) {
+          btn.querySelectorAll('[data-submit-text]').forEach((node) => {
+            node.textContent = loading;
+          });
+        }
+      });
+      setTimeout(() => {
+        targets.forEach((btn) => { btn.disabled = true; });
+      }, 0);
+    });
+  });
+</script>
+{% endblock %}
