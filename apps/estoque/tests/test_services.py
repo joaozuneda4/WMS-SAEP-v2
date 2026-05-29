@@ -189,3 +189,98 @@ class TestRegistrarSaidaExcepcionalAuth:
                 observacao='Teste válido',
                 itens=[{'material_id': material_disponivel.pk, 'quantidade': '1'}],
             )
+
+
+class TestEstornarSaidaExcepcional:
+    def test_happy_path_estorna_e_restaura_saldo(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        saida_registrada,
+    ):
+        from apps.estoque.services import estornar_saida_excepcional
+
+        saldo_antes = SaldoEstoque.objects.get(
+            estoque=estoque_principal, material=material_disponivel
+        ).saldo_fisico
+
+        saida = estornar_saida_excepcional(
+            ator_id=chefe_almoxarifado.pk,
+            saida_id=saida_registrada.pk,
+            justificativa='Registro equivocado.',
+        )
+
+        assert saida.estado == EstadoSaidaExcepcional.ESTORNADA
+        assert saida.estornado_por_id == chefe_almoxarifado.pk
+        assert saida.estornado_em is not None
+        assert saida.justificativa_estorno == 'Registro equivocado.'
+
+        saldo_depois = SaldoEstoque.objects.get(
+            estoque=estoque_principal, material=material_disponivel
+        ).saldo_fisico
+        assert saldo_depois == saldo_antes + 5
+
+    def test_estorno_duplo_lanca_conflito(
+        self, chefe_almoxarifado, saida_registrada
+    ):
+        import pytest
+
+        from apps.core.exceptions import ConflitoDominio
+        from apps.estoque.services import estornar_saida_excepcional
+
+        estornar_saida_excepcional(
+            ator_id=chefe_almoxarifado.pk,
+            saida_id=saida_registrada.pk,
+            justificativa='Primeiro estorno.',
+        )
+
+        with pytest.raises(ConflitoDominio, match='já estornada'):
+            estornar_saida_excepcional(
+                ator_id=chefe_almoxarifado.pk,
+                saida_id=saida_registrada.pk,
+                justificativa='Segundo estorno.',
+            )
+
+    def test_ator_sem_permissao_lanca_permissao_negada(
+        self, aux_almoxarifado, saida_registrada
+    ):
+        import pytest
+
+        from apps.core.exceptions import PermissaoNegada
+        from apps.estoque.services import estornar_saida_excepcional
+
+        with pytest.raises(PermissaoNegada):
+            estornar_saida_excepcional(
+                ator_id=aux_almoxarifado.pk,
+                saida_id=saida_registrada.pk,
+                justificativa='Tentativa indevida.',
+            )
+
+    def test_justificativa_vazia_lanca_dados_invalidos(
+        self, chefe_almoxarifado, saida_registrada
+    ):
+        import pytest
+
+        from apps.core.exceptions import DadosInvalidos
+        from apps.estoque.services import estornar_saida_excepcional
+
+        with pytest.raises(DadosInvalidos, match='justificativa'):
+            estornar_saida_excepcional(
+                ator_id=chefe_almoxarifado.pk,
+                saida_id=saida_registrada.pk,
+                justificativa='',
+            )
+
+    def test_saida_inexistente_lanca_dados_invalidos(self, chefe_almoxarifado):
+        import pytest
+
+        from apps.core.exceptions import DadosInvalidos
+        from apps.estoque.services import estornar_saida_excepcional
+
+        with pytest.raises(DadosInvalidos):
+            estornar_saida_excepcional(
+                ator_id=chefe_almoxarifado.pk,
+                saida_id=999999,
+                justificativa='Inexistente.',
+            )

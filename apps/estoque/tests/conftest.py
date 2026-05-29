@@ -98,3 +98,16 @@ def material_disponivel(db, estoque_principal):
         estoque=estoque_principal, material=m, saldo_fisico=100, saldo_reservado=10
     )
     return m
+
+
+@pytest.fixture
+def saida_registrada(db, chefe_almoxarifado, estoque_principal, material_disponivel):
+    from apps.estoque.services import registrar_saida_excepcional
+
+    return registrar_saida_excepcional(
+        ator_id=chefe_almoxarifado.pk,
+        estoque_id=estoque_principal.pk,
+        motivo='Descarte por avaria',
+        observacao='Itens danificados',
+        itens=[{'material_id': material_disponivel.pk, 'quantidade': '5'}],
+    )
