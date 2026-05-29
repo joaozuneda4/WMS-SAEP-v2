@@ -191,7 +191,7 @@ Requisitos de acessibilidade (ver `.design/saida-excepcional/DESIGN_BRIEF.md`):
 
 - contraste mínimo WCAG AA em textos, badges e botões;
 - todo input deve ter `<label>` explícito;
-- modal de estorno precisa de `role="dialog"`, `aria-modal="true"` e foco gerenciado corretamente;
+- modal de estorno precisa de `role="dialog"`, `aria-modal="true"`, trap de foco e restauração do foco ao fechar;
 - a lista precisa ser navegável por teclado e manter o link de detalhe acessível;
 - o estado precisa ter label textual além da cor;
 - o autocomplete precisa ser utilizável por teclado, com navegação por setas e confirmação da seleção;

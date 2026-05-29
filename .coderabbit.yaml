@@ -202,8 +202,9 @@ reviews:
     - path: ".design/**/*.md"
       instructions: >
         Design briefs usam PT-BR e definem contratos de UX. Verifique conflito
-        com CONTEXT.md, ADRs aceitas, docs/CONVENTIONS.md, matriz de permissões,
-        matriz de invariantes e especificações de processo. Revise alinhamento
+        com CONTEXT.md, ADRs aceitas, docs/CONVENTIONS.md, docs/design-system.md,
+        matriz de permissões, matriz de invariantes, transições de requisição e
+        especificações de processo. Revise alinhamento
         entre decisões de interface, fluxos de navegação, acessibilidade e
         regras de domínio. Se design e documentação/código divergem, sinalize
         explicitamente.
