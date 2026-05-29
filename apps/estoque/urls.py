@@ -20,4 +20,9 @@ urlpatterns = [
         views.buscar_materiais_saida_excepcional_view,
         name='buscar_materiais_saida_excepcional',
     ),
+    path(
+        'saidas-excepcionais/<int:pk>/',
+        views.detalhe_saida_excepcional_view,
+        name='detalhe_saida_excepcional',
+    ),
 ]

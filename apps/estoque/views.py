@@ -172,3 +172,66 @@ def buscar_materiais_saida_excepcional_view(request):
         for m in materiais
     ]
     return JsonResponse({'resultados': resultado})
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def detalhe_saida_excepcional_view(request, pk: int):
+    from apps.estoque.policies import (
+        exigir_pode_estornar_saida_excepcional,
+        pode_estornar_saida_excepcional,
+    )
+    from apps.estoque.selectors import buscar_detalhe_saida_excepcional
+    from apps.estoque.services import estornar_saida_excepcional
+
+    try:
+        exigir_pode_consultar_saidas_excepcionais(request.user)
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+
+    saida = buscar_detalhe_saida_excepcional(saida_id=pk)
+    if saida is None:
+        from django.http import Http404
+
+        raise Http404
+
+    pode_estornar = pode_estornar_saida_excepcional(request.user)
+
+    if request.method == 'GET':
+        return render(
+            request,
+            'estoque/detalhe_saida_excepcional.html',
+            {
+                'saida': saida,
+                'pode_estornar': pode_estornar,
+            },
+        )
+
+    # POST — ação de estorno
+    try:
+        exigir_pode_estornar_saida_excepcional(request.user)
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+
+    justificativa = request.POST.get('justificativa', '').strip()
+
+    try:
+        estornar_saida_excepcional(
+            ator_id=request.user.pk,
+            saida_id=pk,
+            justificativa=justificativa,
+        )
+    except (DadosInvalidos, ConflitoDominio) as exc:
+        saida_atualizada = buscar_detalhe_saida_excepcional(saida_id=pk) or saida
+        return render(
+            request,
+            'estoque/detalhe_saida_excepcional.html',
+            {
+                'saida': saida_atualizada,
+                'pode_estornar': pode_estornar,
+                'erro_estorno': str(exc),
+            },
+        )
+
+    messages.success(request, f'Saída {saida.numero_publico} estornada com sucesso.')
+    return redirect('estoque:detalhe_saida_excepcional', pk=pk)

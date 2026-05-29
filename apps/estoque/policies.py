@@ -58,3 +58,15 @@ def exigir_pode_registrar_saida_excepcional(ator: User) -> None:
         raise PermissaoNegada(
             'Apenas chefe de almoxarifado pode registrar saídas excepcionais.'
         )
+
+
+def pode_estornar_saida_excepcional(ator: User) -> bool:
+    """Apenas chefe de almoxarifado e superuser podem estornar."""
+    return pode_registrar_saida_excepcional(ator)
+
+
+def exigir_pode_estornar_saida_excepcional(ator: User) -> None:
+    if not pode_estornar_saida_excepcional(ator):
+        raise PermissaoNegada(
+            'Apenas chefe de almoxarifado pode estornar saídas excepcionais.'
+        )

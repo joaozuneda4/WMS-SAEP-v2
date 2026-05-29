@@ -417,3 +417,78 @@ def registrar_saida_excepcional(
     saida.save(update_fields=['numero_publico'])
 
     return saida
+
+
+@transaction.atomic
+def estornar_saida_excepcional(
+    *,
+    ator_id: int,
+    saida_id: int,
+    justificativa: str,
+) -> SaidaExcepcional:
+    """Estorna uma saída excepcional, restaurando saldo_fisico de cada item.
+
+    Operação total e atômica (EST-saida-02). Sem estorno parcial.
+    """
+    from apps.estoque.models import EstadoSaidaExcepcional
+    from apps.estoque.policies import exigir_pode_estornar_saida_excepcional
+
+    try:
+        ator = User.objects.get(pk=ator_id)
+    except ObjectDoesNotExist as exc:
+        raise DadosInvalidos('Ator inválido.', code='referencia_invalida') from exc
+
+    exigir_pode_estornar_saida_excepcional(ator)
+
+    if not justificativa or not justificativa.strip():
+        raise DadosInvalidos(
+            'A justificativa de estorno é obrigatória.', code='justificativa_vazia'
+        )
+
+    try:
+        saida = SaidaExcepcional.objects.select_for_update().get(pk=saida_id)
+    except ObjectDoesNotExist as exc:
+        raise DadosInvalidos(
+            'Saída excepcional não encontrada.', code='nao_encontrada'
+        ) from exc
+
+    if saida.estado == EstadoSaidaExcepcional.ESTORNADA:
+        raise ConflitoDominio(
+            'Esta saída já estornada não pode ser estornada novamente.',
+            code='ja_estornada',
+        )
+
+    itens = list(saida.itens.select_related('material').all())
+    material_ids = [item.material_id for item in itens]
+
+    saldos = list(
+        SaldoEstoque.objects.select_for_update()
+        .filter(material_id__in=material_ids, estoque_id=saida.estoque_id)
+        .order_by('material_id')
+    )
+    saldos_por_material = {s.material_id: s for s in saldos}
+
+    for item in itens:
+        saldo = saldos_por_material.get(item.material_id)
+        if saldo is None:
+            raise ConflitoDominio(
+                f"Saldo não encontrado para material '{item.material.nome}' no estorno.",
+                code='saldo_nao_encontrado_estorno',
+            )
+        saldo.saldo_fisico = saldo.saldo_fisico + item.quantidade
+        saldo.save(update_fields=['saldo_fisico'])
+
+    saida.estado = EstadoSaidaExcepcional.ESTORNADA
+    saida.estornado_em = timezone.now()
+    saida.estornado_por = ator
+    saida.justificativa_estorno = justificativa.strip()
+    saida.save(
+        update_fields=[
+            'estado',
+            'estornado_em',
+            'estornado_por',
+            'justificativa_estorno',
+        ]
+    )
+
+    return saida

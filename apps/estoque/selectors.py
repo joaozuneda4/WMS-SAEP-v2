@@ -24,3 +24,17 @@ def buscar_materiais_saida_excepcional(q: str = '', limite: int = 20):
     if q:
         qs = qs.filter(Q(codigo__icontains=q) | Q(nome__icontains=q))
     return qs.order_by('nome')[:limite]
+
+
+def buscar_detalhe_saida_excepcional(saida_id: int) -> SaidaExcepcional | None:
+    """Retorna SaidaExcepcional com itens e relações prefetchadas, ou None."""
+    try:
+        return (
+            SaidaExcepcional.objects.select_related(
+                'registrado_por', 'estoque', 'estornado_por'
+            )
+            .prefetch_related('itens__material')
+            .get(pk=saida_id)
+        )
+    except SaidaExcepcional.DoesNotExist:
+        return None

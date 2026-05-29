@@ -250,3 +250,114 @@ class TestBuscarMateriasSaidaExcepcionalView:
     def test_anonimo_redirecionado(self, client):
         response = client.get(URL_BUSCAR)
         assert response.status_code == 302
+
+
+class TestDetalheSaidaExcepcionalView:
+    def _url(self, pk):
+        return reverse('estoque:detalhe_saida_excepcional', args=[pk])
+
+    def test_chefe_almox_acessa_detalhe(
+        self, client, chefe_almoxarifado, saida_registrada
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(self._url(saida_registrada.pk))
+        assert response.status_code == 200
+
+    def test_aux_almox_acessa_detalhe(self, client, aux_almoxarifado, saida_registrada):
+        client.force_login(aux_almoxarifado)
+        response = client.get(self._url(saida_registrada.pk))
+        assert response.status_code == 200
+
+    def test_superuser_acessa_detalhe(self, client, superuser, saida_registrada):
+        client.force_login(superuser)
+        response = client.get(self._url(saida_registrada.pk))
+        assert response.status_code == 200
+
+    def test_solicitante_recebe_403(self, client, solicitante, saida_registrada):
+        client.force_login(solicitante)
+        response = client.get(self._url(saida_registrada.pk))
+        assert response.status_code == 403
+
+    def test_anonimo_redirecionado_para_login(self, client, saida_registrada):
+        response = client.get(self._url(saida_registrada.pk))
+        assert response.status_code == 302
+        assert 'login' in response['Location']
+
+    def test_usuario_inativo_redirecionado_para_login(
+        self, client, usuario_inativo, saida_registrada
+    ):
+        client.force_login(usuario_inativo)
+        response = client.get(self._url(saida_registrada.pk))
+        assert response.status_code == 302
+        assert 'login' in response['Location']
+
+    def test_pk_inexistente_retorna_404(self, client, chefe_almoxarifado):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(self._url(999999))
+        assert response.status_code == 404
+
+    def test_contexto_contem_saida_e_pode_estornar(
+        self, client, chefe_almoxarifado, saida_registrada
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(self._url(saida_registrada.pk))
+        assert 'saida' in response.context
+        assert 'pode_estornar' in response.context
+        assert response.context['pode_estornar'] is True
+
+    def test_aux_nao_pode_estornar_no_contexto(
+        self, client, aux_almoxarifado, saida_registrada
+    ):
+        client.force_login(aux_almoxarifado)
+        response = client.get(self._url(saida_registrada.pk))
+        assert response.context['pode_estornar'] is False
+
+    def test_post_estorno_chefe_redireciona_para_detalhe(
+        self, client, chefe_almoxarifado, saida_registrada
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            self._url(saida_registrada.pk),
+            data={'justificativa': 'Registro equivocado.'},
+        )
+        assert response.status_code == 302
+        assert str(saida_registrada.pk) in response['Location']
+
+    def test_post_estorno_aux_recebe_403(
+        self, client, aux_almoxarifado, saida_registrada
+    ):
+        client.force_login(aux_almoxarifado)
+        response = client.post(
+            self._url(saida_registrada.pk),
+            data={'justificativa': 'Tentativa.'},
+        )
+        assert response.status_code == 403
+
+    def test_post_sem_justificativa_retorna_200_com_erro(
+        self, client, chefe_almoxarifado, saida_registrada
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            self._url(saida_registrada.pk),
+            data={'justificativa': ''},
+        )
+        assert response.status_code == 200
+        assert 'erro_estorno' in response.context
+
+    def test_post_saida_ja_estornada_retorna_200_com_erro(
+        self, client, chefe_almoxarifado, saida_registrada
+    ):
+        from apps.estoque.services import estornar_saida_excepcional
+
+        estornar_saida_excepcional(
+            ator_id=chefe_almoxarifado.pk,
+            saida_id=saida_registrada.pk,
+            justificativa='Primeiro.',
+        )
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            self._url(saida_registrada.pk),
+            data={'justificativa': 'Segundo.'},
+        )
+        assert response.status_code == 200
+        assert 'erro_estorno' in response.context
