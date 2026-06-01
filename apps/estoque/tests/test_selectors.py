@@ -172,3 +172,19 @@ class TestGerarPreviewImportacaoScpiCasos:
             gerar_preview_importacao_scpi(
                 conteudo_bytes=csv_bytes, estoque_id=estoque_principal.pk
             )
+
+
+class TestNormalizacaoCsvScpi:
+    """Testes de normalização e erros de codificação."""
+
+    def test_codificacao_invalida_lanca_dados_invalidos(self, db, estoque_principal):
+        import pytest
+
+        from apps.core.exceptions import DadosInvalidos
+        from apps.estoque.selectors import gerar_preview_importacao_scpi
+
+        bytes_invalidos = b'\xff\xfe' + b'\x80\x81' * 20
+        with pytest.raises(DadosInvalidos, match='UTF-8'):
+            gerar_preview_importacao_scpi(
+                conteudo_bytes=bytes_invalidos, estoque_id=estoque_principal.pk
+            )

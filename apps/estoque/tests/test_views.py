@@ -413,7 +413,7 @@ class TestEstornarSaidaExcepcionalView:
 class TestPreviewImportacaoScpiView:
     """Contrato HTTP de preview_importacao_scpi_view."""
 
-    URL = '/estoque/importacao-scpi/preview/'
+    URL = '/estoque/importacao-scpi/pre-visualizacao/'
 
     def _csv_valido(self, codigo: str = 'MAT001', quantidade: str = '10.000') -> bytes:
         return f'CADPRO;QUANTIDADE\n{codigo};{quantidade}\n'.encode('utf-8')
@@ -464,3 +464,4 @@ class TestPreviewImportacaoScpiView:
         arquivo = SimpleUploadedFile('ruim.csv', csv_ruim, content_type='text/csv')
         resp = client.post(self.URL, {'arquivo': arquivo})
         assert resp.status_code == 200
+        assert b'CADPRO' in resp.content or b'inv' in resp.content.lower()

@@ -57,7 +57,15 @@ class LinhaPreviewSCPI:
 
 
 def _normalizar_csv_scpi(conteudo_bytes: bytes) -> str:
-    texto = conteudo_bytes.decode('utf-8-sig')
+    from apps.core.exceptions import DadosInvalidos
+
+    try:
+        texto = conteudo_bytes.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        raise DadosInvalidos(
+            'Arquivo deve estar em UTF-8 (BOM opcional).',
+            code='csv_codificacao_invalida',
+        )
     return texto.replace('\r\n', '\n').replace('\r', '\n')
 
 
@@ -88,9 +96,7 @@ def _parse_linhas_csv_scpi(conteudo: str) -> list[dict]:
         try:
             quantidade = Decimal(qtd_raw)
         except (InvalidOperation, ValueError):
-            from apps.core.exceptions import DadosInvalidos as _DI
-
-            raise _DI(
+            raise DadosInvalidos(
                 f'Quantidade inválida na linha {i}: "{qtd_raw}".',
                 code='csv_quantidade_invalida',
             )

@@ -31,7 +31,7 @@ urlpatterns = [
         name='estornar_saida_excepcional',
     ),
     path(
-        'importacao-scpi/preview/',
+        'importacao-scpi/pre-visualizacao/',
         views.preview_importacao_scpi_view,
         name='preview_importacao_scpi',
     ),
