@@ -57,6 +57,49 @@ class TestExigirPodeRegistrarSaidaExcepcional:
             exigir_pode_registrar_saida_excepcional(usuario_inativo)
 
 
+class TestPodeVisualizarPreviewScpi:
+    def test_superuser_pode(self, superuser):
+        from apps.estoque.policies import pode_visualizar_preview_scpi
+
+        assert pode_visualizar_preview_scpi(superuser) is True
+
+    def test_inativo_nao_pode(self, usuario_inativo):
+        from apps.estoque.policies import pode_visualizar_preview_scpi
+
+        assert pode_visualizar_preview_scpi(usuario_inativo) is False
+
+    def test_chefe_almoxarifado_nao_pode(self, chefe_almoxarifado):
+        from apps.estoque.policies import pode_visualizar_preview_scpi
+
+        assert pode_visualizar_preview_scpi(chefe_almoxarifado) is False
+
+    def test_aux_almoxarifado_nao_pode(self, aux_almoxarifado):
+        from apps.estoque.policies import pode_visualizar_preview_scpi
+
+        assert pode_visualizar_preview_scpi(aux_almoxarifado) is False
+
+    def test_solicitante_nao_pode(self, solicitante):
+        from apps.estoque.policies import pode_visualizar_preview_scpi
+
+        assert pode_visualizar_preview_scpi(solicitante) is False
+
+
+class TestExigirPodeVisualizarPreviewScpi:
+    def test_superuser_nao_lanca(self, superuser):
+        from apps.estoque.policies import exigir_pode_visualizar_preview_scpi
+
+        exigir_pode_visualizar_preview_scpi(superuser)
+
+    def test_chefe_almoxarifado_lanca_permissao_negada(self, chefe_almoxarifado):
+        import pytest
+
+        from apps.core.exceptions import PermissaoNegada
+        from apps.estoque.policies import exigir_pode_visualizar_preview_scpi
+
+        with pytest.raises(PermissaoNegada):
+            exigir_pode_visualizar_preview_scpi(chefe_almoxarifado)
+
+
 class TestPodeEstornarSaidaExcepcional:
     def test_chefe_almoxarifado_pode(self, chefe_almoxarifado):
         from apps.estoque.policies import pode_estornar_saida_excepcional

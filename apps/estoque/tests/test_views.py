@@ -408,3 +408,60 @@ class TestEstornarSaidaExcepcionalView:
         assert str(saida_registrada.pk) in response['Location']
         messages_list = list(response.wsgi_request._messages)
         assert any(m.tags == 'error' for m in messages_list)
+
+
+class TestPreviewImportacaoScpiView:
+    """Contrato HTTP de preview_importacao_scpi_view."""
+
+    URL = '/estoque/importacao-scpi/pre-visualizacao/'
+
+    def _csv_valido(self, codigo: str = 'MAT001', quantidade: str = '10.000') -> bytes:
+        return f'CADPRO;QUANTIDADE\n{codigo};{quantidade}\n'.encode('utf-8')
+
+    def test_nao_autenticado_redireciona_para_login(self, client):
+        resp = client.get(self.URL)
+        assert resp.status_code == 302
+        assert '/login/' in resp['Location']
+
+    def test_sem_permissao_retorna_403(self, client, chefe_almoxarifado):
+        client.force_login(chefe_almoxarifado)
+        resp = client.get(self.URL)
+        assert resp.status_code == 403
+
+    def test_superuser_get_retorna_200(self, client, superuser):
+        client.force_login(superuser)
+        resp = client.get(self.URL)
+        assert resp.status_code == 200
+
+    def test_post_csv_valido_retorna_200_com_preview(
+        self, client, superuser, estoque_principal, material_disponivel
+    ):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        client.force_login(superuser)
+        csv_bytes = self._csv_valido(material_disponivel.codigo, '100.000')
+        arquivo = SimpleUploadedFile('teste.csv', csv_bytes, content_type='text/csv')
+        resp = client.post(self.URL, {'arquivo': arquivo})
+        assert resp.status_code == 200
+        assert (
+            b'CADPRO' in resp.content
+            or material_disponivel.codigo.encode() in resp.content
+        )
+
+    def test_post_sem_arquivo_retorna_200_com_erro(self, client, superuser):
+        client.force_login(superuser)
+        resp = client.post(self.URL, {})
+        assert resp.status_code == 200
+        assert b'arquivo' in resp.content.lower() or b'obrigat' in resp.content.lower()
+
+    def test_post_csv_invalido_retorna_200_com_mensagem_erro(
+        self, client, superuser, estoque_principal
+    ):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        client.force_login(superuser)
+        csv_ruim = b'COLUNA_ERRADA;OUTRA\nX;Y\n'
+        arquivo = SimpleUploadedFile('ruim.csv', csv_ruim, content_type='text/csv')
+        resp = client.post(self.URL, {'arquivo': arquivo})
+        assert resp.status_code == 200
+        assert b'CADPRO' in resp.content or b'inv' in resp.content.lower()

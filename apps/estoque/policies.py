@@ -70,3 +70,19 @@ def exigir_pode_estornar_saida_excepcional(ator: User) -> None:
         raise PermissaoNegada(
             'Apenas chefe de almoxarifado pode estornar saídas excepcionais.'
         )
+
+
+def pode_visualizar_preview_scpi(ator: 'User') -> bool:
+    if not ator.is_active:
+        return False
+    return ator.is_superuser
+
+
+def exigir_pode_visualizar_preview_scpi(ator: 'User') -> None:
+    if not pode_visualizar_preview_scpi(ator):
+        from apps.core.exceptions import PermissaoNegada
+
+        raise PermissaoNegada(
+            'Apenas superusuários podem visualizar pré-visualizações de importação SCPI.',
+            code='permissao_negada',
+        )

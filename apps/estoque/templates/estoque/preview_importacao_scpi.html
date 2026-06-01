@@ -1,0 +1,419 @@
+{% extends "estoque/base.html" %}
+
+{% block title %}Pré-visualização SCPI — WMS-SAEP{% endblock %}
+
+{% block topbar_leading %}
+  <h1 class="app-bar__title">Importação SCPI — Pré-visualização</h1>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+
+  <p class="mb-6 max-w-2xl text-sm text-slate-600">
+    Envie o CSV bruto do SCPI para conferir os saldos antes de confirmar qualquer importação.
+    <strong class="font-medium text-slate-800">Nenhuma alteração é realizada nesta etapa.</strong>
+  </p>
+
+  {# ── Upload (estado inicial) ─────────────────────────────────────────── #}
+  {% if not linhas and not erro_arquivo %}
+    <section
+      class="mb-8 rounded-xl border-2 border-dashed border-slate-200 bg-white px-6 py-10 shadow-sm
+             transition-colors duration-150 motion-reduce:transition-none"
+      aria-label="Formulário de upload do CSV SCPI"
+      x-data="{ arrastando: false, enviando: false }"
+      :class="arrastando ? 'border-blue-400 bg-blue-50' : ''"
+      @dragover.prevent="arrastando = true"
+      @dragleave.prevent="arrastando = false"
+      @drop.prevent="arrastando = false; $refs.arquivo.files = $event.dataTransfer.files; $refs.form.submit()"
+    >
+      <div class="mx-auto max-w-md text-center">
+        <div
+          class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full
+                 bg-slate-100 transition-colors duration-150"
+          :class="arrastando ? 'bg-blue-100' : ''"
+          aria-hidden="true"
+        >
+          <svg class="h-7 w-7 text-slate-400" :class="arrastando ? 'text-blue-500' : ''" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+        </div>
+
+        <h2 class="text-base font-semibold text-slate-800">Carregar arquivo CSV do SCPI</h2>
+        <p class="mt-1 text-sm text-slate-500">Arraste o arquivo aqui ou clique para selecionar.</p>
+
+        <form
+          method="post"
+          enctype="multipart/form-data"
+          class="mt-6 space-y-4"
+          x-ref="form"
+          @submit="enviando = true"
+        >
+          {% csrf_token %}
+
+          <div>
+            <label
+              for="arquivo"
+              class="mb-1.5 block text-left text-sm font-medium text-slate-700"
+            >
+              Arquivo CSV
+              <span class="ml-0.5 text-red-500" aria-hidden="true">*</span>
+            </label>
+            <p id="arquivo-ajuda" class="mb-2 text-left text-xs text-slate-500">
+              Formato esperado: delimitado por ponto-e-vírgula, com colunas
+              <code class="rounded bg-slate-100 px-1 font-mono" translate="no">CADPRO</code> e
+              <code class="rounded bg-slate-100 px-1 font-mono" translate="no">QUANTIDADE</code>.
+            </p>
+            <input
+              id="arquivo"
+              type="file"
+              name="arquivo"
+              accept=".csv,text/csv,text/plain"
+              required
+              aria-required="true"
+              aria-describedby="arquivo-ajuda"
+              x-ref="arquivo"
+              class="block w-full cursor-pointer rounded-lg border border-slate-300 bg-white
+                     px-3 py-2 text-sm text-slate-700
+                     file:mr-4 file:cursor-pointer file:rounded-md file:border-0
+                     file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-700
+                     hover:file:bg-blue-100
+                     focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
+                     focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+          </div>
+
+          <button
+            type="submit"
+            :disabled="enviando"
+            :aria-busy="enviando"
+            class="inline-flex min-h-11 w-full cursor-pointer items-center justify-center
+                   gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold
+                   text-white shadow-sm transition-colors duration-150 motion-reduce:transition-none
+                   hover:bg-blue-700 active:bg-blue-800
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
+                   disabled:cursor-not-allowed disabled:opacity-60
+                   touch-manipulation"
+          >
+            <svg
+              x-show="enviando"
+              class="h-4 w-4 animate-spin motion-reduce:animate-none"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span x-text="enviando ? 'Processando...' : 'Gerar pré-visualização'">Gerar pré-visualização</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+  {# ── Estado de erro no upload ────────────────────────────────────────── #}
+  {% elif erro_arquivo %}
+    <div
+      class="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4"
+      role="alert"
+      aria-live="assertive"
+    >
+      <svg class="mt-0.5 h-5 w-5 shrink-0 text-red-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/>
+      </svg>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-red-800">Erro ao processar o arquivo</p>
+        <p class="mt-0.5 text-sm text-red-700">{{ erro_arquivo }}</p>
+      </div>
+    </div>
+
+    <form
+      method="post"
+      enctype="multipart/form-data"
+      class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      x-data="{ enviando: false }"
+      @submit="enviando = true"
+    >
+      {% csrf_token %}
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div class="flex-1">
+          <label for="arquivo-retry" class="mb-1.5 block text-sm font-medium text-slate-700">
+            Arquivo CSV
+            <span class="ml-0.5 text-red-500" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="arquivo-retry"
+            type="file"
+            name="arquivo"
+            accept=".csv,text/csv,text/plain"
+            required
+            aria-required="true"
+            aria-invalid="true"
+            autofocus
+            class="block w-full cursor-pointer rounded-lg border border-red-300 bg-white
+                   px-3 py-2 text-sm text-slate-700
+                   file:mr-4 file:cursor-pointer file:rounded-md file:border-0
+                   file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-700
+                   focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+        </div>
+        <button
+          type="submit"
+          :disabled="enviando"
+          class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2
+                 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white
+                 shadow-sm transition-colors duration-150 motion-reduce:transition-none
+                 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                 disabled:cursor-not-allowed disabled:opacity-60 touch-manipulation"
+        >
+          <svg x-show="enviando" class="h-4 w-4 animate-spin motion-reduce:animate-none" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          Tentar novamente
+        </button>
+      </div>
+    </form>
+
+  {# ── Preview — resultado ─────────────────────────────────────────────── #}
+  {% else %}
+
+    {# Barra de estatísticas #}
+    <div
+      class="mb-4 flex flex-wrap gap-3"
+      role="status"
+      aria-live="polite"
+      aria-label="Resumo: {{ total }} linha{{ total|pluralize:'s' }}, {{ divergencias }} divergência{{ divergencias|pluralize:'s' }}, {{ novos }} materia{{ novos|pluralize:'l,is' }} novo{{ novos|pluralize:'s' }}"
+    >
+      <div class="flex min-w-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+        <span class="text-lg font-bold tabular-nums text-slate-800">{{ total }}</span>
+        <span class="text-sm text-slate-500">linha{{ total|pluralize:"s" }}</span>
+      </div>
+
+      <div class="flex min-w-0 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 shadow-sm">
+        <svg class="h-4 w-4 shrink-0 text-amber-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+        </svg>
+        <span class="text-lg font-bold tabular-nums text-amber-800">{{ divergencias }}</span>
+        <span class="text-sm text-amber-700">divergênc{{ divergencias|pluralize:"ia,ias" }}</span>
+      </div>
+
+      <div class="flex min-w-0 items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 shadow-sm">
+        <svg class="h-4 w-4 shrink-0 text-teal-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clip-rule="evenodd"/>
+        </svg>
+        <span class="text-lg font-bold tabular-nums text-teal-800">{{ novos }}</span>
+        <span class="text-sm text-teal-700">materia{{ novos|pluralize:"l,is" }} novo{{ novos|pluralize:"s" }}</span>
+      </div>
+
+      <div class="ml-auto flex shrink-0 items-center gap-2">
+        <span class="hidden max-w-[12rem] truncate text-xs text-slate-400 sm:block" title="{{ nome_arquivo }}">
+          {{ nome_arquivo }}
+        </span>
+        <form method="post" enctype="multipart/form-data" class="inline">
+          {% csrf_token %}
+          <label
+            for="arquivo-novo"
+            class="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md
+                   border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700
+                   hover:bg-slate-50 hover:text-slate-900
+                   focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-1
+                   transition-colors duration-150 motion-reduce:transition-none touch-manipulation"
+          >
+            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z" clip-rule="evenodd"/>
+            </svg>
+            Outro arquivo
+            <input
+              id="arquivo-novo"
+              type="file"
+              name="arquivo"
+              accept=".csv,text/csv,text/plain"
+              class="sr-only"
+              onchange="this.form.submit()"
+            >
+          </label>
+        </form>
+      </div>
+    </div>
+
+    {# Legenda #}
+    <div class="mb-3 flex flex-wrap gap-4 text-xs text-slate-600" aria-label="Legenda de status">
+      <span class="flex items-center gap-1.5">
+        <span class="inline-block h-3 w-3 rounded-sm bg-green-100 ring-1 ring-green-200" aria-hidden="true"></span>
+        Saldo igual
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="inline-block h-3 w-3 rounded-sm bg-amber-100 ring-1 ring-amber-200" aria-hidden="true"></span>
+        Divergência (SCPI ≠ WMS)
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="inline-block h-3 w-3 rounded-sm bg-teal-100 ring-1 ring-teal-200" aria-hidden="true"></span>
+        Material novo (apenas no SCPI)
+      </span>
+    </div>
+
+    {% if linhas %}
+
+      {# ── Desktop: tabela ─────────────────────────────────────────────── #}
+      <div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:block">
+        <table class="min-w-full divide-y divide-slate-200">
+          <caption class="sr-only">
+            Pré-visualização da importação SCPI.
+            {{ total }} linha{{ total|pluralize:"s" }},
+            {{ divergencias }} divergênc{{ divergencias|pluralize:"ia,ias" }},
+            {{ novos }} materia{{ novos|pluralize:"l,is" }} novo{{ novos|pluralize:"s" }}.
+          </caption>
+          <thead class="sticky top-0 bg-slate-50 shadow-[0_1px_0_0] shadow-slate-200">
+            <tr>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">CADPRO</th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Material</th>
+              <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <abbr title="Saldo físico no WMS" class="no-underline cursor-help">Saldo WMS</abbr>
+              </th>
+              <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <abbr title="Quantidade no arquivo SCPI" class="no-underline cursor-help">Saldo SCPI</abbr>
+              </th>
+              <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <abbr title="SCPI − WMS" class="no-underline cursor-help">Delta</abbr>
+              </th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 bg-white">
+            {% for linha in linhas %}
+              <tr
+                class="transition-colors duration-100 motion-reduce:transition-none
+                  {% if linha.status == 'divergente' %}bg-amber-50 hover:bg-amber-100
+                  {% elif linha.status == 'novo' %}bg-teal-50 hover:bg-teal-100
+                  {% else %}hover:bg-slate-50{% endif %}"
+              >
+                <td class="whitespace-nowrap px-4 py-3 font-mono text-sm font-medium text-slate-900">
+                  {{ linha.cadpro }}
+                </td>
+                <td class="px-4 py-3 text-sm text-slate-700">
+                  {% if linha.nome_material %}
+                    {{ linha.nome_material }}
+                  {% else %}
+                    <em class="not-italic text-teal-700">Novo material (a criar)</em>
+                  {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm tabular-nums text-slate-700">
+                  {{ linha.saldo_wms }}
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm tabular-nums text-slate-700">
+                  {{ linha.saldo_scpi }}
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm tabular-nums font-semibold">
+                  {% if linha.delta > 0 %}
+                    <span class="text-green-700" aria-label="Delta positivo: +{{ linha.delta }}">
+                      ▲ +{{ linha.delta }}
+                    </span>
+                  {% elif linha.delta < 0 %}
+                    <span class="text-red-700" aria-label="Delta negativo: {{ linha.delta }}">
+                      ▼ {{ linha.delta }}
+                    </span>
+                  {% else %}
+                    <span class="text-slate-400">—</span>
+                  {% endif %}
+                </td>
+                <td class="whitespace-nowrap px-4 py-3 text-sm">
+                  {% if linha.status == 'ok' %}
+                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 ring-1 ring-inset ring-green-200">
+                      <svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M10.28 1.28L3.989 7.575 1.695 5.28A1 1 0 00.28 6.695l3 3a1 1 0 001.414 0l7-7A1 1 0 0010.28 1.28z"/></svg>
+                      OK
+                    </span>
+                  {% elif linha.status == 'divergente' %}
+                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200" aria-label="Divergência: saldo SCPI difere do WMS">
+                      <svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6 1.5a.5.5 0 01.447.276l4.5 9A.5.5 0 0110.5 11h-9a.5.5 0 01-.447-.724l4.5-9A.5.5 0 016 1.5zM5.5 6v2a.5.5 0 001 0V6a.5.5 0 00-1 0zm.5 4a.5.5 0 100-1 .5.5 0 000 1z" clip-rule="evenodd"/></svg>
+                      Divergência
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-200" aria-label="Material novo: não existe no WMS">
+                      <svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6 1a.5.5 0 01.5.5v4h4a.5.5 0 010 1h-4v4a.5.5 0 01-1 0v-4h-4a.5.5 0 010-1h4v-4A.5.5 0 016 1z" clip-rule="evenodd"/></svg>
+                      Novo
+                    </span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# ── Mobile: cards ───────────────────────────────────────────────── #}
+      <div class="space-y-3 sm:hidden">
+        {% for linha in linhas %}
+          <article
+            class="rounded-xl border px-4 py-4 shadow-sm
+              {% if linha.status == 'divergente' %}border-amber-200 bg-amber-50
+              {% elif linha.status == 'novo' %}border-teal-200 bg-teal-50
+              {% else %}border-slate-200 bg-white{% endif %}"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <code class="font-mono text-sm font-semibold text-slate-900">{{ linha.cadpro }}</code>
+              {% if linha.status == 'ok' %}
+                <span class="shrink-0 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 ring-1 ring-inset ring-green-200">OK</span>
+              {% elif linha.status == 'divergente' %}
+                <span class="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">Divergência</span>
+              {% else %}
+                <span class="shrink-0 rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-200">Novo</span>
+              {% endif %}
+            </div>
+            <p class="mt-1 text-sm text-slate-600">
+              {% if linha.nome_material %}{{ linha.nome_material }}{% else %}<em class="not-italic text-teal-700">Novo material</em>{% endif %}
+            </p>
+            <dl class="mt-3 grid grid-cols-3 gap-2 text-sm">
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">WMS</dt>
+                <dd class="mt-0.5 font-mono tabular-nums text-slate-800">{{ linha.saldo_wms }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">SCPI</dt>
+                <dd class="mt-0.5 font-mono tabular-nums text-slate-800">{{ linha.saldo_scpi }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Delta</dt>
+                <dd class="mt-0.5 font-mono tabular-nums font-semibold
+                  {% if linha.delta > 0 %}text-green-700{% elif linha.delta < 0 %}text-red-700{% else %}text-slate-400{% endif %}">
+                  {% if linha.delta > 0 %}▲ +{{ linha.delta }}{% elif linha.delta < 0 %}▼ {{ linha.delta }}{% else %}—{% endif %}
+                </dd>
+              </div>
+            </dl>
+          </article>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <div class="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+        <p class="text-sm text-slate-500">O arquivo não contém linhas de dados após o cabeçalho.</p>
+        <p class="mt-1 text-xs text-slate-400">Verifique se o arquivo possui registros abaixo do cabeçalho.</p>
+      </div>
+    {% endif %}
+
+    {# CTA: confirmação (issue #26) — desabilitado nesta fase #}
+    <div class="mt-6 flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        disabled
+        aria-disabled="true"
+        title="A confirmação da importação será implementada em uma próxima versão."
+        class="inline-flex min-h-11 cursor-not-allowed items-center gap-2 rounded-lg
+               bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-400 shadow-sm"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/>
+        </svg>
+        Confirmar importação
+      </button>
+      <p class="text-xs text-slate-400">
+        A confirmação e criação de materiais novos serão implementadas na próxima etapa do fluxo.
+      </p>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -240,3 +240,64 @@ def estornar_saida_excepcional_view(request, pk: int):
 
     messages.success(request, f'Saída {saida.numero_publico} estornada com sucesso.')
     return redirect('estoque:detalhe_saida_excepcional', pk=pk)
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def preview_importacao_scpi_view(request):
+    from apps.core.exceptions import DadosInvalidos, PermissaoNegada
+    from apps.estoque.policies import exigir_pode_visualizar_preview_scpi
+    from apps.estoque.selectors import gerar_preview_importacao_scpi
+
+    try:
+        exigir_pode_visualizar_preview_scpi(request.user)
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+
+    if request.method == 'GET':
+        return render(request, 'estoque/preview_importacao_scpi.html', {})
+
+    arquivo = request.FILES.get('arquivo')
+    if not arquivo:
+        return render(
+            request,
+            'estoque/preview_importacao_scpi.html',
+            {'erro_arquivo': 'O arquivo é obrigatório.'},
+        )
+
+    estoque = Estoque.objects.filter(ativo=True).first()
+    if estoque is None:
+        return render(
+            request,
+            'estoque/preview_importacao_scpi.html',
+            {'erro_arquivo': 'Não há estoque ativo configurado.'},
+        )
+
+    try:
+        conteudo = arquivo.read()
+        linhas = gerar_preview_importacao_scpi(
+            conteudo_bytes=conteudo,
+            estoque_id=estoque.pk,
+        )
+    except DadosInvalidos as exc:
+        return render(
+            request,
+            'estoque/preview_importacao_scpi.html',
+            {'erro_arquivo': str(exc)},
+        )
+
+    total = len(linhas)
+    divergencias = sum(1 for linha in linhas if linha.status == 'divergente')
+    novos = sum(1 for linha in linhas if linha.status == 'novo')
+
+    return render(
+        request,
+        'estoque/preview_importacao_scpi.html',
+        {
+            'linhas': linhas,
+            'total': total,
+            'divergencias': divergencias,
+            'novos': novos,
+            'nome_arquivo': arquivo.name,
+        },
+    )
