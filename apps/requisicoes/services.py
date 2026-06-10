@@ -743,7 +743,11 @@ def separar_para_retirada(
                 f"Saldo de estoque não encontrado para '{item.material.nome}'.",
                 code='separacao_bloqueada',
             )
-        if saldo.divergente or saldo.saldo_fisico < item.quantidade_autorizada:
+        qty_autorizada = item.quantidade_autorizada
+        assert (
+            qty_autorizada is not None
+        )  # garantido por filter(quantidade_autorizada__gt=0)
+        if saldo.divergente or saldo.saldo_fisico < qty_autorizada:
             raise DadosInvalidos(
                 f'Estoque insuficiente para separação do material '
                 f"'{item.material.nome}'. "
