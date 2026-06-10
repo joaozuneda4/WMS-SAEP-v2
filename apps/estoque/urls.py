@@ -45,4 +45,9 @@ urlpatterns = [
         views.sucesso_importacao_scpi_view,
         name='sucesso_importacao_scpi',
     ),
+    path(
+        'importacao-scpi/historico/',
+        views.historico_importacoes_scpi_view,
+        name='historico_importacoes_scpi',
+    ),
 ]

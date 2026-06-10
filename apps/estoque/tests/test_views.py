@@ -551,3 +551,71 @@ class TestConfirmarImportacaoScpiView:
         client.force_login(superuser)
         resp = client.get(self.URL)
         assert resp.status_code == 405
+
+
+class TestHistoricoImportacoesScpiView:
+    """Contrato HTTP de historico_importacoes_scpi_view."""
+
+    URL = '/estoque/importacao-scpi/historico/'
+
+    def test_nao_autenticado_redireciona_para_login(self, client):
+        resp = client.get(self.URL)
+        assert resp.status_code == 302
+        assert '/login/' in resp['Location']
+
+    def test_sem_permissao_retorna_403(self, client, solicitante):
+        client.force_login(solicitante)
+        resp = client.get(self.URL)
+        assert resp.status_code == 403
+
+    def test_superuser_get_retorna_200(self, client, superuser):
+        client.force_login(superuser)
+        resp = client.get(self.URL)
+        assert resp.status_code == 200
+
+    def test_chefe_almoxarifado_get_retorna_200(self, client, chefe_almoxarifado):
+        client.force_login(chefe_almoxarifado)
+        resp = client.get(self.URL)
+        assert resp.status_code == 200
+
+    def test_post_retorna_405(self, client, superuser):
+        client.force_login(superuser)
+        resp = client.post(self.URL, {})
+        assert resp.status_code == 405
+
+    def test_lista_vazia_retorna_200(self, client, superuser):
+        client.force_login(superuser)
+        resp = client.get(self.URL)
+        assert resp.status_code == 200
+
+    def test_exibe_metadados_da_importacao(self, client, superuser, estoque_principal):
+        from apps.estoque.models import ImportacaoSCPI, StatusImportacaoSCPI
+
+        ImportacaoSCPI.objects.create(
+            arquivo_nome='relatorio.csv',
+            arquivo_hash='e' * 64,
+            importado_por=superuser,
+            estoque=estoque_principal,
+            status=StatusImportacaoSCPI.CONCLUIDA,
+            total_linhas=10,
+            total_novos=2,
+            total_divergentes=3,
+        )
+        client.force_login(superuser)
+        resp = client.get(self.URL)
+        assert resp.status_code == 200
+        assert b'relatorio.csv' in resp.content
+
+    def test_nao_expoe_csv_bruto(self, client, superuser, estoque_principal):
+        from apps.estoque.models import ImportacaoSCPI, StatusImportacaoSCPI
+
+        ImportacaoSCPI.objects.create(
+            arquivo_nome='bruto.csv',
+            arquivo_hash='f' * 64,
+            importado_por=superuser,
+            estoque=estoque_principal,
+            status=StatusImportacaoSCPI.CONCLUIDA,
+        )
+        client.force_login(superuser)
+        resp = client.get(self.URL)
+        assert b'conteudo_csv' not in resp.content

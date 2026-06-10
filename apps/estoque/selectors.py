@@ -212,3 +212,11 @@ def gerar_preview_importacao_scpi(
         )
 
     return resultado
+
+
+def listar_historico_importacoes_scpi():
+    from apps.estoque.models import ImportacaoSCPI
+
+    return ImportacaoSCPI.objects.select_related('importado_por', 'estoque').order_by(
+        '-importado_em'
+    )

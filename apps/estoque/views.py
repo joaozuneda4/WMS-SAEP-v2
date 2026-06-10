@@ -405,3 +405,23 @@ def sucesso_importacao_scpi_view(request, pk: int):
             'sucesso': True,
         },
     )
+
+
+@login_required
+@require_http_methods(['GET'])
+def historico_importacoes_scpi_view(request):
+    from apps.core.exceptions import PermissaoNegada
+    from apps.estoque.policies import exigir_pode_consultar_historico_scpi
+    from apps.estoque.selectors import listar_historico_importacoes_scpi
+
+    try:
+        exigir_pode_consultar_historico_scpi(request.user)
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+
+    importacoes = listar_historico_importacoes_scpi()
+    return render(
+        request,
+        'estoque/historico_importacoes_scpi.html',
+        {'importacoes': importacoes},
+    )

@@ -269,3 +269,64 @@ class TestDenominacaoScpiNoPreview:
             conteudo_bytes=csv_bytes, estoque_id=estoque_principal.pk
         )
         assert linhas[0].denominacao_scpi == ''
+
+
+class TestListarHistoricoImportacoesScpi:
+    def test_retorna_queryset_vazio_quando_sem_registros(self, db):
+        from apps.estoque.selectors import listar_historico_importacoes_scpi
+
+        assert list(listar_historico_importacoes_scpi()) == []
+
+    def test_retorna_importacoes_existentes(self, db, superuser, estoque_principal):
+        from apps.estoque.models import ImportacaoSCPI, StatusImportacaoSCPI
+        from apps.estoque.selectors import listar_historico_importacoes_scpi
+
+        importacao = ImportacaoSCPI.objects.create(
+            arquivo_nome='teste.csv',
+            arquivo_hash='a' * 64,
+            importado_por=superuser,
+            estoque=estoque_principal,
+            status=StatusImportacaoSCPI.CONCLUIDA,
+            total_linhas=5,
+            total_novos=1,
+            total_divergentes=2,
+        )
+        qs = list(listar_historico_importacoes_scpi())
+        assert importacao in qs
+
+    def test_ordena_por_mais_recente_primeiro(self, db, superuser, estoque_principal):
+        from apps.estoque.models import ImportacaoSCPI, StatusImportacaoSCPI
+        from apps.estoque.selectors import listar_historico_importacoes_scpi
+
+        i1 = ImportacaoSCPI.objects.create(
+            arquivo_nome='primeiro.csv',
+            arquivo_hash='b' * 64,
+            importado_por=superuser,
+            estoque=estoque_principal,
+            status=StatusImportacaoSCPI.CONCLUIDA,
+        )
+        i2 = ImportacaoSCPI.objects.create(
+            arquivo_nome='segundo.csv',
+            arquivo_hash='c' * 64,
+            importado_por=superuser,
+            estoque=estoque_principal,
+            status=StatusImportacaoSCPI.COM_ALERTAS,
+        )
+        qs = list(listar_historico_importacoes_scpi())
+        assert qs[0] == i2
+        assert qs[1] == i1
+
+    def test_nao_expoe_csv_bruto(self, db, superuser, estoque_principal):
+        from apps.estoque.models import ImportacaoSCPI, StatusImportacaoSCPI
+        from apps.estoque.selectors import listar_historico_importacoes_scpi
+
+        ImportacaoSCPI.objects.create(
+            arquivo_nome='check.csv',
+            arquivo_hash='d' * 64,
+            importado_por=superuser,
+            estoque=estoque_principal,
+            status=StatusImportacaoSCPI.CONCLUIDA,
+        )
+        qs = listar_historico_importacoes_scpi()
+        item = qs.first()
+        assert not hasattr(item, 'conteudo_csv')
