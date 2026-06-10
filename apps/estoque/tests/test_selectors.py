@@ -228,3 +228,44 @@ class TestNormalizacaoCsvScpiMultilinha:
         )
         assert linhas[0].status == 'ok'
         assert linhas[0].material_id == m.pk
+
+
+class TestDenominacaoScpiNoPreview:
+    """denominacao_scpi deve ser propagada no LinhaPreviewSCPI."""
+
+    def _csv(self, cadpro: str, denominacao: str, quantidade: str) -> bytes:
+        return (
+            f'CADPRO;DENOMINACAO;QUAN3\n{cadpro};{denominacao};{quantidade}\n'.encode(
+                'utf-8'
+            )
+        )
+
+    def test_material_novo_tem_denominacao_scpi(self, db, estoque_principal):
+        from apps.estoque.selectors import gerar_preview_importacao_scpi
+
+        csv_bytes = self._csv('000.999.001', 'Arruela Plana', '5.000')
+        linhas = gerar_preview_importacao_scpi(
+            conteudo_bytes=csv_bytes, estoque_id=estoque_principal.pk
+        )
+        assert linhas[0].status == 'novo'
+        assert linhas[0].denominacao_scpi == 'Arruela Plana'
+
+    def test_material_existente_tem_denominacao_scpi(
+        self, db, estoque_principal, material_scpi
+    ):
+        from apps.estoque.selectors import gerar_preview_importacao_scpi
+
+        csv_bytes = self._csv(material_scpi.codigo, 'Parafuso M6 Orig', '100.000')
+        linhas = gerar_preview_importacao_scpi(
+            conteudo_bytes=csv_bytes, estoque_id=estoque_principal.pk
+        )
+        assert linhas[0].denominacao_scpi == 'Parafuso M6 Orig'
+
+    def test_denominacao_ausente_retorna_string_vazia(self, db, estoque_principal):
+        from apps.estoque.selectors import gerar_preview_importacao_scpi
+
+        csv_bytes = 'CADPRO;QUAN3\n000.999.002;10\n'.encode('utf-8')
+        linhas = gerar_preview_importacao_scpi(
+            conteudo_bytes=csv_bytes, estoque_id=estoque_principal.pk
+        )
+        assert linhas[0].denominacao_scpi == ''

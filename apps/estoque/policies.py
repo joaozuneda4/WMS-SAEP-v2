@@ -86,3 +86,17 @@ def exigir_pode_visualizar_preview_scpi(ator: 'User') -> None:
             'Apenas superusuários podem visualizar pré-visualizações de importação SCPI.',
             code='permissao_negada',
         )
+
+
+def pode_confirmar_importacao_scpi(ator: 'User') -> bool:
+    return ator.is_active and ator.is_superuser
+
+
+def exigir_pode_confirmar_importacao_scpi(ator: 'User') -> None:
+    if not pode_confirmar_importacao_scpi(ator):
+        from apps.core.exceptions import PermissaoNegada
+
+        raise PermissaoNegada(
+            'Apenas superusuários podem confirmar importações SCPI.',
+            code='permissao_negada',
+        )

@@ -265,3 +265,53 @@ class SequenciaSaidaExcepcional(models.Model):
 
     def __str__(self) -> str:
         return f'{self.ano}: {self.ultimo_numero}'
+
+
+class StatusImportacaoSCPI(models.TextChoices):
+    CONCLUIDA = 'concluida', 'Concluída'
+    COM_ALERTAS = 'com_alertas', 'Concluída com alertas'
+
+
+class ImportacaoSCPI(models.Model):
+    """Metadados de uma confirmação de importação SCPI.
+
+    Não armazena o CSV bruto nem snapshot do preview — apenas metadados e resumo mínimo.
+    O hash garante bloqueio de reimportação exata do mesmo arquivo.
+    """
+
+    arquivo_nome = models.CharField('nome do arquivo', max_length=255)
+    arquivo_hash = models.CharField(
+        'hash SHA-256 do arquivo',
+        max_length=64,
+        unique=True,
+    )
+    importado_por = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.PROTECT,
+        related_name='importacoes_scpi',
+        verbose_name='importado por',
+    )
+    importado_em = models.DateTimeField('importado em', auto_now_add=True)
+    estoque = models.ForeignKey(
+        Estoque,
+        on_delete=models.PROTECT,
+        related_name='importacoes_scpi',
+        verbose_name='estoque',
+    )
+    status = models.CharField(
+        'status',
+        max_length=20,
+        choices=StatusImportacaoSCPI.choices,
+        default=StatusImportacaoSCPI.CONCLUIDA,
+    )
+    total_linhas = models.PositiveIntegerField('total de linhas', default=0)
+    total_novos = models.PositiveIntegerField('materiais novos criados', default=0)
+    total_divergentes = models.PositiveIntegerField('linhas divergentes', default=0)
+
+    class Meta:
+        verbose_name = 'importação SCPI'
+        verbose_name_plural = 'importações SCPI'
+        ordering = ('-importado_em',)
+
+    def __str__(self):
+        return f'Importação SCPI #{self.pk} — {self.arquivo_nome}'

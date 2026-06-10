@@ -293,3 +293,135 @@ class TestEstornarSaidaExcepcional:
                 saida_id=999999,
                 justificativa='Inexistente.',
             )
+
+
+class TestConfirmarImportacaoScpi:
+    """Contrato de confirmar_importacao_scpi."""
+
+    def _csv(self, cadpro: str, denominacao: str, quantidade: str) -> bytes:
+        return (
+            f'CADPRO;DENOMINACAO;QUAN3\n{cadpro};{denominacao};{quantidade}\n'.encode(
+                'utf-8'
+            )
+        )
+
+    def test_cria_importacao_scpi_com_metadados(self, db, superuser, estoque_principal):
+        from apps.estoque.models import ImportacaoSCPI
+        from apps.estoque.services import confirmar_importacao_scpi
+
+        csv_bytes = self._csv('000.999.100', 'Material Qualquer', '10.000')
+        importacao = confirmar_importacao_scpi(
+            ator_id=superuser.pk,
+            conteudo_bytes=csv_bytes,
+            arquivo_nome='teste.csv',
+            estoque_id=estoque_principal.pk,
+        )
+        assert importacao.pk is not None
+        assert importacao.arquivo_nome == 'teste.csv'
+        assert importacao.importado_por_id == superuser.pk
+        assert importacao.total_linhas == 1
+        assert ImportacaoSCPI.objects.filter(pk=importacao.pk).exists()
+
+    def test_cria_material_novo_com_saldo_inicial(
+        self, db, superuser, estoque_principal
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.models import Material, SaldoEstoque
+        from apps.estoque.services import confirmar_importacao_scpi
+
+        csv_bytes = self._csv('000.999.200', 'Rebite 3mm', '42.000')
+        confirmar_importacao_scpi(
+            ator_id=superuser.pk,
+            conteudo_bytes=csv_bytes,
+            arquivo_nome='novo.csv',
+            estoque_id=estoque_principal.pk,
+        )
+        material = Material.objects.get(codigo='000.999.200')
+        assert material.nome == 'Rebite 3mm'
+        saldo = SaldoEstoque.objects.get(material=material, estoque=estoque_principal)
+        assert saldo.saldo_fisico == Decimal('42')
+        assert saldo.saldo_reservado == Decimal('0')
+
+    def test_material_existente_nao_tem_saldo_alterado(
+        self, db, superuser, estoque_principal, material_scpi
+    ):
+
+        from apps.estoque.models import SaldoEstoque
+        from apps.estoque.services import confirmar_importacao_scpi
+
+        saldo_antes = SaldoEstoque.objects.get(
+            material=material_scpi, estoque=estoque_principal
+        ).saldo_fisico
+
+        csv_bytes = self._csv(material_scpi.codigo, 'Parafuso M6', '999.000')
+        confirmar_importacao_scpi(
+            ator_id=superuser.pk,
+            conteudo_bytes=csv_bytes,
+            arquivo_nome='existente.csv',
+            estoque_id=estoque_principal.pk,
+        )
+        saldo_depois = SaldoEstoque.objects.get(
+            material=material_scpi, estoque=estoque_principal
+        ).saldo_fisico
+        assert saldo_depois == saldo_antes
+
+    def test_hash_duplicado_lanca_conflito_dominio(
+        self, db, superuser, estoque_principal
+    ):
+        import pytest
+
+        from apps.core.exceptions import ConflitoDominio
+        from apps.estoque.services import confirmar_importacao_scpi
+
+        csv_bytes = self._csv('000.999.300', 'Porca M4', '5.000')
+        confirmar_importacao_scpi(
+            ator_id=superuser.pk,
+            conteudo_bytes=csv_bytes,
+            arquivo_nome='dup.csv',
+            estoque_id=estoque_principal.pk,
+        )
+        with pytest.raises(ConflitoDominio):
+            confirmar_importacao_scpi(
+                ator_id=superuser.pk,
+                conteudo_bytes=csv_bytes,
+                arquivo_nome='dup.csv',
+                estoque_id=estoque_principal.pk,
+            )
+
+    def test_sem_permissao_lanca_permissao_negada(
+        self, db, chefe_almoxarifado, estoque_principal
+    ):
+        import pytest
+
+        from apps.core.exceptions import PermissaoNegada
+        from apps.estoque.services import confirmar_importacao_scpi
+
+        csv_bytes = self._csv('000.999.400', 'Parafuso', '1.000')
+        with pytest.raises(PermissaoNegada):
+            confirmar_importacao_scpi(
+                ator_id=chefe_almoxarifado.pk,
+                conteudo_bytes=csv_bytes,
+                arquivo_nome='negado.csv',
+                estoque_id=estoque_principal.pk,
+            )
+
+    def test_total_novos_e_divergentes_gravados(
+        self, db, superuser, estoque_principal, material_scpi
+    ):
+        from apps.estoque.services import confirmar_importacao_scpi
+
+        csv_bytes = (
+            'CADPRO;DENOMINACAO;QUAN3\n'
+            f'{material_scpi.codigo};Parafuso M6;999.000\n'
+            '000.999.500;Material Nv;5.000\n'
+        ).encode('utf-8')
+        importacao = confirmar_importacao_scpi(
+            ator_id=superuser.pk,
+            conteudo_bytes=csv_bytes,
+            arquivo_nome='mix.csv',
+            estoque_id=estoque_principal.pk,
+        )
+        assert importacao.total_linhas == 2
+        assert importacao.total_novos == 1
+        assert importacao.total_divergentes == 1

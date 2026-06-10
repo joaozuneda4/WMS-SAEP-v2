@@ -49,6 +49,7 @@ def buscar_detalhe_saida_excepcional(saida_id: int) -> SaidaExcepcional | None:
 class LinhaPreviewSCPI:
     cadpro: str
     nome_material: str | None
+    denominacao_scpi: str
     material_id: int | None
     saldo_wms: Decimal
     saldo_scpi: Decimal
@@ -114,6 +115,11 @@ def _parse_linhas_csv_scpi(conteudo: str) -> list[dict]:
             code='csv_coluna_ausente',
         )
     col_qtd = colunas_quantidade[0]
+    _COLUNAS_NOME = ('DISC1', 'DENOMINACAO')
+    col_den = next(
+        (f for f in reader.fieldnames if f.upper() in _COLUNAS_NOME),
+        None,
+    )
     linhas = []
     for i, row in enumerate(reader, start=2):
         cadpro = (row.get('CADPRO') or '').strip()
@@ -127,7 +133,10 @@ def _parse_linhas_csv_scpi(conteudo: str) -> list[dict]:
                 f'Quantidade inválida no produto {cadpro} (linha {i}): "{qtd_raw}".',
                 code='csv_quantidade_invalida',
             )
-        linhas.append({'cadpro': cadpro, 'quantidade': quantidade})
+        denominacao = (row.get(col_den) or '').strip() if col_den else ''
+        linhas.append(
+            {'cadpro': cadpro, 'quantidade': quantidade, 'denominacao': denominacao}
+        )
     return linhas
 
 
@@ -166,6 +175,7 @@ def gerar_preview_importacao_scpi(
     for linha in linhas_raw:
         cadpro = linha['cadpro']
         saldo_scpi = linha['quantidade']
+        denominacao = linha['denominacao']
         material = materiais.get(cadpro)
 
         if material is None:
@@ -173,6 +183,7 @@ def gerar_preview_importacao_scpi(
                 LinhaPreviewSCPI(
                     cadpro=cadpro,
                     nome_material=None,
+                    denominacao_scpi=denominacao,
                     material_id=None,
                     saldo_wms=Decimal('0'),
                     saldo_scpi=saldo_scpi,
@@ -191,6 +202,7 @@ def gerar_preview_importacao_scpi(
             LinhaPreviewSCPI(
                 cadpro=cadpro,
                 nome_material=material.nome,
+                denominacao_scpi=denominacao,
                 material_id=material.id,
                 saldo_wms=saldo_wms,
                 saldo_scpi=saldo_scpi,

@@ -492,3 +492,98 @@ def estornar_saida_excepcional(
     )
 
     return saida
+
+
+def confirmar_importacao_scpi(
+    *,
+    ator_id: int,
+    conteudo_bytes: bytes,
+    arquivo_nome: str,
+    estoque_id: int,
+):
+    """Confirma importação SCPI: bloqueia reimportação, cria novos materiais e grava metadados."""
+    import hashlib
+
+    from django.db import IntegrityError, transaction
+
+    from apps.accounts.models import User
+    from apps.core.exceptions import ConflitoDominio, DadosInvalidos
+    from apps.estoque.models import (
+        Estoque,
+        ImportacaoSCPI,
+        Material,
+        SaldoEstoque,
+        StatusImportacaoSCPI,
+        UnidadeMedida,
+    )
+    from apps.estoque.policies import exigir_pode_confirmar_importacao_scpi
+    from apps.estoque.selectors import gerar_preview_importacao_scpi
+
+    try:
+        ator = User.objects.get(pk=ator_id)
+    except User.DoesNotExist:
+        raise DadosInvalidos('Usuário não encontrado.', code='usuario_nao_encontrado')
+
+    exigir_pode_confirmar_importacao_scpi(ator)
+
+    try:
+        estoque = Estoque.objects.get(pk=estoque_id)
+    except Estoque.DoesNotExist:
+        raise DadosInvalidos('Estoque não encontrado.', code='estoque_nao_encontrado')
+
+    arquivo_hash = hashlib.sha256(conteudo_bytes).hexdigest()
+
+    linhas = gerar_preview_importacao_scpi(
+        conteudo_bytes=conteudo_bytes,
+        estoque_id=estoque_id,
+    )
+
+    total_novos = sum(1 for linha in linhas if linha.status == 'novo')
+    total_divergentes = sum(1 for linha in linhas if linha.status == 'divergente')
+    status = (
+        StatusImportacaoSCPI.COM_ALERTAS
+        if total_divergentes > 0
+        else StatusImportacaoSCPI.CONCLUIDA
+    )
+
+    with transaction.atomic():
+        if ImportacaoSCPI.objects.filter(arquivo_hash=arquivo_hash).exists():
+            raise ConflitoDominio(
+                'Este arquivo já foi importado anteriormente. Reimportação bloqueada.',
+                code='reimportacao_bloqueada',
+            )
+
+        for linha in linhas:
+            if linha.status != 'novo':
+                continue
+            material = Material.objects.create(
+                codigo=linha.cadpro,
+                nome=linha.denominacao_scpi or linha.cadpro,
+                unidade=UnidadeMedida.UNIDADE,
+                ativo=True,
+            )
+            SaldoEstoque.objects.create(
+                estoque=estoque,
+                material=material,
+                saldo_fisico=linha.saldo_scpi,
+                saldo_reservado=0,
+            )
+
+        try:
+            importacao = ImportacaoSCPI.objects.create(
+                arquivo_nome=arquivo_nome,
+                arquivo_hash=arquivo_hash,
+                importado_por=ator,
+                estoque=estoque,
+                status=status,
+                total_linhas=len(linhas),
+                total_novos=total_novos,
+                total_divergentes=total_divergentes,
+            )
+        except IntegrityError:
+            raise ConflitoDominio(
+                'Este arquivo já foi importado anteriormente. Reimportação bloqueada.',
+                code='reimportacao_bloqueada',
+            )
+
+    return importacao
