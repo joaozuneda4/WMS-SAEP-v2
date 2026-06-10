@@ -730,19 +730,29 @@ def separar_para_retirada(
         .order_by('id')
     )
     material_ids = [item.material_id for item in itens_autorizados]
-    saldos_por_material = {
-        saldo.material_id: saldo
-        for saldo in SaldoEstoque.objects.select_for_update()
+
+    saldos_agrupados: dict[int, list[SaldoEstoque]] = {}
+    for saldo in (
+        SaldoEstoque.objects.select_for_update()
         .filter(material_id__in=material_ids)
         .order_by('estoque_id', 'material_id', 'id')
-    }
+    ):
+        saldos_agrupados.setdefault(saldo.material_id, []).append(saldo)
+
     for item in itens_autorizados:
-        saldo = saldos_por_material.get(item.material_id)
-        if saldo is None:
+        saldos_do_material = saldos_agrupados.get(item.material_id)
+        if not saldos_do_material:
             raise DadosInvalidos(
                 f"Saldo de estoque não encontrado para '{item.material.nome}'.",
                 code='separacao_bloqueada',
             )
+        if len(saldos_do_material) > 1:
+            raise DadosInvalidos(
+                f"Saldo de estoque ambíguo para '{item.material.nome}'. "
+                f'Corrija o estoque ou cancele a requisição via TR-013.',
+                code='separacao_bloqueada',
+            )
+        saldo = saldos_do_material[0]
         qty_autorizada = item.quantidade_autorizada
         assert (
             qty_autorizada is not None

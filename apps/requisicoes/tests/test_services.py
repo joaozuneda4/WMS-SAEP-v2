@@ -1468,12 +1468,16 @@ def test_separar_para_retirada_idempotencia_bloqueia_segunda_execucao(
 def test_tr015b_bloqueia_por_divergencia_critica(
     requisicao_autorizada, aux_almoxarifado, material_disponivel
 ):
-    """TR-015B: divergência crítica pós-autorização bloqueia separação."""
+    """TR-015B: divergência crítica pós-autorização bloqueia separação sem efeitos colaterais."""
     from apps.estoque.models import SaldoEstoque
 
     saldo = SaldoEstoque.objects.get(material=material_disponivel)
     saldo.saldo_fisico = saldo.saldo_reservado - 1
     saldo.save(update_fields=['saldo_fisico'])
+
+    fisico_antes = saldo.saldo_fisico
+    reservado_antes = saldo.saldo_reservado
+    timeline_count_antes = requisicao_autorizada.eventos.count()
 
     with pytest.raises(DadosInvalidos) as excinfo:
         separar_para_retirada(
@@ -1482,15 +1486,29 @@ def test_tr015b_bloqueia_por_divergencia_critica(
         )
     assert excinfo.value.code == 'separacao_bloqueada'
 
+    requisicao_autorizada.refresh_from_db()
+    saldo.refresh_from_db()
+    assert requisicao_autorizada.estado == EstadoRequisicao.AUTORIZADA
+    assert saldo.saldo_fisico == fisico_antes
+    assert saldo.saldo_reservado == reservado_antes
+    assert requisicao_autorizada.eventos.count() == timeline_count_antes
+
 
 @pytest.mark.django_db
 def test_tr015b_bloqueia_por_fisico_insuficiente_sem_divergencia(
     aux_almoxarifado, solicitante, setor_obras, material_disponivel
 ):
-    """TR-015B: saldo_fisico < quantidade_autorizada mas sem divergência bloqueia separação."""
+    """TR-015B: saldo_fisico < quantidade_autorizada mas sem divergência bloqueia separação.
+
+    Estado construído manualmente: esse cenário (saldo_fisico < quantidade_autorizada
+    com saldo_fisico >= saldo_reservado) é matematicamente inalcançável via services
+    normais, já que a autorização reserva exatamente a quantidade autorizada. Este
+    teste valida a verificação defensiva que protege contra inconsistências de dados.
+    """
     from apps.estoque.models import SaldoEstoque
 
-    # Constrói estado manual: autorizada com qty=10, saldo_fisico=5, saldo_reservado=4
+    # quantidade_autorizada=10; saldo_fisico=5 >= saldo_reservado=4 (não divergente),
+    # mas saldo_fisico=5 < quantidade_autorizada=10 (físico insuficiente).
     req = Requisicao.objects.create(
         estado=EstadoRequisicao.AUTORIZADA,
         numero_publico='REQ-2026-TST-015B',
@@ -1509,12 +1527,21 @@ def test_tr015b_bloqueia_por_fisico_insuficiente_sem_divergencia(
     saldo.saldo_reservado = Decimal('4')
     saldo.save(update_fields=['saldo_fisico', 'saldo_reservado'])
 
+    timeline_count_antes = req.eventos.count()
+
     with pytest.raises(DadosInvalidos) as excinfo:
         separar_para_retirada(
             ator_id=aux_almoxarifado.pk,
             requisicao_id=req.pk,
         )
     assert excinfo.value.code == 'separacao_bloqueada'
+
+    req.refresh_from_db()
+    saldo.refresh_from_db()
+    assert req.estado == EstadoRequisicao.AUTORIZADA
+    assert saldo.saldo_fisico == Decimal('5')
+    assert saldo.saldo_reservado == Decimal('4')
+    assert req.eventos.count() == timeline_count_antes
 
 
 # ---------------------------------------------------------------------------
