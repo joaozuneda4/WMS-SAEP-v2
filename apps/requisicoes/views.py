@@ -1028,6 +1028,7 @@ def recusar_requisicao_view(request, pk: int):
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
 def copiar_requisicao_view(request, pk: int):
     """Copia requisição atendida ou recusada para novo rascunho (REQ-09).
 

@@ -2268,15 +2268,20 @@ def test_copiar_requisicao_view_get_retorna_confirmacao(
 def test_copiar_requisicao_view_post_cria_rascunho_e_redireciona(
     client, solicitante, req_recusada_view
 ):
+    from django.urls import resolve
+
     _login(client, solicitante)
     url = reverse('requisicoes:copiar', kwargs={'pk': req_recusada_view.pk})
-    response = client.post(url)
+    response = client.post(url, follow=True)
 
-    assert response.status_code == 302
-    novo_pk = response['Location'].split('/')[-3]
+    assert response.redirect_chain
+    redirect_url = response.redirect_chain[0][0]
+    novo_pk = resolve(redirect_url).kwargs['pk']
     novo = Requisicao.objects.get(pk=novo_pk)
     assert novo.estado == EstadoRequisicao.RASCUNHO
     assert novo.itens.count() == req_recusada_view.itens.count()
+    mensagens = [str(m) for m in response.context['messages']]
+    assert any('Rascunho criado' in m for m in mensagens)
 
 
 @pytest.mark.django_db
@@ -2305,3 +2310,5 @@ def test_copiar_requisicao_view_post_estado_invalido_exibe_erro(
     url = reverse('requisicoes:copiar', kwargs={'pk': req_rascunho.pk})
     response = client.post(url)
     assert response.status_code == 200
+    mensagens = [str(m) for m in response.context['messages']]
+    assert any('atendidas ou recusadas' in m for m in mensagens)

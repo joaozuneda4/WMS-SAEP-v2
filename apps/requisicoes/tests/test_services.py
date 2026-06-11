@@ -2070,6 +2070,26 @@ def test_copiar_requisicao_registra_timeline_criacao(requisicao_recusada, solici
 
 
 @pytest.mark.django_db
+def test_copiar_requisicao_preserva_beneficiario_setor_e_observacao(
+    requisicao_recusada, solicitante, setor_obras
+):
+    from apps.requisicoes.services import copiar_requisicao
+
+    requisicao_recusada.observacao_geral = 'Urgente'
+    requisicao_recusada.save(update_fields=['observacao_geral'])
+
+    novo = copiar_requisicao(
+        ator_id=solicitante.pk,
+        requisicao_id=requisicao_recusada.pk,
+    )
+
+    assert novo.beneficiario_id == requisicao_recusada.beneficiario_id
+    assert novo.setor_beneficiario_id == requisicao_recusada.setor_beneficiario_id
+    assert novo.criador_id == solicitante.pk
+    assert novo.observacao_geral == 'Urgente'
+
+
+@pytest.mark.django_db
 def test_copiar_requisicao_estado_invalido_lanca_estado_invalido(
     requisicao_aguardando, solicitante
 ):
