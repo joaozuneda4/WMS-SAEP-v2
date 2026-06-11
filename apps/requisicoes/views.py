@@ -39,6 +39,7 @@ from apps.requisicoes.policies import (
     pode_atender_retirada,
     pode_autorizar_requisicao,
     pode_cancelar_requisicao,
+    pode_copiar_requisicao,
     pode_editar_rascunho,
     pode_enviar_rascunho,
     pode_recusar_requisicao,
@@ -53,9 +54,11 @@ from apps.requisicoes.selectors import (
     materiais_para_requisicao,
     minhas_requisicoes,
     requisicoes_visiveis_para,
+    saldos_por_materiais,
 )
 from apps.requisicoes.services import (
     autorizar_requisicao,
+    copiar_requisicao,
     criar_requisicao,
     cancelar_ou_descartar_requisicao,
     editar_rascunho,
@@ -159,6 +162,12 @@ def _detalhe_context(
         cancelamento_confirmar = ''
         cancelamento_requer_justificativa = False
         cancelamento_variacao = ''
+
+    estados_copiavel = {EstadoRequisicao.ATENDIDA, EstadoRequisicao.RECUSADA}
+    pode_copiar = requisicao.estado in estados_copiavel and pode_copiar_requisicao(
+        request.user, requisicao
+    )
+
     return {
         'requisicao': requisicao,
         'itens': itens,
@@ -193,6 +202,7 @@ def _detalhe_context(
             and pode_atender_retirada(request.user, requisicao)
         ),
         'pode_cancelar': cancelavel,
+        'pode_copiar': pode_copiar,
         'cancelamento_titulo': cancelamento_titulo,
         'cancelamento_descricao': cancelamento_descricao,
         'cancelamento_trigger': cancelamento_trigger,
@@ -416,6 +426,10 @@ def editar_rascunho_view(request, pk: int):
 
     # GET — preencher com itens existentes
     itens_existentes = list(requisicao.itens.select_related('material').all())
+    material_ids = [item.material_id for item in itens_existentes]
+    saldo_info = saldos_por_materiais(material_ids)
+    tem_item_inelegivel = any(not v['elegivel'] for v in saldo_info.values())
+
     initial = [
         {
             'material_id': item.material_id,
@@ -429,6 +443,9 @@ def editar_rascunho_view(request, pk: int):
     form = RequisicaoForm(initial={'observacao_geral': requisicao.observacao_geral})
     formset = ItemRequisicaoFormSet(prefix='itens', initial=initial or [{}])
 
+    # saldo_info keyed by str(material_id) for template dict lookup
+    saldo_info_str = {str(k): v for k, v in saldo_info.items()}
+
     return render(
         request,
         'requisicoes/rascunho_form.html',
@@ -437,6 +454,8 @@ def editar_rascunho_view(request, pk: int):
             'formset': formset,
             'modo': 'editar',
             'requisicao': requisicao,
+            'saldo_info': saldo_info_str,
+            'tem_item_inelegivel': tem_item_inelegivel,
         },
     )
 
@@ -1006,3 +1025,37 @@ def recusar_requisicao_view(request, pk: int):
             request, default=reverse('requisicoes:detalhe', args=[requisicao.pk])
         ),
     )
+
+
+@login_required
+def copiar_requisicao_view(request, pk: int):
+    """Copia requisição atendida ou recusada para novo rascunho (REQ-09).
+
+    GET mostra confirmação; POST executa a cópia e redireciona para editar.
+    """
+    requisicao = get_object_or_404(
+        requisicoes_visiveis_para(request.user.pk),
+        pk=pk,
+    )
+
+    if request.method == 'GET':
+        return render(
+            request,
+            'requisicoes/copiar_confirmacao.html',
+            {'requisicao': requisicao},
+        )
+
+    try:
+        novo = copiar_requisicao(
+            ator_id=request.user.pk,
+            requisicao_id=requisicao.pk,
+        )
+    except (PermissaoNegada, DadosInvalidos, EstadoInvalido) as exc:
+        messages.error(request, str(exc))
+        return _render_detalhe(request, requisicao)
+
+    messages.success(
+        request,
+        'Rascunho criado. Verifique os itens marcados antes de enviar para autorização.',
+    )
+    return redirect('requisicoes:editar_rascunho', pk=novo.pk)

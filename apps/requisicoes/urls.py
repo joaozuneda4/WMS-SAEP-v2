@@ -30,6 +30,7 @@ urlpatterns = [
         name='retornar_rascunho',
     ),
     path('<int:pk>/recusar/', views.recusar_requisicao_view, name='recusar'),
+    path('<int:pk>/copiar/', views.copiar_requisicao_view, name='copiar'),
     path('itens/nova-linha/', views.nova_linha_item, name='nova_linha_item'),
     path('materiais/busca/', views.buscar_materiais, name='buscar_materiais'),
     path(
