@@ -44,3 +44,11 @@ def formatar_quantidade(qtd, unidade: str) -> str:
     if normalized == normalized.to_integral_value():
         return str(int(normalized))
     return format(normalized, 'f')
+
+
+@register.filter
+def get_item(dictionary, key):
+    """Retorna dictionary[key]; compatível com chaves string e int."""
+    if not isinstance(dictionary, dict):
+        return None
+    return dictionary.get(str(key))

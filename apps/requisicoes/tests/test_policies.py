@@ -678,3 +678,52 @@ def test_aux_almox_nao_pode_atender_fora_de_pronta_para_retirada(
         assert pode_atender_retirada(aux_almoxarifado, req) is False, (
             f'estado={estado} não deveria permitir atendimento'
         )
+
+
+# ---------------------------------------------------------------------------
+# pode_copiar_requisicao
+# ---------------------------------------------------------------------------
+
+
+def _req_recusada(criador, beneficiario, setor):
+    from apps.requisicoes.models import Requisicao
+
+    return Requisicao.objects.create(
+        estado=EstadoRequisicao.RECUSADA,
+        numero_publico='REQ-2026-000501',
+        criador=criador,
+        beneficiario=beneficiario,
+        setor_beneficiario=setor,
+    )
+
+
+@pytest.mark.django_db
+def test_solicitante_pode_copiar_propria_req(solicitante, setor_obras):
+    from apps.requisicoes.policies import pode_copiar_requisicao
+
+    req = _req_recusada(solicitante, solicitante, setor_obras)
+    assert pode_copiar_requisicao(solicitante, req) is True
+
+
+@pytest.mark.django_db
+def test_usuario_outro_setor_nao_pode_copiar(usuario_ti, solicitante, setor_obras):
+    from apps.requisicoes.policies import pode_copiar_requisicao
+
+    req = _req_recusada(solicitante, solicitante, setor_obras)
+    assert pode_copiar_requisicao(usuario_ti, req) is False
+
+
+@pytest.mark.django_db
+def test_superuser_pode_copiar(superuser, solicitante, setor_obras):
+    from apps.requisicoes.policies import pode_copiar_requisicao
+
+    req = _req_recusada(solicitante, solicitante, setor_obras)
+    assert pode_copiar_requisicao(superuser, req) is True
+
+
+@pytest.mark.django_db
+def test_inativo_nao_pode_copiar(usuario_inativo, solicitante, setor_obras):
+    from apps.requisicoes.policies import pode_copiar_requisicao
+
+    req = _req_recusada(solicitante, solicitante, setor_obras)
+    assert pode_copiar_requisicao(usuario_inativo, req) is False

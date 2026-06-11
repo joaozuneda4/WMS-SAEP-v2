@@ -419,6 +419,33 @@
     </section>
   {% endif %}
 
+  {% if pode_copiar %}
+    <section
+      class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      aria-labelledby="copiar-titulo"
+    >
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <h2 id="copiar-titulo" class="text-sm font-semibold text-slate-900">Repetir esta requisição</h2>
+          <p class="mt-0.5 text-xs text-slate-500">
+            Cria novo rascunho com os mesmos materiais e quantidades solicitadas.
+            Itens sem saldo ou com divergência serão marcados para revisão antes do envio.
+          </p>
+        </div>
+        <a
+          href="{% url 'requisicoes:copiar' requisicao.pk %}"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1"
+        >
+          <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M7 9a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9Z"/>
+            <path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2V5h8a2 2 0 0 0-2-2H5Z"/>
+          </svg>
+          Repetir requisição
+        </a>
+      </div>
+    </section>
+  {% endif %}
+
   {# --- 3. Timeline (suporte/auditoria, peso secundário) --- #}
   <section class="mb-6 rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-6">
     <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Histórico</h2>

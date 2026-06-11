@@ -1966,3 +1966,179 @@ def test_registrar_atendimento_requisicao_inexistente(aux_almoxarifado):
             retirante_nome='X',
         )
     assert excinfo.value.code == 'requisicao_nao_encontrada'
+
+
+# ---------------------------------------------------------------------------
+# REQ-09 / TR-001 variant: copiar_requisicao
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def requisicao_recusada(requisicao_aguardando, chefe_obras):
+    return recusar_requisicao(
+        ator_id=chefe_obras.pk,
+        requisicao_id=requisicao_aguardando.pk,
+        motivo='Orçamento insuficiente.',
+    )
+
+
+@pytest.fixture
+def requisicao_atendida(requisicao_pronta_retirada, aux_almoxarifado):
+    item = requisicao_pronta_retirada.itens.first()
+    return registrar_atendimento(
+        ator_id=aux_almoxarifado.pk,
+        requisicao_id=requisicao_pronta_retirada.pk,
+        itens=[
+            {
+                'item_id': item.pk,
+                'quantidade_entregue': item.quantidade_autorizada,
+                'justificativa': '',
+            }
+        ],
+        retirante_nome='Carlos',
+    )
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_recusada_cria_rascunho(requisicao_recusada, solicitante):
+    from apps.requisicoes.services import copiar_requisicao
+
+    novo = copiar_requisicao(
+        ator_id=solicitante.pk,
+        requisicao_id=requisicao_recusada.pk,
+    )
+
+    assert novo.pk is not None
+    assert novo.estado == EstadoRequisicao.RASCUNHO
+    assert novo.numero_publico is None
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_atendida_cria_rascunho(requisicao_atendida, solicitante):
+    from apps.requisicoes.services import copiar_requisicao
+
+    novo = copiar_requisicao(
+        ator_id=solicitante.pk,
+        requisicao_id=requisicao_atendida.pk,
+    )
+
+    assert novo.estado == EstadoRequisicao.RASCUNHO
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_preserva_itens_solicitados(requisicao_recusada, solicitante):
+    from apps.requisicoes.services import copiar_requisicao
+
+    novo = copiar_requisicao(
+        ator_id=solicitante.pk,
+        requisicao_id=requisicao_recusada.pk,
+    )
+
+    itens_origem = list(
+        requisicao_recusada.itens.values_list('material_id', 'quantidade_solicitada')
+    )
+    itens_novo = list(novo.itens.values_list('material_id', 'quantidade_solicitada'))
+    assert itens_novo == itens_origem
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_nao_copia_autorizada_entregue(
+    requisicao_atendida, solicitante
+):
+    from apps.requisicoes.services import copiar_requisicao
+
+    novo = copiar_requisicao(
+        ator_id=solicitante.pk,
+        requisicao_id=requisicao_atendida.pk,
+    )
+
+    for item in novo.itens.all():
+        assert item.quantidade_autorizada is None
+        assert item.quantidade_entregue is None
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_registra_timeline_criacao(requisicao_recusada, solicitante):
+    from apps.requisicoes.services import copiar_requisicao
+
+    novo = copiar_requisicao(
+        ator_id=solicitante.pk,
+        requisicao_id=requisicao_recusada.pk,
+    )
+
+    assert novo.eventos.filter(evento=EventoTimeline.CRIACAO).exists()
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_preserva_beneficiario_setor_e_observacao(
+    requisicao_recusada, solicitante, setor_obras
+):
+    from apps.requisicoes.services import copiar_requisicao
+
+    requisicao_recusada.observacao_geral = 'Urgente'
+    requisicao_recusada.save(update_fields=['observacao_geral'])
+
+    novo = copiar_requisicao(
+        ator_id=solicitante.pk,
+        requisicao_id=requisicao_recusada.pk,
+    )
+
+    assert novo.beneficiario_id == requisicao_recusada.beneficiario_id
+    assert novo.setor_beneficiario_id == requisicao_recusada.setor_beneficiario_id
+    assert novo.criador_id == solicitante.pk
+    assert novo.observacao_geral == 'Urgente'
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_estado_invalido_lanca_estado_invalido(
+    requisicao_aguardando, solicitante
+):
+    from apps.core.exceptions import EstadoInvalido
+    from apps.requisicoes.services import copiar_requisicao
+
+    with pytest.raises(EstadoInvalido) as excinfo:
+        copiar_requisicao(
+            ator_id=solicitante.pk,
+            requisicao_id=requisicao_aguardando.pk,
+        )
+    assert excinfo.value.code == 'estado_invalido'
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_ator_sem_permissao_lanca_permissao_negada(
+    requisicao_recusada, usuario_ti
+):
+    from apps.core.exceptions import PermissaoNegada
+    from apps.requisicoes.services import copiar_requisicao
+
+    with pytest.raises(PermissaoNegada):
+        copiar_requisicao(
+            ator_id=usuario_ti.pk,
+            requisicao_id=requisicao_recusada.pk,
+        )
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_inclui_item_inelegivel_sem_erro(
+    solicitante, requisicao_aguardando, chefe_obras, material_sem_saldo
+):
+    """Itens inelegíveis no momento da cópia são incluídos no rascunho."""
+    from apps.requisicoes.services import copiar_requisicao
+
+    recusada = recusar_requisicao(
+        ator_id=chefe_obras.pk,
+        requisicao_id=requisicao_aguardando.pk,
+        motivo='Sem estoque.',
+    )
+    from apps.estoque.models import SaldoEstoque
+
+    SaldoEstoque.objects.filter(material=recusada.itens.first().material).update(
+        saldo_fisico=0, saldo_reservado=0
+    )
+
+    novo = copiar_requisicao(
+        ator_id=solicitante.pk,
+        requisicao_id=recusada.pk,
+    )
+
+    assert novo.itens.count() == recusada.itens.count()

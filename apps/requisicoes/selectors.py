@@ -204,3 +204,38 @@ def material_eh_elegivel(material: Material) -> bool:
     if material.saldos.filter(saldo_fisico__lt=F('saldo_reservado')).exists():
         return False
     return material.saldos.filter(saldo_fisico__gt=F('saldo_reservado')).exists()
+
+
+def saldos_por_materiais(material_ids: list[int]) -> dict[int, dict]:
+    """Retorna dict {material_id: {elegivel, saldo_disponivel, motivo}} para exibição.
+
+    Usado para sinalizar itens inelegíveis no form de edição de rascunho copiado.
+    """
+    from apps.estoque.models import Material
+
+    materiais = Material.objects.filter(pk__in=material_ids).prefetch_related('saldos')
+    resultado: dict[int, dict] = {}
+    for material in materiais:
+        saldos = list(material.saldos.all())
+        tem_divergencia = any(s.saldo_fisico < s.saldo_reservado for s in saldos)
+        saldo_disponivel = sum(
+            (s.saldo_fisico - s.saldo_reservado for s in saldos), start=0
+        )
+        if not material.ativo:
+            motivo = 'Material inativo'
+            elegivel = False
+        elif tem_divergencia:
+            motivo = 'Divergência crítica de estoque'
+            elegivel = False
+        elif saldo_disponivel <= 0:
+            motivo = 'Sem saldo disponível'
+            elegivel = False
+        else:
+            motivo = ''
+            elegivel = True
+        resultado[material.pk] = {
+            'elegivel': elegivel,
+            'saldo_disponivel': saldo_disponivel,
+            'motivo': motivo,
+        }
+    return resultado

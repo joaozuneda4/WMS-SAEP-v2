@@ -4,8 +4,11 @@ Parâmetros de contexto:
   form        — ItemRequisicaoForm com prefixo correto
   form_index  — índice numérico (para data-index e lógica JS/Alpine)
   prefix      — prefixo completo "itens-N" (usado nos ids/names quando gerado via HTMX)
+  saldo_info  — dict {str(material_id): {elegivel, saldo_disponivel, motivo}} (opcional)
 {% endcomment %}
-<div class="item-form-row flex flex-wrap items-start gap-3 p-3 rounded-lg border border-slate-200 bg-white"
+{% load requisicoes_tags %}
+{% with saldo_item=saldo_info|get_item:form.material_id.value %}
+<div class="item-form-row flex flex-wrap items-start gap-3 p-3 rounded-lg border {% if saldo_item and not saldo_item.elegivel %}border-amber-300 bg-amber-50/40{% else %}border-slate-200 bg-white{% endif %}"
      data-index="{{ form_index }}">
 
   {# Autocomplete de material — hidden field dentro do escopo Alpine para $refs #}
@@ -94,6 +97,18 @@ Parâmetros de contexto:
     {% if form.material_id.errors %}
       <p class="mt-1 text-xs text-red-600" role="alert">{{ form.material_id.errors|join:", " }}</p>
     {% endif %}
+    {% if saldo_item %}
+      {% if not saldo_item.elegivel %}
+        <p class="mt-1.5 flex items-center gap-1 text-xs font-medium text-amber-700" role="alert">
+          <svg aria-hidden="true" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/>
+          </svg>
+          {{ saldo_item.motivo }} — saldo atual: {{ saldo_item.saldo_disponivel|floatformat:"-3" }}
+        </p>
+      {% else %}
+        <p class="mt-1.5 text-xs text-slate-500">Saldo disponível: {{ saldo_item.saldo_disponivel|floatformat:"-3" }}</p>
+      {% endif %}
+    {% endif %}
   </div>
 
   {# Quantidade #}
@@ -135,3 +150,4 @@ Parâmetros de contexto:
     </button>
   </div>
 </div>
+{% endwith %}

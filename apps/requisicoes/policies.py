@@ -425,3 +425,20 @@ def exigir_pode_atender_retirada(ator: User, requisicao: Requisicao) -> None:
             'Você não tem permissão para registrar o atendimento desta requisição.',
             code='atender_retirada_negada',
         )
+
+
+def pode_copiar_requisicao(ator: 'User', requisicao: Requisicao) -> bool:
+    """True se o ator pode copiar a requisição para novo rascunho (REQ-09)."""
+    if not ator.is_active:
+        return False
+    if ator.is_superuser:
+        return True
+    return pode_criar_para_beneficiario(ator, requisicao.beneficiario)
+
+
+def exigir_pode_copiar_requisicao(ator: 'User', requisicao: Requisicao) -> None:
+    if not pode_copiar_requisicao(ator, requisicao):
+        raise PermissaoNegada(
+            'Você não tem permissão para copiar esta requisição.',
+            code='copiar_requisicao_negada',
+        )

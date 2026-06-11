@@ -2225,3 +2225,90 @@ def test_messages_html_aria_live_containers():
     assert 'aria-live="polite"' in html
     assert 'Erro de teste' in html
     assert 'Sucesso de teste' in html
+
+
+# ---------------------------------------------------------------------------
+# copiar_requisicao_view
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def req_recusada_view(solicitante, material_disponivel, chefe_obras):
+    from apps.requisicoes.services import enviar_para_autorizacao, recusar_requisicao
+
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('3'),
+            }
+        ],
+    )
+    req = enviar_para_autorizacao(ator_id=solicitante.pk, requisicao_id=req.pk)
+    return recusar_requisicao(
+        ator_id=chefe_obras.pk,
+        requisicao_id=req.pk,
+        motivo='Sem orçamento.',
+    )
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_view_get_retorna_confirmacao(
+    client, solicitante, req_recusada_view
+):
+    _login(client, solicitante)
+    url = reverse('requisicoes:copiar', kwargs={'pk': req_recusada_view.pk})
+    response = client.get(url)
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_view_post_cria_rascunho_e_redireciona(
+    client, solicitante, req_recusada_view
+):
+    from django.urls import resolve
+
+    _login(client, solicitante)
+    url = reverse('requisicoes:copiar', kwargs={'pk': req_recusada_view.pk})
+    response = client.post(url, follow=True)
+
+    assert response.redirect_chain
+    redirect_url = response.redirect_chain[0][0]
+    novo_pk = resolve(redirect_url).kwargs['pk']
+    novo = Requisicao.objects.get(pk=novo_pk)
+    assert novo.estado == EstadoRequisicao.RASCUNHO
+    assert novo.itens.count() == req_recusada_view.itens.count()
+    mensagens = [str(m) for m in response.context['messages']]
+    assert any('Rascunho criado' in m for m in mensagens)
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_view_post_sem_login_redireciona(client, req_recusada_view):
+    url = reverse('requisicoes:copiar', kwargs={'pk': req_recusada_view.pk})
+    response = client.post(url)
+    assert response.status_code == 302
+    assert '/login/' in response['Location'] or 'next=' in response['Location']
+
+
+@pytest.mark.django_db
+def test_copiar_requisicao_view_post_estado_invalido_exibe_erro(
+    client, solicitante, material_disponivel
+):
+    req_rascunho = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('1'),
+            }
+        ],
+    )
+    _login(client, solicitante)
+    url = reverse('requisicoes:copiar', kwargs={'pk': req_rascunho.pk})
+    response = client.post(url)
+    assert response.status_code == 200
+    mensagens = [str(m) for m in response.context['messages']]
+    assert any('atendidas ou recusadas' in m for m in mensagens)
