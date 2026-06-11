@@ -1037,9 +1037,11 @@ def copiar_requisicao(
         raise DadosInvalidos('Ator não encontrado.', code='ator_nao_encontrado')
 
     try:
-        origem = Requisicao.objects.select_related(
-            'beneficiario__setor', 'setor_beneficiario'
-        ).get(pk=requisicao_id)
+        origem = (
+            Requisicao.objects.select_for_update(of=('self',))
+            .select_related('beneficiario__setor', 'setor_beneficiario')
+            .get(pk=requisicao_id)
+        )
     except Requisicao.DoesNotExist:
         raise DadosInvalidos(
             'Requisição não encontrada.', code='requisicao_nao_encontrada'
