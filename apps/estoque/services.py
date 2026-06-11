@@ -494,6 +494,83 @@ def estornar_saida_excepcional(
     return saida
 
 
+def _registrar_atualizacao_estoque_relevante(*, linhas, estoque, importacao, ator):
+    """Registra evento de timeline em requisições autorizadas afetadas por divergência crítica."""
+    from django.db.models import F
+
+    from apps.estoque.models import SaldoEstoque
+    from apps.requisicoes.models import (
+        EstadoRequisicao,
+        EventoTimeline,
+        ItemRequisicao,
+        TimelineRequisicao,
+    )
+
+    # Todos os materiais existentes no import (excluir 'novo' — ainda sem material_id)
+    existing_material_ids = [
+        linha.material_id for linha in linhas if linha.material_id is not None
+    ]
+    if not existing_material_ids:
+        return
+
+    saldos_criticos = {
+        s.material_id: s
+        for s in SaldoEstoque.objects.filter(
+            material_id__in=existing_material_ids,
+            estoque=estoque,
+            saldo_fisico__lt=F('saldo_reservado'),
+        )
+        .select_for_update()
+        .only('material_id', 'saldo_fisico', 'saldo_reservado')
+    }
+    if not saldos_criticos:
+        return
+
+    material_info = {
+        linha.material_id: {
+            'codigo': linha.cadpro,
+            'nome': linha.nome_material or linha.denominacao_scpi,
+        }
+        for linha in linhas
+        if linha.material_id in saldos_criticos
+    }
+
+    itens = list(
+        ItemRequisicao.objects.filter(
+            material_id__in=saldos_criticos.keys(),
+            requisicao__estado=EstadoRequisicao.AUTORIZADA,
+            quantidade_autorizada__gt=0,
+        ).select_related('requisicao')
+    )
+    if not itens:
+        return
+
+    req_materiais: dict[int, list[dict]] = {}
+    for item in itens:
+        req_id = item.requisicao_id
+        if req_id not in req_materiais:
+            req_materiais[req_id] = []
+        req_materiais[req_id].append(material_info[item.material_id])
+
+    req_por_id = {item.requisicao_id: item.requisicao for item in itens}
+
+    TimelineRequisicao.objects.bulk_create(
+        [
+            TimelineRequisicao(
+                requisicao=req_por_id[req_id],
+                evento=EventoTimeline.ATUALIZACAO_ESTOQUE_RELEVANTE,
+                ator=ator,
+                estado_resultante=None,
+                metadata={
+                    'importacao_id': importacao.pk,
+                    'materiais': mats,
+                },
+            )
+            for req_id, mats in req_materiais.items()
+        ]
+    )
+
+
 def confirmar_importacao_scpi(
     *,
     ator_id: int,
@@ -585,5 +662,12 @@ def confirmar_importacao_scpi(
                 'Este arquivo já foi importado anteriormente. Reimportação bloqueada.',
                 code='reimportacao_bloqueada',
             )
+
+        _registrar_atualizacao_estoque_relevante(
+            linhas=linhas,
+            estoque=estoque,
+            importacao=importacao,
+            ator=ator,
+        )
 
     return importacao

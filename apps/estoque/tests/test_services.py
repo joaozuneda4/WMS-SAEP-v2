@@ -425,3 +425,199 @@ class TestConfirmarImportacaoScpi:
         assert importacao.total_linhas == 2
         assert importacao.total_novos == 1
         assert importacao.total_divergentes == 1
+
+
+class TestConfirmarImportacaoScpiTimelineRequisicoes:
+    """atualizacao_estoque_relevante registrado em requisições autorizadas afetadas."""
+
+    def _csv(self, cadpro: str, denominacao: str, quantidade: str) -> bytes:
+        """Monta CSV SCPI mínimo com uma linha."""
+        return (
+            f'CADPRO;DENOMINACAO;QUAN3\n{cadpro};{denominacao};{quantidade}\n'.encode(
+                'utf-8'
+            )
+        )
+
+    def test_cria_evento_quando_divergencia_critica_e_requisicao_autorizada(
+        self,
+        db,
+        superuser,
+        estoque_principal,
+        material_scpi_critico,
+        requisicao_autorizada_critico,
+    ):
+        """Happy path: material crítico + requisição autorizada → evento criado com metadata correto."""
+        from apps.estoque.services import confirmar_importacao_scpi
+        from apps.requisicoes.models import EventoTimeline, TimelineRequisicao
+
+        csv_bytes = self._csv(material_scpi_critico.codigo, 'Tinta Branca 18L', '1.000')
+        importacao = confirmar_importacao_scpi(
+            ator_id=superuser.pk,
+            conteudo_bytes=csv_bytes,
+            arquivo_nome='crit.csv',
+            estoque_id=estoque_principal.pk,
+        )
+
+        eventos = TimelineRequisicao.objects.filter(
+            requisicao=requisicao_autorizada_critico,
+            evento=EventoTimeline.ATUALIZACAO_ESTOQUE_RELEVANTE,
+        )
+        assert eventos.count() == 1
+        evento = eventos.first()
+        assert evento.metadata['importacao_id'] == importacao.pk
+        assert any(
+            m['codigo'] == material_scpi_critico.codigo
+            for m in evento.metadata['materiais']
+        )
+        assert any(
+            m['nome'] == material_scpi_critico.nome
+            for m in evento.metadata['materiais']
+        )
+
+    def test_nao_cria_evento_quando_saldo_nao_critico(
+        self, db, superuser, estoque_principal, solicitante, setor_obras
+    ):
+        """Material divergente (SCPI != WMS) mas não crítico: sem evento."""
+        from decimal import Decimal
+
+        from apps.estoque.models import Material, SaldoEstoque, UnidadeMedida
+        from apps.estoque.services import confirmar_importacao_scpi
+        from apps.requisicoes.models import (
+            EstadoRequisicao,
+            EventoTimeline,
+            ItemRequisicao,
+            Requisicao,
+            TimelineRequisicao,
+        )
+
+        m = Material.objects.create(
+            codigo='000.000.010',
+            nome='Parafuso M8',
+            unidade=UnidadeMedida.UNIDADE,
+            ativo=True,
+        )
+        SaldoEstoque.objects.create(
+            estoque=estoque_principal, material=m, saldo_fisico=10, saldo_reservado=5
+        )
+        req = Requisicao.objects.create(
+            estado=EstadoRequisicao.AUTORIZADA,
+            numero_publico='REQ-2025-000010',
+            criador=solicitante,
+            beneficiario=solicitante,
+            setor_beneficiario=setor_obras,
+        )
+        ItemRequisicao.objects.create(
+            requisicao=req,
+            material=m,
+            quantidade_solicitada=Decimal('5'),
+            quantidade_autorizada=Decimal('5'),
+        )
+
+        # SCPI diz 8 (divergente de WMS=10), mas saldo_fisico=10 >= saldo_reservado=5
+        csv_bytes = self._csv(m.codigo, 'Parafuso M8', '8.000')
+        confirmar_importacao_scpi(
+            ator_id=superuser.pk,
+            conteudo_bytes=csv_bytes,
+            arquivo_nome='nao_crit.csv',
+            estoque_id=estoque_principal.pk,
+        )
+
+        assert not TimelineRequisicao.objects.filter(
+            requisicao=req,
+            evento=EventoTimeline.ATUALIZACAO_ESTOQUE_RELEVANTE,
+        ).exists()
+
+    def test_nao_cria_evento_sem_requisicao_autorizada(
+        self, db, superuser, estoque_principal, material_scpi_critico
+    ):
+        """Material crítico mas sem requisição autorizada: sem evento."""
+        from apps.estoque.services import confirmar_importacao_scpi
+        from apps.requisicoes.models import EventoTimeline, TimelineRequisicao
+
+        csv_bytes = self._csv(material_scpi_critico.codigo, 'Tinta Branca 18L', '1.000')
+        confirmar_importacao_scpi(
+            ator_id=superuser.pk,
+            conteudo_bytes=csv_bytes,
+            arquivo_nome='sem_req.csv',
+            estoque_id=estoque_principal.pk,
+        )
+
+        assert not TimelineRequisicao.objects.filter(
+            evento=EventoTimeline.ATUALIZACAO_ESTOQUE_RELEVANTE,
+        ).exists()
+
+    def test_evento_agregado_com_multiplos_materiais_criticos(
+        self, db, superuser, estoque_principal, solicitante, setor_obras
+    ):
+        """Dois materiais críticos na mesma requisição: um evento com lista agregada."""
+        from decimal import Decimal
+
+        from apps.estoque.models import Material, SaldoEstoque, UnidadeMedida
+        from apps.estoque.services import confirmar_importacao_scpi
+        from apps.requisicoes.models import (
+            EstadoRequisicao,
+            EventoTimeline,
+            ItemRequisicao,
+            Requisicao,
+            TimelineRequisicao,
+        )
+
+        m1 = Material.objects.create(
+            codigo='000.000.011',
+            nome='Material A',
+            unidade=UnidadeMedida.UNIDADE,
+            ativo=True,
+        )
+        m2 = Material.objects.create(
+            codigo='000.000.012',
+            nome='Material B',
+            unidade=UnidadeMedida.UNIDADE,
+            ativo=True,
+        )
+        SaldoEstoque.objects.create(
+            estoque=estoque_principal, material=m1, saldo_fisico=2, saldo_reservado=5
+        )
+        SaldoEstoque.objects.create(
+            estoque=estoque_principal, material=m2, saldo_fisico=1, saldo_reservado=3
+        )
+
+        req = Requisicao.objects.create(
+            estado=EstadoRequisicao.AUTORIZADA,
+            numero_publico='REQ-2025-000011',
+            criador=solicitante,
+            beneficiario=solicitante,
+            setor_beneficiario=setor_obras,
+        )
+        ItemRequisicao.objects.create(
+            requisicao=req,
+            material=m1,
+            quantidade_solicitada=Decimal('3'),
+            quantidade_autorizada=Decimal('3'),
+        )
+        ItemRequisicao.objects.create(
+            requisicao=req,
+            material=m2,
+            quantidade_solicitada=Decimal('2'),
+            quantidade_autorizada=Decimal('2'),
+        )
+
+        csv_bytes = (
+            'CADPRO;DENOMINACAO;QUAN3\n'
+            f'{m1.codigo};Material A;1.000\n'
+            f'{m2.codigo};Material B;1.000\n'
+        ).encode('utf-8')
+        importacao = confirmar_importacao_scpi(
+            ator_id=superuser.pk,
+            conteudo_bytes=csv_bytes,
+            arquivo_nome='multi.csv',
+            estoque_id=estoque_principal.pk,
+        )
+
+        eventos = TimelineRequisicao.objects.filter(
+            requisicao=req,
+            evento=EventoTimeline.ATUALIZACAO_ESTOQUE_RELEVANTE,
+        )
+        assert eventos.count() == 1
+        codigos = {m['codigo'] for m in eventos.first().metadata['materiais']}
+        assert codigos == {m1.codigo, m2.codigo}
+        assert eventos.first().metadata['importacao_id'] == importacao.pk

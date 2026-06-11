@@ -128,3 +128,46 @@ def material_scpi(db, estoque_principal):
         estoque=estoque_principal, material=m, saldo_fisico=100, saldo_reservado=0
     )
     return m
+
+
+@pytest.fixture
+def material_scpi_critico(db, estoque_principal):
+    """Material com código SCPI e divergência crítica (físico < reservado)."""
+    from apps.estoque.models import Material, SaldoEstoque, UnidadeMedida
+
+    m = Material.objects.create(
+        codigo='000.000.002',
+        nome='Tinta Branca 18L',
+        unidade=UnidadeMedida.LITRO,
+        ativo=True,
+    )
+    SaldoEstoque.objects.create(
+        estoque=estoque_principal,
+        material=m,
+        saldo_fisico=2,
+        saldo_reservado=5,
+    )
+    return m
+
+
+@pytest.fixture
+def requisicao_autorizada_critico(db, solicitante, setor_obras, material_scpi_critico):
+    """Requisição autorizada com item do material_scpi_critico (qty_autorizada > 0)."""
+    from decimal import Decimal
+
+    from apps.requisicoes.models import EstadoRequisicao, ItemRequisicao, Requisicao
+
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.AUTORIZADA,
+        numero_publico='REQ-2025-000001',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    ItemRequisicao.objects.create(
+        requisicao=req,
+        material=material_scpi_critico,
+        quantidade_solicitada=Decimal('3'),
+        quantidade_autorizada=Decimal('3'),
+    )
+    return req
