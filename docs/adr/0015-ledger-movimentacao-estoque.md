@@ -51,7 +51,7 @@ O caso decisivo é `consumo`, que reduz `saldo_fisico` pela quantidade entregue 
 Uma única coluna de quantidade assinada não representaria isso. Com dois deltas,
 um evento continua sendo uma linha e a reconciliação é independente por balde:
 
-```
+```text
 Σ delta_fisico    por (estoque, material) = saldo_fisico
 Σ delta_reservado por (estoque, material) = saldo_reservado
 ```
@@ -121,7 +121,7 @@ são estruturais (`>= 0`) enquanto a lógica de sinal vive nos services.
 
 Toda linha é criada por um helper privado único em `apps/estoque/services.py`:
 
-```
+```text
 _registrar_movimentacao(*, tipo, material_id, estoque_id,
                         delta_fisico, delta_reservado, origem, ator_id)
 ```
@@ -167,14 +167,14 @@ de auditoria externa mais rígida.
 
 ### 8. Selector `entregue_liquida_por_item` — leitura pura, tipos explícitos
 
-```
+```text
 entregue_liquida_por_item(requisicao_id, item_id) -> Decimal
 ```
 
 Valida que `item_id` pertence à `requisicao_id` (senão `DadosInvalidos`),
 resolve `item_id → material_id` e calcula:
 
-```
+```text
 entregue_liquida = − Σ delta_fisico,
   filtrando por (requisicao_id, material_id) e
   tipo ∈ {consumo, devolucao, estorno_requisicao}

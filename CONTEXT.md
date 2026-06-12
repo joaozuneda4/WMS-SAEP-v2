@@ -117,8 +117,9 @@ foram criados, quantas linhas divergiram e quantos alertas foram gerados.
 
 **Entregue líquida**:
 A parte de um item já entregue que ainda permanece fora do estoque — a
-quantidade entregue menos o que voltou por **Devolução** ou **Estorno**.
-Nunca armazenada; derivada das **Movimentações de estoque** do item.
+quantidade entregue menos o que voltou por **Devolução** ou **Estorno de
+Requisição** (`estorno_requisicao`). Nunca armazenada; derivada das
+**Movimentações de estoque** do item.
 
 ### Estoque
 
@@ -178,8 +179,11 @@ sinal esperado das variações.
   `ItemSaidaExcepcional`, `SequenciaSaidaExcepcional`,
   `registrar_saida_excepcional` e `estornar_saida_excepcional`.
 - A feature pertence ao app **estoque**, não ao app **requisicoes**.
-- Toda mutação de saldo feita pelos services de estoque gera a **Movimentação
-  de estoque** correspondente na mesma transação; saldo nunca muda sem ela.
+- Toda mutação de saldo feita pelos services de estoque **retrofitados por
+  ADR-0015** gera a **Movimentação de estoque** correspondente na mesma
+  transação; saldo nunca muda sem ela. O bootstrap inicial de saldo da
+  **Importação SCPI** (`confirmar_importacao_scpi`) fica fora desse ledger
+  nesta fase.
 - Cada **Movimentação de estoque** tem exatamente uma origem: ou uma
   **Requisição**, ou uma **Saída excepcional**, nunca as duas.
 - A **Entregue líquida** de um item é `Σ` das **Movimentações de estoque** de
