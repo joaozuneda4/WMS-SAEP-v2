@@ -118,6 +118,24 @@ foram criados, quantas linhas divergiram e quantos alertas foram gerados.
 **Entregue líquida**:
 A parte de um item já entregue que ainda permanece fora do estoque — a
 quantidade entregue menos o que voltou por **Devolução** ou **Estorno**.
+Nunca armazenada; derivada das **Movimentações de estoque** do item.
+
+### Estoque
+
+**Movimentação de estoque**:
+Registro imutável (livro-razão append-only) de cada variação de saldo de um
+material num estoque, causada por um evento de domínio. Carrega duas variações
+assinadas — uma do saldo físico, outra do saldo reservado — e aponta para o
+documento de origem (uma **Requisição** ou uma **Saída excepcional**). É a fonte
+de auditoria do estoque e a base de cálculo da **Entregue líquida**. Nunca
+substitui o saldo corrente, que continua materializado.
+_Avoid_: histórico técnico, snapshot de saldo.
+
+**Tipo de movimentação**:
+A natureza do evento que gerou a movimentação: `reserva`, `liberacao`,
+`consumo`, `saida_excepcional`, `estorno_saida`, `devolucao` ou
+`estorno_requisicao`. O tipo determina qual documento de origem é válido e o
+sinal esperado das variações.
 
 ## Relationships
 
@@ -160,6 +178,16 @@ quantidade entregue menos o que voltou por **Devolução** ou **Estorno**.
   `ItemSaidaExcepcional`, `SequenciaSaidaExcepcional`,
   `registrar_saida_excepcional` e `estornar_saida_excepcional`.
 - A feature pertence ao app **estoque**, não ao app **requisicoes**.
+- Toda mutação de saldo feita pelos services de estoque gera a **Movimentação
+  de estoque** correspondente na mesma transação; saldo nunca muda sem ela.
+- Cada **Movimentação de estoque** tem exatamente uma origem: ou uma
+  **Requisição**, ou uma **Saída excepcional**, nunca as duas.
+- A **Entregue líquida** de um item é `Σ` das **Movimentações de estoque** de
+  tipo `consumo`, `devolucao` e `estorno_requisicao` daquele item, calculada
+  dentro da transação que trava a **Requisição** (ADR-0005).
+- **Material é único por documento** (requisição ou saída): essa unicidade é o
+  que permite identificar a linha pela origem mais o material, sem referência
+  direta ao item.
 
 ## Example dialogue
 
