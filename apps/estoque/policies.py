@@ -125,11 +125,7 @@ def exigir_pode_consultar_historico_scpi(ator: 'User') -> None:
 
 
 def pode_consultar_catalogo_estoque(usuario: 'User') -> bool:
-    if not usuario.is_active:
-        return False
-    if usuario.is_superuser:
-        return True
-    return _eh_almoxarifado(usuario)
+    return usuario.is_active
 
 
 def exigir_pode_consultar_catalogo_estoque(usuario: 'User') -> None:
@@ -137,6 +133,6 @@ def exigir_pode_consultar_catalogo_estoque(usuario: 'User') -> None:
         from apps.core.exceptions import PermissaoNegada
 
         raise PermissaoNegada(
-            'Apenas usuários de almoxarifado e superusuários podem consultar o catálogo de estoque.',
+            'Apenas usuários ativos podem consultar o catálogo de estoque.',
             code='permissao_negada',
         )

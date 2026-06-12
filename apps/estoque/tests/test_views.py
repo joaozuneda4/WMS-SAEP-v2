@@ -621,7 +621,7 @@ class TestHistoricoImportacoesScpiView:
         assert b'conteudo_csv' not in resp.content
 
 
-URL_MATERIAIS = '/estoque/materiais/'
+URL_MATERIAIS = reverse('estoque:lista_materiais')
 
 
 class TestListaMateriaisView:
@@ -640,10 +640,19 @@ class TestListaMateriaisView:
         response = client.get(URL_MATERIAIS)
         assert response.status_code == 200
 
-    def test_solicitante_recebe_403(self, client, solicitante):
+    def test_solicitante_acessa_lista(self, client, solicitante):
+        # Consultar materiais é permitido para todos os papéis ativos (matriz-permissoes.md).
         client.force_login(solicitante)
         response = client.get(URL_MATERIAIS)
-        assert response.status_code == 403
+        assert response.status_code == 200
+
+    def test_usuario_inativo_redirecionado_para_login(self, client, usuario_inativo):
+        # Django ModelBackend trata is_active=False como não-autenticado;
+        # @login_required redireciona para login (USR-01).
+        client.force_login(usuario_inativo)
+        response = client.get(URL_MATERIAIS)
+        assert response.status_code == 302
+        assert 'login' in response['Location']
 
     def test_anonimo_redirecionado_para_login(self, client):
         response = client.get(URL_MATERIAIS)

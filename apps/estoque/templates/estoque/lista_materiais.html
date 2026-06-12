@@ -44,7 +44,7 @@
 
   {% if saldos %}
 
-    {# Mobile: cards empilhados #}
+    {# Dispositivos móveis: cartões empilhados #}
     <div class="space-y-3 sm:hidden">
       {% for saldo in saldos %}
         <article
@@ -88,7 +88,7 @@
       {% endfor %}
     </div>
 
-    {# Desktop: tabela #}
+    {# Desktop: tabela de dados #}
     <div class="hidden sm:block overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
       <table class="min-w-full divide-y divide-slate-200 text-sm">
         <thead class="bg-slate-50">
