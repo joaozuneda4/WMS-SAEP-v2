@@ -621,3 +621,310 @@ class TestConfirmarImportacaoScpiTimelineRequisicoes:
         codigos = {m['codigo'] for m in eventos.first().metadata['materiais']}
         assert codigos == {m1.codigo, m2.codigo}
         assert eventos.first().metadata['importacao_id'] == importacao.pk
+
+
+class TestMovimentacaoEstoqueImutavel:
+    @pytest.mark.django_db
+    def test_save_apos_criacao_levanta_excecao(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        saida_registrada,
+    ):
+        from apps.estoque.models import MovimentacaoEstoque, MovimentacaoEstoqueImutavel
+
+        mov = MovimentacaoEstoque.objects.filter(
+            saida_excepcional=saida_registrada
+        ).first()
+        assert mov is not None
+        with pytest.raises(MovimentacaoEstoqueImutavel):
+            mov.delta_fisico = mov.delta_fisico + 1
+            mov.save()
+
+    @pytest.mark.django_db
+    def test_delete_levanta_excecao(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        saida_registrada,
+    ):
+        from apps.estoque.models import MovimentacaoEstoque, MovimentacaoEstoqueImutavel
+
+        mov = MovimentacaoEstoque.objects.filter(
+            saida_excepcional=saida_registrada
+        ).first()
+        assert mov is not None
+        with pytest.raises(MovimentacaoEstoqueImutavel):
+            mov.delete()
+
+
+class TestLedgerRegistrarSaidaExcepcional:
+    @pytest.mark.django_db
+    def test_emite_movimentacao_saida_excepcional(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        saida_registrada,
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+
+        movs = MovimentacaoEstoque.objects.filter(saida_excepcional=saida_registrada)
+        assert movs.count() == 1
+        mov = movs.first()
+        assert mov.tipo == TipoMovimentacaoEstoque.SAIDA_EXCEPCIONAL
+        assert mov.material == material_disponivel
+        assert mov.estoque == estoque_principal
+        assert mov.delta_fisico == Decimal('-5')
+        assert mov.delta_reservado == Decimal('0')
+        assert mov.ator == chefe_almoxarifado
+
+
+class TestLedgerEstornarSaidaExcepcional:
+    @pytest.mark.django_db
+    def test_emite_movimentacao_estorno_saida(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        saida_registrada,
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+        from apps.estoque.services import estornar_saida_excepcional
+
+        estornar_saida_excepcional(
+            ator_id=chefe_almoxarifado.pk,
+            saida_id=saida_registrada.pk,
+            justificativa='Estorno de teste',
+        )
+
+        movs = MovimentacaoEstoque.objects.filter(saida_excepcional=saida_registrada)
+        tipos = list(movs.values_list('tipo', flat=True))
+        assert TipoMovimentacaoEstoque.ESTORNO_SAIDA in tipos
+
+        mov_estorno = movs.get(tipo=TipoMovimentacaoEstoque.ESTORNO_SAIDA)
+        assert mov_estorno.delta_fisico == Decimal('5')
+        assert mov_estorno.delta_reservado == Decimal('0')
+        assert mov_estorno.ator == chefe_almoxarifado
+
+
+class TestLedgerReservarSaldos:
+    @pytest.mark.django_db
+    def test_emite_movimentacao_reserva(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        requisicao_autorizavel,
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+        from apps.estoque.services import (
+            OrigemMovimentacaoEstoque,
+            reservar_saldos_para_autorizacao,
+        )
+
+        reservar_saldos_para_autorizacao(
+            itens=[
+                {
+                    'material_id': material_disponivel.pk,
+                    'quantidade_solicitada': Decimal('3'),
+                }
+            ],
+            ator_id=chefe_almoxarifado.pk,
+            origem=OrigemMovimentacaoEstoque.de_requisicao(requisicao_autorizavel),
+        )
+
+        movs = MovimentacaoEstoque.objects.filter(requisicao=requisicao_autorizavel)
+        assert movs.count() == 1
+        mov = movs.first()
+        assert mov.tipo == TipoMovimentacaoEstoque.RESERVA
+        assert mov.delta_fisico == Decimal('0')
+        assert mov.delta_reservado == Decimal('3')
+        assert mov.ator == chefe_almoxarifado
+
+
+class TestLedgerLiberarReservas:
+    @pytest.mark.django_db
+    def test_emite_movimentacao_liberacao(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        requisicao_autorizada,
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+        from apps.estoque.services import (
+            OrigemMovimentacaoEstoque,
+            liberar_reservas_para_cancelamento,
+        )
+
+        req, item = requisicao_autorizada
+
+        liberar_reservas_para_cancelamento(
+            itens=[
+                {
+                    'material_id': material_disponivel.pk,
+                    'quantidade_reservada': Decimal('5'),
+                }
+            ],
+            ator_id=chefe_almoxarifado.pk,
+            origem=OrigemMovimentacaoEstoque.de_requisicao(req),
+        )
+
+        movs = MovimentacaoEstoque.objects.filter(
+            requisicao=req, tipo=TipoMovimentacaoEstoque.LIBERACAO
+        )
+        assert movs.count() == 1
+        mov = movs.first()
+        assert mov.delta_fisico == Decimal('0')
+        assert mov.delta_reservado == Decimal('-5')
+
+
+class TestLedgerConsumirReservas:
+    @pytest.mark.django_db
+    def test_emite_movimentacao_consumo(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        requisicao_autorizada,
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+        from apps.estoque.services import (
+            OrigemMovimentacaoEstoque,
+            consumir_e_liberar_reservas_para_atendimento,
+        )
+
+        req, item = requisicao_autorizada
+
+        consumir_e_liberar_reservas_para_atendimento(
+            itens=[
+                {
+                    'material_id': material_disponivel.pk,
+                    'quantidade_autorizada': Decimal('5'),
+                    'quantidade_entregue': Decimal('4'),
+                }
+            ],
+            ator_id=chefe_almoxarifado.pk,
+            origem=OrigemMovimentacaoEstoque.de_requisicao(req),
+        )
+
+        movs = MovimentacaoEstoque.objects.filter(
+            requisicao=req, tipo=TipoMovimentacaoEstoque.CONSUMO
+        )
+        assert movs.count() == 1
+        mov = movs.first()
+        assert mov.delta_fisico == Decimal('-4')
+        assert mov.delta_reservado == Decimal('-5')
+
+
+class TestLedgerReconciliacao:
+    @pytest.mark.django_db
+    def test_soma_delta_fisico_reconcilia_com_saldo(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        saida_registrada,
+    ):
+        from decimal import Decimal
+
+        from django.db.models import Sum
+
+        from apps.estoque.models import MovimentacaoEstoque, SaldoEstoque
+        from apps.estoque.services import estornar_saida_excepcional
+
+        saldo_inicial = Decimal('100')
+
+        estornar_saida_excepcional(
+            ator_id=chefe_almoxarifado.pk,
+            saida_id=saida_registrada.pk,
+            justificativa='Reconciliação de teste',
+        )
+
+        total_delta = MovimentacaoEstoque.objects.filter(
+            estoque=estoque_principal,
+            material=material_disponivel,
+        ).aggregate(total=Sum('delta_fisico'))['total'] or Decimal('0')
+
+        saldo_atual = SaldoEstoque.objects.get(
+            estoque=estoque_principal, material=material_disponivel
+        ).saldo_fisico
+
+        assert saldo_atual == saldo_inicial + total_delta
+
+
+@pytest.mark.django_db(transaction=True)
+class TestLedgerConcorrenciaEST06:
+    def test_locks_preservados_com_ledger(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        requisicao_autorizavel,
+    ):
+        """EST-06: lock determinístico preservado após retrofit do ledger."""
+        import threading
+        from decimal import Decimal
+
+        from apps.estoque.models import (
+            MovimentacaoEstoque,
+            SaldoEstoque,
+            TipoMovimentacaoEstoque,
+        )
+        from apps.estoque.services import (
+            OrigemMovimentacaoEstoque,
+            reservar_saldos_para_autorizacao,
+        )
+
+        erros = []
+
+        def reservar():
+            try:
+                reservar_saldos_para_autorizacao(
+                    itens=[
+                        {
+                            'material_id': material_disponivel.pk,
+                            'quantidade_solicitada': Decimal('1'),
+                        }
+                    ],
+                    ator_id=chefe_almoxarifado.pk,
+                    origem=OrigemMovimentacaoEstoque.de_requisicao(
+                        requisicao_autorizavel
+                    ),
+                )
+            except Exception as e:
+                erros.append(e)
+
+        t1 = threading.Thread(target=reservar)
+        t2 = threading.Thread(target=reservar)
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        saldo = SaldoEstoque.objects.get(
+            estoque=estoque_principal, material=material_disponivel
+        )
+        movs = MovimentacaoEstoque.objects.filter(
+            requisicao=requisicao_autorizavel,
+            tipo=TipoMovimentacaoEstoque.RESERVA,
+        )
+        # Ambas as threads devem ter completado sem erro
+        assert not erros
+        # saldo_reservado aumentou 2 (1 por thread)
+        assert saldo.saldo_reservado == Decimal('10') + Decimal('2')
+        # 2 movimentações criadas
+        assert movs.count() == 2

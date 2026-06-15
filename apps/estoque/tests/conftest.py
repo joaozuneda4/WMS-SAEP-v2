@@ -171,3 +171,64 @@ def requisicao_autorizada_critico(db, solicitante, setor_obras, material_scpi_cr
         quantidade_autorizada=Decimal('3'),
     )
     return req
+
+
+@pytest.fixture
+def requisicao_autorizavel(db, solicitante, setor_obras, material_disponivel):
+    """Requisição em AGUARDANDO_AUTORIZACAO pronta para reservar saldo."""
+    from decimal import Decimal
+
+    from apps.requisicoes.models import EstadoRequisicao, ItemRequisicao, Requisicao
+
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+        numero_publico='REQ-2025-000010',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    ItemRequisicao.objects.create(
+        requisicao=req,
+        material=material_disponivel,
+        quantidade_solicitada=Decimal('5'),
+    )
+    return req
+
+
+@pytest.fixture
+def requisicao_autorizada(
+    db, solicitante, setor_obras, material_disponivel, chefe_almoxarifado
+):
+    """Requisição em AUTORIZADA com saldo reservado (via service)."""
+    from apps.estoque.services import (
+        OrigemMovimentacaoEstoque,
+        reservar_saldos_para_autorizacao,
+    )
+    from apps.requisicoes.models import EstadoRequisicao, ItemRequisicao, Requisicao
+
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.AUTORIZADA,
+        numero_publico='REQ-2025-000011',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    item = ItemRequisicao.objects.create(
+        requisicao=req,
+        material=material_disponivel,
+        quantidade_solicitada=5,
+        quantidade_autorizada=5,
+    )
+    from decimal import Decimal
+
+    reservar_saldos_para_autorizacao(
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('5'),
+            }
+        ],
+        ator_id=chefe_almoxarifado.pk,
+        origem=OrigemMovimentacaoEstoque.de_requisicao(req),
+    )
+    return req, item

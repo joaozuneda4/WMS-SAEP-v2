@@ -719,9 +719,10 @@ def test_cancelar_requisicao_pronta_para_retirada_libera_reserva_sem_baixa_fisic
     [Decimal('NaN'), Decimal('Infinity'), Decimal('-Infinity')],
 )
 def test_liberar_reservas_para_cancelamento_rejeita_quantidade_nao_finita(
-    material_disponivel, quantidade_reservada
+    material_disponivel, quantidade_reservada, chefe_almoxarifado
 ):
     from apps.estoque.models import SaldoEstoque
+    from apps.estoque.services import OrigemMovimentacaoEstoque
 
     saldo_antes = SaldoEstoque.objects.get(material=material_disponivel)
     reservado_antes = saldo_antes.saldo_reservado
@@ -734,7 +735,9 @@ def test_liberar_reservas_para_cancelamento_rejeita_quantidade_nao_finita(
                     'material_id': material_disponivel.pk,
                     'quantidade_reservada': quantidade_reservada,
                 }
-            ]
+            ],
+            ator_id=chefe_almoxarifado.pk,
+            origem=OrigemMovimentacaoEstoque(requisicao_id=999),
         )
 
     saldo_antes.refresh_from_db()
@@ -1236,9 +1239,19 @@ def test_autorizar_requisicao_bloqueia_multiplos_itens_sem_efeitos_parciais(
 
 @pytest.mark.django_db
 def test_reservar_saldos_para_autorizacao_acumula_itens_do_mesmo_material(
-    material_disponivel,
+    material_disponivel, chefe_almoxarifado, solicitante, setor_obras
 ):
     from apps.estoque.models import SaldoEstoque
+    from apps.estoque.services import OrigemMovimentacaoEstoque
+    from apps.requisicoes.models import EstadoRequisicao, Requisicao
+
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+        numero_publico='REQ-2025-TEST01',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
 
     saldo = SaldoEstoque.objects.get(material=material_disponivel)
     reservado_antes = saldo.saldo_reservado
@@ -1255,6 +1268,8 @@ def test_reservar_saldos_para_autorizacao_acumula_itens_do_mesmo_material(
                 'quantidade_solicitada': Decimal('3'),
             },
         ],
+        ator_id=chefe_almoxarifado.pk,
+        origem=OrigemMovimentacaoEstoque.de_requisicao(req),
     )
 
     saldo.refresh_from_db()
@@ -1265,9 +1280,10 @@ def test_reservar_saldos_para_autorizacao_acumula_itens_do_mesmo_material(
 
 @pytest.mark.django_db
 def test_reservar_saldos_para_autorizacao_rejeita_saldo_ambiguo(
-    material_disponivel, estoque_principal
+    material_disponivel, estoque_principal, chefe_almoxarifado
 ):
     from apps.estoque.models import Estoque, SaldoEstoque
+    from apps.estoque.services import OrigemMovimentacaoEstoque
 
     estoque_secundario = Estoque.objects.create(
         codigo='EST02',
@@ -1299,6 +1315,8 @@ def test_reservar_saldos_para_autorizacao_rejeita_saldo_ambiguo(
                     'quantidade_solicitada': Decimal('2'),
                 }
             ],
+            ator_id=chefe_almoxarifado.pk,
+            origem=OrigemMovimentacaoEstoque(requisicao_id=999),
         )
 
     saldo_principal.refresh_from_db()

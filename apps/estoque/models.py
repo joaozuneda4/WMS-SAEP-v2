@@ -315,3 +315,188 @@ class ImportacaoSCPI(models.Model):
 
     def __str__(self):
         return f'Importação SCPI #{self.pk} — {self.arquivo_nome}'
+
+
+class MovimentacaoEstoqueImutavel(Exception):
+    """Levantada ao tentar alterar ou excluir um registro de MovimentacaoEstoque.
+
+    Violação de imutabilidade é erro de programação, não condição de negócio.
+    Fora da árvore ErroDominio intencionalmente.
+    """
+
+
+class TipoMovimentacaoEstoque(models.TextChoices):
+    RESERVA = 'reserva', 'Reserva'
+    LIBERACAO = 'liberacao', 'Liberação'
+    CONSUMO = 'consumo', 'Consumo'
+    SAIDA_EXCEPCIONAL = 'saida_excepcional', 'Saída excepcional'
+    ESTORNO_SAIDA = 'estorno_saida', 'Estorno de saída'
+    DEVOLUCAO = 'devolucao', 'Devolução'
+    ESTORNO_REQUISICAO = 'estorno_requisicao', 'Estorno de requisição'
+
+
+_TIPOS_ORIGEM_REQUISICAO = [
+    TipoMovimentacaoEstoque.RESERVA,
+    TipoMovimentacaoEstoque.LIBERACAO,
+    TipoMovimentacaoEstoque.CONSUMO,
+    TipoMovimentacaoEstoque.DEVOLUCAO,
+    TipoMovimentacaoEstoque.ESTORNO_REQUISICAO,
+]
+
+_TIPOS_ORIGEM_SAIDA = [
+    TipoMovimentacaoEstoque.SAIDA_EXCEPCIONAL,
+    TipoMovimentacaoEstoque.ESTORNO_SAIDA,
+]
+
+
+class MovimentacaoEstoqueQuerySet(models.QuerySet):
+    """QuerySet que bloqueia mutações em lote para preservar o ledger append-only."""
+
+    def update(self, **kwargs):
+        raise MovimentacaoEstoqueImutavel(
+            'MovimentacaoEstoque não pode ser alterada em lote.'
+        )
+
+    def bulk_update(self, objs, fields, batch_size=None):
+        raise MovimentacaoEstoqueImutavel(
+            'MovimentacaoEstoque não pode ser alterada em lote.'
+        )
+
+    def delete(self):
+        raise MovimentacaoEstoqueImutavel(
+            'MovimentacaoEstoque não pode ser excluída em lote.'
+        )
+
+
+class MovimentacaoEstoque(models.Model):
+    """Ledger auditável de mutações de SaldoEstoque.
+
+    Cada linha registra um evento de domínio por material afetado, com dois
+    deltas assinados (delta_fisico, delta_reservado). Imutável após criação:
+    save() e delete() levantam MovimentacaoEstoqueImutavel.
+
+    Invariante de reconciliação:
+        Σ delta_fisico por (estoque, material) == saldo_fisico atual
+        Σ delta_reservado por (estoque, material) == saldo_reservado atual
+    (válida apenas para movimentações geridas por este ledger; saldo inicial
+    de importação SCPI é lacuna conhecida — ver ADR-0015.)
+    """
+
+    tipo = models.CharField(
+        'tipo',
+        max_length=25,
+        choices=TipoMovimentacaoEstoque.choices,
+    )
+    material = models.ForeignKey(
+        Material,
+        on_delete=models.PROTECT,
+        related_name='movimentacoes_estoque',
+        verbose_name='material',
+    )
+    estoque = models.ForeignKey(
+        Estoque,
+        on_delete=models.PROTECT,
+        related_name='movimentacoes',
+        verbose_name='estoque',
+    )
+    delta_fisico = models.DecimalField(
+        'delta físico',
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+    )
+    delta_reservado = models.DecimalField(
+        'delta reservado',
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+    )
+    requisicao = models.ForeignKey(
+        'requisicoes.Requisicao',
+        on_delete=models.PROTECT,
+        related_name='movimentacoes_estoque',
+        verbose_name='requisição',
+        null=True,
+        blank=True,
+    )
+    saida_excepcional = models.ForeignKey(
+        SaidaExcepcional,
+        on_delete=models.PROTECT,
+        related_name='movimentacoes_estoque',
+        verbose_name='saída excepcional',
+        null=True,
+        blank=True,
+    )
+    ator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='movimentacoes_estoque',
+        verbose_name='ator',
+    )
+    criado_em = models.DateTimeField('criado em', auto_now_add=True)
+
+    objects = MovimentacaoEstoqueQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = 'movimentação de estoque'
+        verbose_name_plural = 'movimentações de estoque'
+        ordering = ('criado_em',)
+        indexes = [
+            models.Index(
+                fields=['requisicao', 'material', 'tipo'],
+                name='idx_mov_req_mat_tipo',
+            ),
+            models.Index(
+                fields=['estoque', 'material'],
+                name='idx_mov_est_mat',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                name='movimentacao_exatamente_uma_origem',
+                condition=(
+                    (
+                        models.Q(requisicao__isnull=False)
+                        & models.Q(saida_excepcional__isnull=True)
+                    )
+                    | (
+                        models.Q(requisicao__isnull=True)
+                        & models.Q(saida_excepcional__isnull=False)
+                    )
+                ),
+            ),
+            models.CheckConstraint(
+                name='movimentacao_ao_menos_um_delta_nao_nulo',
+                condition=(~models.Q(delta_fisico=0) | ~models.Q(delta_reservado=0)),
+            ),
+            models.CheckConstraint(
+                name='movimentacao_tipo_origem_coerente',
+                condition=(
+                    (
+                        models.Q(tipo__in=[t.value for t in _TIPOS_ORIGEM_REQUISICAO])
+                        & models.Q(requisicao__isnull=False)
+                    )
+                    | (
+                        models.Q(tipo__in=[t.value for t in _TIPOS_ORIGEM_SAIDA])
+                        & models.Q(saida_excepcional__isnull=False)
+                    )
+                ),
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            raise MovimentacaoEstoqueImutavel(
+                f'MovimentacaoEstoque pk={self.pk} é imutável após criação.'
+            )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise MovimentacaoEstoqueImutavel(
+            f'MovimentacaoEstoque pk={self.pk} não pode ser excluída.'
+        )
+
+    def __str__(self):
+        return (
+            f'{self.get_tipo_display()} — {self.material} ({self.criado_em:%Y-%m-%d})'
+        )

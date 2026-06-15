@@ -3,6 +3,7 @@
 Toda mutação de ``SaldoEstoque`` passa por este módulo.
 """
 
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import TypedDict
 
@@ -15,10 +16,87 @@ from apps.core.exceptions import ConflitoDominio, DadosInvalidos
 from apps.estoque.models import (
     Estoque,
     ItemSaidaExcepcional,
+    MovimentacaoEstoque,
     SaidaExcepcional,
     SaldoEstoque,
     SequenciaSaidaExcepcional,
+    TipoMovimentacaoEstoque,
 )
+
+
+@dataclass(frozen=True)
+class OrigemMovimentacaoEstoque:
+    """Value object que identifica o documento de origem de uma movimentação.
+
+    Exatamente uma das FKs deve ser preenchida; a outra deve ser None.
+    """
+
+    requisicao_id: int | None = None
+    saida_excepcional_id: int | None = None
+
+    def __post_init__(self):
+        tem_requisicao = self.requisicao_id is not None
+        tem_saida = self.saida_excepcional_id is not None
+        if tem_requisicao == tem_saida:
+            raise ValueError(
+                'OrigemMovimentacaoEstoque exige exatamente uma origem preenchida.'
+            )
+
+    @classmethod
+    def de_requisicao(cls, requisicao) -> 'OrigemMovimentacaoEstoque':
+        return cls(requisicao_id=requisicao.pk)
+
+    @classmethod
+    def de_saida_excepcional(cls, saida) -> 'OrigemMovimentacaoEstoque':
+        return cls(saida_excepcional_id=saida.pk)
+
+
+def _registrar_movimentacao(
+    *,
+    tipo: str,
+    material_id: int,
+    estoque_id: int,
+    delta_fisico: Decimal,
+    delta_reservado: Decimal,
+    origem: OrigemMovimentacaoEstoque,
+    ator_id: int,
+) -> None:
+    """Cria uma linha no ledger de movimentações de estoque.
+
+    Deve ser chamado dentro da mesma transaction.atomic do service mutante,
+    após o save() do SaldoEstoque afetado.
+    """
+    _TIPOS_REQUISICAO = {
+        TipoMovimentacaoEstoque.RESERVA,
+        TipoMovimentacaoEstoque.LIBERACAO,
+        TipoMovimentacaoEstoque.CONSUMO,
+        TipoMovimentacaoEstoque.DEVOLUCAO,
+        TipoMovimentacaoEstoque.ESTORNO_REQUISICAO,
+    }
+    _TIPOS_SAIDA = {
+        TipoMovimentacaoEstoque.SAIDA_EXCEPCIONAL,
+        TipoMovimentacaoEstoque.ESTORNO_SAIDA,
+    }
+    if tipo in _TIPOS_REQUISICAO and origem.requisicao_id is None:
+        raise DadosInvalidos(
+            'Movimentação de tipo requisição exige origem de requisição.',
+            code='origem_movimentacao_incoerente',
+        )
+    if tipo in _TIPOS_SAIDA and origem.saida_excepcional_id is None:
+        raise DadosInvalidos(
+            'Movimentação de tipo saída exige origem de saída excepcional.',
+            code='origem_movimentacao_incoerente',
+        )
+    MovimentacaoEstoque.objects.create(
+        tipo=tipo,
+        material_id=material_id,
+        estoque_id=estoque_id,
+        delta_fisico=delta_fisico,
+        delta_reservado=delta_reservado,
+        requisicao_id=origem.requisicao_id,
+        saida_excepcional_id=origem.saida_excepcional_id,
+        ator_id=ator_id,
+    )
 
 
 class ItemReservaEstoque(TypedDict):
@@ -27,7 +105,12 @@ class ItemReservaEstoque(TypedDict):
 
 
 @transaction.atomic
-def reservar_saldos_para_autorizacao(*, itens: list[ItemReservaEstoque]) -> None:
+def reservar_saldos_para_autorizacao(
+    *,
+    itens: list[ItemReservaEstoque],
+    ator_id: int,
+    origem: OrigemMovimentacaoEstoque,
+) -> None:
     """Reserva saldo integral para autorização de requisição.
 
     ``itens`` deve conter ``material_id`` e ``quantidade_solicitada`` por item.
@@ -112,6 +195,15 @@ def reservar_saldos_para_autorizacao(*, itens: list[ItemReservaEstoque]) -> None
         saldo = saldos_por_material[material_id][0]
         saldo.saldo_reservado = saldo.saldo_reservado + quantidade
         saldo.save(update_fields=['saldo_reservado'])
+        _registrar_movimentacao(
+            tipo=TipoMovimentacaoEstoque.RESERVA,
+            material_id=material_id,
+            estoque_id=saldo.estoque_id,
+            delta_fisico=Decimal('0'),
+            delta_reservado=quantidade,
+            origem=origem,
+            ator_id=ator_id,
+        )
 
 
 class ItemLiberacaoReserva(TypedDict):
@@ -120,7 +212,12 @@ class ItemLiberacaoReserva(TypedDict):
 
 
 @transaction.atomic
-def liberar_reservas_para_cancelamento(*, itens: list[ItemLiberacaoReserva]) -> None:
+def liberar_reservas_para_cancelamento(
+    *,
+    itens: list[ItemLiberacaoReserva],
+    ator_id: int,
+    origem: OrigemMovimentacaoEstoque,
+) -> None:
     """Libera reserva integral em cancelamento sem tocar saldo físico.
 
     ``itens`` deve conter ``material_id`` e ``quantidade_reservada`` por item.
@@ -199,6 +296,15 @@ def liberar_reservas_para_cancelamento(*, itens: list[ItemLiberacaoReserva]) -> 
         saldo = saldos_por_material[material_id][0]
         saldo.saldo_reservado = saldo.saldo_reservado - quantidade
         saldo.save(update_fields=['saldo_reservado'])
+        _registrar_movimentacao(
+            tipo=TipoMovimentacaoEstoque.LIBERACAO,
+            material_id=material_id,
+            estoque_id=saldo.estoque_id,
+            delta_fisico=Decimal('0'),
+            delta_reservado=-quantidade,
+            origem=origem,
+            ator_id=ator_id,
+        )
 
 
 class ItemAtendimentoSaldo(TypedDict):
@@ -209,7 +315,10 @@ class ItemAtendimentoSaldo(TypedDict):
 
 @transaction.atomic
 def consumir_e_liberar_reservas_para_atendimento(
-    *, itens: list[ItemAtendimentoSaldo]
+    *,
+    itens: list[ItemAtendimentoSaldo],
+    ator_id: int,
+    origem: OrigemMovimentacaoEstoque,
 ) -> None:
     """Baixa físico do entregue e libera reserva não entregue (TR-016/TR-017).
 
@@ -308,11 +417,20 @@ def consumir_e_liberar_reservas_para_atendimento(
 
     for material_id in material_ids:
         saldo = saldos_por_material[material_id][0]
-        saldo.saldo_fisico = saldo.saldo_fisico - entregue_por_material[material_id]
-        saldo.saldo_reservado = (
-            saldo.saldo_reservado - autorizada_por_material[material_id]
-        )
+        entregue = entregue_por_material[material_id]
+        autorizada = autorizada_por_material[material_id]
+        saldo.saldo_fisico = saldo.saldo_fisico - entregue
+        saldo.saldo_reservado = saldo.saldo_reservado - autorizada
         saldo.save(update_fields=['saldo_fisico', 'saldo_reservado'])
+        _registrar_movimentacao(
+            tipo=TipoMovimentacaoEstoque.CONSUMO,
+            material_id=material_id,
+            estoque_id=saldo.estoque_id,
+            delta_fisico=-entregue,
+            delta_reservado=-autorizada,
+            origem=origem,
+            ator_id=ator_id,
+        )
 
 
 @transaction.atomic
@@ -396,6 +514,7 @@ def registrar_saida_excepcional(
         registrado_por=ator,
         estoque=estoque,
     )
+    origem = OrigemMovimentacaoEstoque.de_saida_excepcional(saida)
 
     for material_id, quantidade in quantidade_por_material.items():
         ItemSaidaExcepcional.objects.create(
@@ -406,6 +525,15 @@ def registrar_saida_excepcional(
         saldo = saldos_por_material[material_id]
         saldo.saldo_fisico = saldo.saldo_fisico - quantidade
         saldo.save(update_fields=['saldo_fisico'])
+        _registrar_movimentacao(
+            tipo=TipoMovimentacaoEstoque.SAIDA_EXCEPCIONAL,
+            material_id=material_id,
+            estoque_id=estoque_id,
+            delta_fisico=-quantidade,
+            delta_reservado=Decimal('0'),
+            origem=origem,
+            ator_id=ator_id,
+        )
 
     ano = timezone.localdate().year
     sequencia, _ = SequenciaSaidaExcepcional.objects.select_for_update().get_or_create(
@@ -467,6 +595,7 @@ def estornar_saida_excepcional(
         .order_by('material_id')
     )
     saldos_por_material = {s.material_id: s for s in saldos}
+    origem = OrigemMovimentacaoEstoque.de_saida_excepcional(saida)
 
     for item in itens:
         saldo = saldos_por_material.get(item.material_id)
@@ -477,6 +606,15 @@ def estornar_saida_excepcional(
             )
         saldo.saldo_fisico = saldo.saldo_fisico + item.quantidade
         saldo.save(update_fields=['saldo_fisico'])
+        _registrar_movimentacao(
+            tipo=TipoMovimentacaoEstoque.ESTORNO_SAIDA,
+            material_id=item.material_id,
+            estoque_id=saida.estoque_id,
+            delta_fisico=item.quantidade,
+            delta_reservado=Decimal('0'),
+            origem=origem,
+            ator_id=ator_id,
+        )
 
     saida.estado = EstadoSaidaExcepcional.ESTORNADA
     saida.estornado_em = timezone.now()

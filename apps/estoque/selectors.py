@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.db.models import Count, QuerySet
 
-from apps.estoque.models import SaidaExcepcional
+from apps.estoque.models import SaidaExcepcional, TipoMovimentacaoEstoque
 
 
 def listar_saidas_excepcionais(ator_id: int) -> QuerySet:
@@ -257,3 +257,45 @@ def listar_materiais_com_saldo(*, busca: str = ''):
         )
 
     return qs
+
+
+TIPOS_MOVIMENTO_ENTREGA_LIQUIDA = [
+    TipoMovimentacaoEstoque.CONSUMO,
+    TipoMovimentacaoEstoque.DEVOLUCAO,
+    TipoMovimentacaoEstoque.ESTORNO_REQUISICAO,
+]
+
+
+def entregue_liquida_por_item(*, requisicao_id: int, item_id: int) -> Decimal:
+    """Calcula a quantidade entregue líquida de um item de requisição via ledger.
+
+    Entregue líquida = −Σ delta_fisico para movimentações do tipo consumo,
+    devolucao ou estorno_requisicao vinculadas à requisição e ao material do item.
+
+    Leitura pura: não faz select_for_update. Quem muta deve travar a requisição
+    antes de chamar (ADR-0005). Levanta DadosInvalidos se item_id não pertence
+    à requisicao_id.
+    """
+    from django.db.models import Sum
+
+    from apps.estoque.models import MovimentacaoEstoque
+    from apps.requisicoes.models import ItemRequisicao
+
+    try:
+        item = ItemRequisicao.objects.get(pk=item_id, requisicao_id=requisicao_id)
+    except ItemRequisicao.DoesNotExist as exc:
+        from apps.core.exceptions import DadosInvalidos
+
+        raise DadosInvalidos(
+            'Item não pertence à requisição informada.',
+            code='item_nao_pertence_requisicao',
+        ) from exc
+
+    resultado = MovimentacaoEstoque.objects.filter(
+        requisicao_id=requisicao_id,
+        material_id=item.material_id,
+        tipo__in=TIPOS_MOVIMENTO_ENTREGA_LIQUIDA,
+    ).aggregate(total=Sum('delta_fisico'))
+
+    total_delta_fisico = resultado['total'] or Decimal('0')
+    return -total_delta_fisico

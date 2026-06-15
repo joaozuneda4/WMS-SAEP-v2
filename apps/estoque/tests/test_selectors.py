@@ -1,5 +1,7 @@
 """Testes de selector para estoque.saidas_excepcionais."""
 
+import pytest
+
 from apps.estoque.models import SaidaExcepcional
 from apps.estoque.selectors import listar_saidas_excepcionais
 
@@ -269,6 +271,118 @@ class TestDenominacaoScpiNoPreview:
             conteudo_bytes=csv_bytes, estoque_id=estoque_principal.pk
         )
         assert linhas[0].denominacao_scpi == ''
+
+
+class TestEntregaLiquidaPorItem:
+    @pytest.mark.django_db
+    def test_sem_consumo_retorna_zero(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        requisicao_autorizada,
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.selectors import entregue_liquida_por_item
+
+        req, item = requisicao_autorizada
+        resultado = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
+        assert resultado == Decimal('0')
+
+    @pytest.mark.django_db
+    def test_com_consumo_retorna_entregue(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        requisicao_autorizada,
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+        from apps.estoque.selectors import entregue_liquida_por_item
+
+        req, item = requisicao_autorizada
+
+        MovimentacaoEstoque.objects.create(
+            tipo=TipoMovimentacaoEstoque.CONSUMO,
+            material=material_disponivel,
+            estoque=estoque_principal,
+            delta_fisico=Decimal('-4'),
+            delta_reservado=Decimal('-5'),
+            requisicao=req,
+            ator=chefe_almoxarifado,
+        )
+
+        resultado = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
+        assert resultado == Decimal('4')
+
+    @pytest.mark.django_db
+    def test_com_multiplos_movimentos_soma_corretamente(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        requisicao_autorizada,
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+        from apps.estoque.selectors import entregue_liquida_por_item
+
+        req, item = requisicao_autorizada
+
+        MovimentacaoEstoque.objects.create(
+            tipo=TipoMovimentacaoEstoque.CONSUMO,
+            material=material_disponivel,
+            estoque=estoque_principal,
+            delta_fisico=Decimal('-5'),
+            delta_reservado=Decimal('-5'),
+            requisicao=req,
+            ator=chefe_almoxarifado,
+        )
+        MovimentacaoEstoque.objects.create(
+            tipo=TipoMovimentacaoEstoque.DEVOLUCAO,
+            material=material_disponivel,
+            estoque=estoque_principal,
+            delta_fisico=Decimal('2'),
+            delta_reservado=Decimal('0'),
+            requisicao=req,
+            ator=chefe_almoxarifado,
+        )
+
+        resultado = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
+        assert resultado == Decimal('3')
+
+    @pytest.mark.django_db
+    def test_item_nao_pertence_requisicao_lanca_dados_invalidos(
+        self,
+        chefe_almoxarifado,
+        estoque_principal,
+        material_disponivel,
+        requisicao_autorizada,
+        setor_obras,
+        solicitante,
+    ):
+        from apps.core.exceptions import DadosInvalidos
+        from apps.estoque.selectors import entregue_liquida_por_item
+        from apps.requisicoes.models import EstadoRequisicao, Requisicao
+
+        req, item = requisicao_autorizada
+
+        outra_req = Requisicao.objects.create(
+            estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+            numero_publico='REQ-2025-999',
+            criador=solicitante,
+            beneficiario=solicitante,
+            setor_beneficiario=setor_obras,
+        )
+
+        with pytest.raises(DadosInvalidos) as exc_info:
+            entregue_liquida_por_item(requisicao_id=outra_req.pk, item_id=item.pk)
+
+        assert exc_info.value.code == 'item_nao_pertence_requisicao'
 
 
 class TestListarHistoricoImportacoesScpi:

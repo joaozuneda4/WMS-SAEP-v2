@@ -23,6 +23,7 @@ from apps.estoque.models import Material, SaldoEstoque
 from apps.estoque.services import (
     ItemAtendimentoSaldo,
     ItemLiberacaoReserva,
+    OrigemMovimentacaoEstoque,
     liberar_reservas_para_cancelamento,
     consumir_e_liberar_reservas_para_atendimento,
     reservar_saldos_para_autorizacao,
@@ -479,7 +480,11 @@ def _cancelar_requisicao_impl(
             }
         )
 
-    liberar_reservas_para_cancelamento(itens=itens_liberacao)
+    liberar_reservas_para_cancelamento(
+        itens=itens_liberacao,
+        ator_id=ator.pk,
+        origem=OrigemMovimentacaoEstoque.de_requisicao(requisicao),
+    )
 
     requisicao.estado = EstadoRequisicao.CANCELADA
     requisicao.save(update_fields=['estado', 'atualizado_em'])
@@ -660,7 +665,9 @@ def autorizar_requisicao(
                 'quantidade_solicitada': item.quantidade_solicitada,
             }
             for item in itens
-        ]
+        ],
+        ator_id=ator.pk,
+        origem=OrigemMovimentacaoEstoque.de_requisicao(requisicao),
     )
 
     for item in itens:
@@ -915,7 +922,11 @@ def registrar_atendimento(
                 'quantidade_entregue': payload_por_item[item.id]['quantidade_entregue'],
             }
         )
-    consumir_e_liberar_reservas_para_atendimento(itens=payload_estoque)
+    consumir_e_liberar_reservas_para_atendimento(
+        itens=payload_estoque,
+        ator_id=ator.pk,
+        origem=OrigemMovimentacaoEstoque.de_requisicao(requisicao),
+    )
 
     for item in itens_autorizados:
         entrada = payload_por_item[item.id]
