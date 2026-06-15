@@ -31,6 +31,11 @@ urlpatterns = [
     ),
     path('<int:pk>/recusar/', views.recusar_requisicao_view, name='recusar'),
     path('<int:pk>/copiar/', views.copiar_requisicao_view, name='copiar'),
+    path(
+        '<int:pk>/devolver/<int:item_pk>/',
+        views.registrar_devolucao_view,
+        name='registrar_devolucao',
+    ),
     path('itens/nova-linha/', views.nova_linha_item, name='nova_linha_item'),
     path('materiais/busca/', views.buscar_materiais, name='buscar_materiais'),
     path(

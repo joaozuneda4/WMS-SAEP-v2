@@ -33,6 +33,9 @@ TRANSICOES_VALIDAS: dict[str, set[str]] = {
         EstadoRequisicao.CANCELADA,  # TR-014: cancelar pronta para retirada
         EstadoRequisicao.ATENDIDA,  # TR-016/TR-017: registrar atendimento total/parcial
     },
+    EstadoRequisicao.ATENDIDA: {
+        EstadoRequisicao.ATENDIDA,  # TR-020: registrar devolução
+    },
 }
 
 

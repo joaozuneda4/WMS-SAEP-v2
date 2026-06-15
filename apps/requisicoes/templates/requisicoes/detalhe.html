@@ -140,6 +140,9 @@
                 {% if estado == 'atendida' or estado == 'estornada' %}
                   <th scope="col" class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Entregue</th>
                 {% endif %}
+                {% if pode_devolver %}
+                  <th scope="col" class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Ações</th>
+                {% endif %}
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -161,11 +164,35 @@
                       {% if item.quantidade_entregue is not None %}{{ item.quantidade_entregue|formatar_quantidade:item.material.unidade }}{% else %}<span class="text-slate-300">—</span>{% endif %}
                     </td>
                   {% endif %}
+                  {% if pode_devolver %}
+                    <td class="px-3 py-2">
+                      {% if item.entregue_liquida > 0 %}
+                        <button
+                          type="button"
+                          onclick="document.getElementById('{{ item.modal_devolver_id }}').showModal()"
+                          aria-haspopup="dialog"
+                          class="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-white px-2.5 py-1 text-xs font-medium text-teal-700 shadow-sm hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1"
+                        >
+                          Registrar devolução
+                        </button>
+                      {% endif %}
+                    </td>
+                  {% endif %}
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
+        {% if pode_devolver %}
+          {% for item in itens %}
+            {% if item.entregue_liquida > 0 %}
+              <div x-data="modalController({ id: '{{ item.modal_devolver_id }}' })">
+                {% url 'requisicoes:registrar_devolucao' requisicao.pk item.pk as devolver_url %}
+                {% include "components/modal.html" with id=item.modal_devolver_id titulo="Registrar devolução" descricao="Informe a quantidade a devolver ao estoque." action_url=devolver_url confirm_label="Registrar devolução" confirm_variant="primary" form=devolucao_form item=item entregue_liquida=item.entregue_liquida form_body_template="requisicoes/partials/_modal_form_devolucao.html" %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
       {% endwith %}
     {% else %}
       <p class="text-sm text-slate-500">Sem itens registrados.</p>

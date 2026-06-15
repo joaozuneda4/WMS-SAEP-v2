@@ -408,6 +408,25 @@ def exigir_pode_separar_para_retirada(ator: User, requisicao: Requisicao) -> Non
         )
 
 
+def pode_registrar_devolucao(ator: User, requisicao: Requisicao) -> bool:
+    """True se ator ativo, requisição atendida e almoxarifado (chefe ou auxiliar) ou superusuário."""
+    if not ator.is_active:
+        return False
+    if requisicao.estado != EstadoRequisicao.ATENDIDA:
+        return False
+    if ator.is_superuser:
+        return True
+    return _eh_almoxarifado(ator)
+
+
+def exigir_pode_registrar_devolucao(ator: User, requisicao: Requisicao) -> None:
+    if not pode_registrar_devolucao(ator, requisicao):
+        raise PermissaoNegada(
+            'Você não tem permissão para registrar devolução desta requisição.',
+            code='registrar_devolucao_negada',
+        )
+
+
 def pode_atender_retirada(ator: User, requisicao: Requisicao) -> bool:
     """True se o ator pode registrar atendimento desta requisição."""
     if not ator.is_active:

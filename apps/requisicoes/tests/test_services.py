@@ -2160,3 +2160,302 @@ def test_copiar_requisicao_inclui_item_inelegivel_sem_erro(
     )
 
     assert novo.itens.count() == recusada.itens.count()
+
+
+# ---------------------------------------------------------------------------
+# TR-020: registrar_devolucao
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def requisicao_atendida_para_devolucao(requisicao_pronta_retirada, aux_almoxarifado):
+    """Requisição atendida com item entregue, pronta para receber devolução."""
+    item = requisicao_pronta_retirada.itens.first()
+    return registrar_atendimento(
+        ator_id=aux_almoxarifado.pk,
+        requisicao_id=requisicao_pronta_retirada.pk,
+        itens=[
+            {
+                'item_id': item.pk,
+                'quantidade_entregue': item.quantidade_autorizada,
+                'justificativa': '',
+            }
+        ],
+        retirante_nome='Carlos',
+    )
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_caminho_feliz(
+    requisicao_atendida_para_devolucao, aux_almoxarifado
+):
+    """Devolução incrementa saldo físico, não muda estado, emite ledger e timeline."""
+    from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+    from apps.estoque.selectors import entregue_liquida_por_item
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    saldo = item.material.saldos.get()
+    saldo_fisico_antes = saldo.saldo_fisico
+    saldo_reservado_antes = saldo.saldo_reservado
+    quantidade_devolver = Decimal('1')
+
+    resultado = registrar_devolucao(
+        ator_id=aux_almoxarifado.pk,
+        requisicao_id=req.pk,
+        item_id=item.pk,
+        quantidade=quantidade_devolver,
+    )
+
+    saldo.refresh_from_db()
+    assert saldo.saldo_fisico == saldo_fisico_antes + quantidade_devolver
+    assert (
+        saldo.saldo_reservado == saldo_reservado_antes
+    )  # devolução não altera reserva
+    resultado.refresh_from_db()
+    assert resultado.estado == EstadoRequisicao.ATENDIDA
+
+    mov = MovimentacaoEstoque.objects.get(
+        requisicao=req,
+        material=item.material,
+        tipo=TipoMovimentacaoEstoque.DEVOLUCAO,
+    )
+    assert mov.delta_fisico == quantidade_devolver
+    assert mov.delta_reservado == Decimal('0')
+
+    evento = resultado.eventos.filter(evento=EventoTimeline.DEVOLUCAO_REGISTRADA).get()
+    assert evento.ator == aux_almoxarifado
+
+    liquida = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
+    assert liquida == item.quantidade_entregue - quantidade_devolver
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_quantidade_excede_entregue_liquida(
+    requisicao_atendida_para_devolucao, aux_almoxarifado
+):
+    """quantidade > entregue_liquida → ConflitoDominio."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    excesso = item.quantidade_entregue + Decimal('1')
+
+    with pytest.raises(ConflitoDominio) as excinfo:
+        registrar_devolucao(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=req.pk,
+            item_id=item.pk,
+            quantidade=excesso,
+        )
+    assert excinfo.value.code == 'quantidade_excede_entregue_liquida'
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_double_count_respeita_liquida(
+    requisicao_atendida_para_devolucao, aux_almoxarifado
+):
+    """Segunda devolução considera a primeira — não usa entregue bruta."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    primeira = item.quantidade_entregue - Decimal('1')
+
+    registrar_devolucao(
+        ator_id=aux_almoxarifado.pk,
+        requisicao_id=req.pk,
+        item_id=item.pk,
+        quantidade=primeira,
+    )
+
+    with pytest.raises(ConflitoDominio) as excinfo:
+        registrar_devolucao(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=req.pk,
+            item_id=item.pk,
+            quantidade=Decimal('2'),
+        )
+    assert excinfo.value.code == 'quantidade_excede_entregue_liquida'
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_estado_invalido(requisicao_autorizada, aux_almoxarifado):
+    """Devolução em estado que não seja ATENDIDA → EstadoInvalido."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    item = requisicao_autorizada.itens.first()
+    with pytest.raises(EstadoInvalido):
+        registrar_devolucao(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=requisicao_autorizada.pk,
+            item_id=item.pk,
+            quantidade=Decimal('1'),
+        )
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_permissao_negada_solicitante(
+    requisicao_atendida_para_devolucao, solicitante
+):
+    """Solicitante comum não pode registrar devolução → PermissaoNegada."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    with pytest.raises(PermissaoNegada):
+        registrar_devolucao(
+            ator_id=solicitante.pk,
+            requisicao_id=req.pk,
+            item_id=item.pk,
+            quantidade=Decimal('1'),
+        )
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_usuario_inativo(
+    requisicao_atendida_para_devolucao, aux_almoxarifado
+):
+    """Usuário inativo não pode registrar devolução."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    aux_almoxarifado.is_active = False
+    aux_almoxarifado.save(update_fields=['is_active'])
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    with pytest.raises(PermissaoNegada):
+        registrar_devolucao(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=req.pk,
+            item_id=item.pk,
+            quantidade=Decimal('1'),
+        )
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_aceita_chefe_almoxarifado(
+    requisicao_atendida_para_devolucao, chefe_almoxarifado
+):
+    """Chefe de almoxarifado pode registrar devolução."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    resultado = registrar_devolucao(
+        ator_id=chefe_almoxarifado.pk,
+        requisicao_id=req.pk,
+        item_id=item.pk,
+        quantidade=Decimal('1'),
+    )
+    assert resultado.estado == EstadoRequisicao.ATENDIDA
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_aceita_superuser(
+    requisicao_atendida_para_devolucao, superuser
+):
+    """Superusuário pode registrar devolução."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    resultado = registrar_devolucao(
+        ator_id=superuser.pk,
+        requisicao_id=req.pk,
+        item_id=item.pk,
+        quantidade=Decimal('1'),
+    )
+    assert resultado.estado == EstadoRequisicao.ATENDIDA
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_material_inativo(
+    requisicao_atendida_para_devolucao, aux_almoxarifado
+):
+    """Material inativo bloqueia devolução → ConflitoDominio."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    item.material.ativo = False
+    item.material.save(update_fields=['ativo'])
+
+    with pytest.raises(ConflitoDominio) as excinfo:
+        registrar_devolucao(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=req.pk,
+            item_id=item.pk,
+            quantidade=Decimal('1'),
+        )
+    assert excinfo.value.code == 'material_inativo'
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_quantidade_zero(
+    requisicao_atendida_para_devolucao, aux_almoxarifado
+):
+    """quantidade = 0 → DadosInvalidos."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    with pytest.raises(DadosInvalidos) as excinfo:
+        registrar_devolucao(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=req.pk,
+            item_id=item.pk,
+            quantidade=Decimal('0'),
+        )
+    assert excinfo.value.code == 'quantidade_invalida'
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_item_nao_pertence(
+    requisicao_atendida_para_devolucao, aux_almoxarifado
+):
+    """item_id inexistente ou de outra requisição → DadosInvalidos."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    with pytest.raises(DadosInvalidos) as excinfo:
+        registrar_devolucao(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=req.pk,
+            item_id=999_999,
+            quantidade=Decimal('1'),
+        )
+    assert excinfo.value.code == 'item_nao_pertence_requisicao'
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_ator_inexistente(requisicao_atendida_para_devolucao):
+    """Ator inexistente → DadosInvalidos."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    with pytest.raises(DadosInvalidos) as excinfo:
+        registrar_devolucao(
+            ator_id=999_999,
+            requisicao_id=req.pk,
+            item_id=item.pk,
+            quantidade=Decimal('1'),
+        )
+    assert excinfo.value.code == 'ator_nao_encontrado'
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_requisicao_inexistente(aux_almoxarifado):
+    """Requisição inexistente → DadosInvalidos."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    with pytest.raises(DadosInvalidos) as excinfo:
+        registrar_devolucao(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=999_999,
+            item_id=1,
+            quantidade=Decimal('1'),
+        )
+    assert excinfo.value.code == 'requisicao_nao_encontrada'

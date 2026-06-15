@@ -317,6 +317,48 @@ class BaseItemAtendimentoFormSet(BaseFormSet):
             vistos.add(item_id)
 
 
+class RegistrarDevolucaoForm(forms.Form):
+    """Formulário de devolução de item de requisição atendida (TR-020)."""
+
+    quantidade = forms.DecimalField(
+        label='Quantidade devolvida',
+        min_value=Decimal('0.001'),
+        decimal_places=3,
+        widget=forms.NumberInput(
+            attrs={
+                'class': (
+                    'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm '
+                    'focus:border-blue-500 focus:ring-2 focus:ring-blue-500 '
+                    'focus:outline-none'
+                ),
+                'step': '0.001',
+                'min': '0.001',
+            }
+        ),
+    )
+    observacao = forms.CharField(
+        label='Observação',
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                'rows': 2,
+                'class': (
+                    'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm '
+                    'focus:border-blue-500 focus:ring-2 focus:ring-blue-500 '
+                    'focus:outline-none'
+                ),
+                'placeholder': 'Opcional',
+            }
+        ),
+    )
+
+    def clean_quantidade(self):
+        quantidade = self.cleaned_data.get('quantidade')
+        if quantidade is not None and quantidade <= 0:
+            raise forms.ValidationError('A quantidade deve ser maior que zero.')
+        return quantidade
+
+
 ItemAtendimentoFormSet = formset_factory(
     ItemAtendimentoForm,
     formset=BaseItemAtendimentoFormSet,

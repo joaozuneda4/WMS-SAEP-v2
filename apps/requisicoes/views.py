@@ -24,10 +24,12 @@ from apps.core.exceptions import (
     PermissaoNegada,
 )
 from apps.estoque.models import SaldoEstoque
+from apps.estoque.selectors import entregue_liquida_por_item
 from apps.requisicoes.forms import (
     ItemAtendimentoFormSet,
     ItemRequisicaoFormSet,
     RegistrarAtendimentoCabecalhoForm,
+    RegistrarDevolucaoForm,
     RequisicaoCriacaoForm,
     RequisicaoForm,
 )
@@ -43,6 +45,7 @@ from apps.requisicoes.policies import (
     pode_editar_rascunho,
     pode_enviar_rascunho,
     pode_recusar_requisicao,
+    pode_registrar_devolucao,
     pode_retornar_para_rascunho,
     pode_separar_para_retirada,
     pode_ver_fila_autorizacao,
@@ -65,6 +68,7 @@ from apps.requisicoes.services import (
     enviar_para_autorizacao,
     recusar_requisicao,
     registrar_atendimento,
+    registrar_devolucao,
     retornar_para_rascunho,
     separar_para_retirada,
 )
@@ -101,6 +105,16 @@ def _detalhe_context(
     cancelamento_modal_aberto: bool = False,
 ):
     itens = list(requisicao.itens.select_related('material').all())
+    pode_devolver = (
+        requisicao.estado == EstadoRequisicao.ATENDIDA
+        and pode_registrar_devolucao(request.user, requisicao)
+    )
+    if pode_devolver:
+        for item in itens:
+            item.entregue_liquida = entregue_liquida_por_item(
+                requisicao_id=requisicao.pk, item_id=item.pk
+            )
+            item.modal_devolver_id = f'devolver-{item.pk}'
     eventos = list(
         requisicao.eventos.select_related('ator').order_by('-criado_em', '-id')
     )
@@ -221,6 +235,8 @@ def _detalhe_context(
         'enviar_hidden_inputs': {'next': _voltar_url(request)},
         'separar_hidden_inputs': {'next': _voltar_url(request)},
         'enviada_em': enviada_em,
+        'pode_devolver': pode_devolver,
+        'devolucao_form': RegistrarDevolucaoForm(),
     }
 
 
@@ -1060,3 +1076,29 @@ def copiar_requisicao_view(request, pk: int):
         'Rascunho criado. Verifique os itens marcados antes de enviar para autorização.',
     )
     return redirect('requisicoes:editar_rascunho', pk=novo.pk)
+
+
+@login_required
+@require_http_methods(['POST'])
+def registrar_devolucao_view(request, pk: int, item_pk: int) -> HttpResponse:
+    """Registra devolução de item de requisição atendida (TR-020)."""
+    get_object_or_404(requisicoes_visiveis_para(request.user.pk), pk=pk)
+    form = RegistrarDevolucaoForm(request.POST)
+    if not form.is_valid():
+        messages.warning(request, form.errors.as_text())
+        return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
+    try:
+        registrar_devolucao(
+            ator_id=request.user.pk,
+            requisicao_id=pk,
+            item_id=item_pk,
+            quantidade=form.cleaned_data['quantidade'],
+            observacao=form.cleaned_data.get('observacao', ''),
+        )
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+    except (ConflitoDominio, DadosInvalidos, EstadoInvalido) as exc:
+        messages.warning(request, str(exc))
+    else:
+        messages.success(request, 'Devolução registrada com sucesso.')
+    return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))

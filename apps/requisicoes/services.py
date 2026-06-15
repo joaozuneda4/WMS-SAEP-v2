@@ -18,12 +18,14 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.core.exceptions import DadosInvalidos, EstadoInvalido
-from apps.estoque.models import Material, SaldoEstoque
+from apps.core.exceptions import ConflitoDominio, DadosInvalidos, EstadoInvalido
+from apps.estoque.models import Material, SaldoEstoque, TipoMovimentacaoEstoque
+from apps.estoque.selectors import entregue_liquida_por_item
 from apps.estoque.services import (
     ItemAtendimentoSaldo,
     ItemLiberacaoReserva,
     OrigemMovimentacaoEstoque,
+    _registrar_movimentacao,
     liberar_reservas_para_cancelamento,
     consumir_e_liberar_reservas_para_atendimento,
     reservar_saldos_para_autorizacao,
@@ -46,6 +48,7 @@ from apps.requisicoes.policies import (
     exigir_pode_recusar_requisicao,
     exigir_pode_retornar_para_rascunho,
     exigir_pode_atender_retirada,
+    exigir_pode_registrar_devolucao,
     exigir_pode_separar_para_retirada,
     pode_ser_beneficiario,
 )
@@ -960,6 +963,126 @@ def registrar_atendimento(
         ator=ator,
         estado_resultante=EstadoRequisicao.ATENDIDA,
         metadata=metadata_principal,
+    )
+
+    return requisicao
+
+
+@transaction.atomic
+def registrar_devolucao(
+    *,
+    ator_id: int,
+    requisicao_id: int,
+    item_id: int,
+    quantidade: Decimal,
+    observacao: str = '',
+) -> Requisicao:
+    """Registra devolução de material vinculada a requisição atendida (TR-020).
+
+    ATENDIDA → ATENDIDA. Incrementa saldo_fisico; não altera estado nem reserva.
+    Emite MovimentacaoEstoque(tipo=devolucao) + TimelineRequisicao(DEVOLUCAO_REGISTRADA).
+    Lock: Requisicao primeiro, SaldoEstoque depois (ADR-0005, EST-06).
+    """
+    try:
+        ator = User.objects.get(pk=ator_id)
+    except User.DoesNotExist:
+        raise DadosInvalidos(
+            'Ator não encontrado.', code='ator_nao_encontrado'
+        ) from None
+
+    try:
+        requisicao = Requisicao.objects.select_for_update().get(pk=requisicao_id)
+    except Requisicao.DoesNotExist:
+        raise DadosInvalidos(
+            'Requisição não encontrada.', code='requisicao_nao_encontrada'
+        ) from None
+
+    if requisicao.estado != EstadoRequisicao.ATENDIDA:
+        raise EstadoInvalido(
+            'Devolução só pode ser registrada em requisição atendida.',
+            code='estado_origem_invalido',
+        )
+
+    exigir_pode_registrar_devolucao(ator, requisicao)
+    verificar_transicao_valida(requisicao.estado, EstadoRequisicao.ATENDIDA)
+
+    if quantidade <= 0:
+        raise DadosInvalidos(
+            'A quantidade devolvida deve ser maior que zero.',
+            code='quantidade_invalida',
+        )
+
+    entregue_liquida = entregue_liquida_por_item(
+        requisicao_id=requisicao_id, item_id=item_id
+    )
+    if quantidade > entregue_liquida:
+        raise ConflitoDominio(
+            'A quantidade devolvida excede a entregue líquida do item.',
+            code='quantidade_excede_entregue_liquida',
+        )
+
+    try:
+        item = ItemRequisicao.objects.select_related('material').get(
+            pk=item_id, requisicao=requisicao
+        )
+    except ItemRequisicao.DoesNotExist:
+        raise DadosInvalidos(
+            'Item não pertence à requisição informada.',
+            code='item_nao_pertence_requisicao',
+        ) from None
+
+    saldos = list(
+        SaldoEstoque.objects.select_for_update()
+        .select_related('material')
+        .filter(material_id=item.material_id)
+        .order_by('estoque_id', 'id')
+    )
+    if not saldos:
+        raise ConflitoDominio(
+            'Saldo de estoque não encontrado para o material.',
+            code='saldo_nao_encontrado',
+        )
+    if len(saldos) > 1:
+        raise ConflitoDominio(
+            f"Mais de um saldo encontrado para o material '{saldos[0].material.nome}'.",
+            code='saldo_ambiguo',
+        )
+    saldo = saldos[0]
+
+    if not saldo.material.ativo:
+        raise ConflitoDominio(
+            f"Material '{saldo.material.nome}' está inativo.",
+            code='material_inativo',
+        )
+
+    saldo.saldo_fisico = saldo.saldo_fisico + quantidade
+    saldo.save(update_fields=['saldo_fisico'])
+
+    origem = OrigemMovimentacaoEstoque.de_requisicao(requisicao)
+    _registrar_movimentacao(
+        tipo=TipoMovimentacaoEstoque.DEVOLUCAO,
+        material_id=item.material_id,
+        estoque_id=saldo.estoque_id,
+        delta_fisico=quantidade,
+        delta_reservado=Decimal('0'),
+        origem=origem,
+        ator_id=ator_id,
+    )
+
+    observacao_limpa = (observacao or '').strip()
+    metadata: dict[str, object] = {
+        'quantidade': str(quantidade),
+        'item_id': item_id,
+    }
+    if observacao_limpa:
+        metadata['observacao'] = observacao_limpa
+
+    TimelineRequisicao.objects.create(
+        requisicao=requisicao,
+        evento=EventoTimeline.DEVOLUCAO_REGISTRADA,
+        ator=ator,
+        estado_resultante=EstadoRequisicao.ATENDIDA,
+        metadata=metadata,
     )
 
     return requisicao

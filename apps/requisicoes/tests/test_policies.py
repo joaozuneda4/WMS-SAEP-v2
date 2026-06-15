@@ -727,3 +727,67 @@ def test_inativo_nao_pode_copiar(usuario_inativo, solicitante, setor_obras):
 
     req = _req_recusada(solicitante, solicitante, setor_obras)
     assert pode_copiar_requisicao(usuario_inativo, req) is False
+
+
+# ---------------------------------------------------------------------------
+# pode_registrar_devolucao
+# ---------------------------------------------------------------------------
+
+
+def _req_atendida_stub(solicitante, setor_obras):
+    """Requisicao atendida mínima para testes de policy."""
+    from apps.requisicoes.models import Requisicao
+
+    return Requisicao.objects.create(
+        estado=EstadoRequisicao.ATENDIDA,
+        numero_publico='REQ-2026-000800',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+
+
+@pytest.mark.django_db
+def test_aux_almoxarifado_pode_registrar_devolucao(
+    aux_almoxarifado, solicitante, setor_obras
+):
+    from apps.requisicoes.policies import pode_registrar_devolucao
+
+    req = _req_atendida_stub(solicitante, setor_obras)
+    assert pode_registrar_devolucao(aux_almoxarifado, req) is True
+
+
+@pytest.mark.django_db
+def test_chefe_almoxarifado_pode_registrar_devolucao(
+    chefe_almoxarifado, solicitante, setor_obras
+):
+    from apps.requisicoes.policies import pode_registrar_devolucao
+
+    req = _req_atendida_stub(solicitante, setor_obras)
+    assert pode_registrar_devolucao(chefe_almoxarifado, req) is True
+
+
+@pytest.mark.django_db
+def test_superuser_pode_registrar_devolucao(superuser, solicitante, setor_obras):
+    from apps.requisicoes.policies import pode_registrar_devolucao
+
+    req = _req_atendida_stub(solicitante, setor_obras)
+    assert pode_registrar_devolucao(superuser, req) is True
+
+
+@pytest.mark.django_db
+def test_solicitante_nao_pode_registrar_devolucao(solicitante, setor_obras):
+    from apps.requisicoes.policies import pode_registrar_devolucao
+
+    req = _req_atendida_stub(solicitante, setor_obras)
+    assert pode_registrar_devolucao(solicitante, req) is False
+
+
+@pytest.mark.django_db
+def test_inativo_nao_pode_registrar_devolucao(
+    usuario_inativo, solicitante, setor_obras
+):
+    from apps.requisicoes.policies import pode_registrar_devolucao
+
+    req = _req_atendida_stub(solicitante, setor_obras)
+    assert pode_registrar_devolucao(usuario_inativo, req) is False

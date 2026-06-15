@@ -5,8 +5,6 @@ language: pt-BR
 reviews:
   profile: chill
   request_changes_workflow: false
-  path_filters: ["!docs/plans/**"]
-  
   high_level_summary: true
   high_level_summary_instructions: >
     Resuma o PR em bullets curtos com:

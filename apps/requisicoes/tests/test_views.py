@@ -2312,3 +2312,121 @@ def test_copiar_requisicao_view_post_estado_invalido_exibe_erro(
     assert response.status_code == 200
     mensagens = [str(m) for m in response.context['messages']]
     assert any('atendidas ou recusadas' in m for m in mensagens)
+
+
+# ---------------------------------------------------------------------------
+# registrar_devolucao_view (TR-020)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def req_atendida_view(
+    db, solicitante, setor_obras, material_disponivel, aux_almoxarifado
+):
+    from apps.estoque.models import SaldoEstoque
+    from apps.requisicoes.services import registrar_atendimento
+
+    req = Requisicao.objects.create(
+        estado=EstadoRequisicao.PRONTA_PARA_RETIRADA,
+        numero_publico='REQ-2026-9200',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    item = ItemRequisicao.objects.create(
+        requisicao=req,
+        material=material_disponivel,
+        quantidade_solicitada=Decimal('5'),
+        quantidade_autorizada=Decimal('5'),
+    )
+    saldo = SaldoEstoque.objects.get(material=material_disponivel)
+    saldo.saldo_reservado = (saldo.saldo_reservado or Decimal('0')) + Decimal('5')
+    saldo.save(update_fields=['saldo_reservado'])
+    return registrar_atendimento(
+        ator_id=aux_almoxarifado.pk,
+        requisicao_id=req.pk,
+        itens=[
+            {
+                'item_id': item.pk,
+                'quantidade_entregue': Decimal('5'),
+                'justificativa': '',
+            }
+        ],
+        retirante_nome='Carlos',
+    )
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_view_post_valido_redireciona(
+    client, aux_almoxarifado, req_atendida_view
+):
+    _login(client, aux_almoxarifado)
+    item = req_atendida_view.itens.first()
+    url = reverse(
+        'requisicoes:registrar_devolucao',
+        kwargs={'pk': req_atendida_view.pk, 'item_pk': item.pk},
+    )
+    response = client.post(url, {'quantidade': '1.000'}, follow=True)
+    assert response.status_code == 200
+    mensagens = [str(m) for m in response.context['messages']]
+    assert any('sucesso' in m.lower() for m in mensagens)
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_view_htmx_retorna_hx_redirect(
+    client, aux_almoxarifado, req_atendida_view
+):
+    _login(client, aux_almoxarifado)
+    item = req_atendida_view.itens.first()
+    url = reverse(
+        'requisicoes:registrar_devolucao',
+        kwargs={'pk': req_atendida_view.pk, 'item_pk': item.pk},
+    )
+    response = client.post(url, {'quantidade': '1.000'}, HTTP_HX_REQUEST='true')
+    assert response.status_code == 204
+    assert response['HX-Redirect'] == reverse(
+        'requisicoes:detalhe', args=[req_atendida_view.pk]
+    )
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_view_quantidade_excede_avisa(
+    client, aux_almoxarifado, req_atendida_view
+):
+    _login(client, aux_almoxarifado)
+    item = req_atendida_view.itens.first()
+    url = reverse(
+        'requisicoes:registrar_devolucao',
+        kwargs={'pk': req_atendida_view.pk, 'item_pk': item.pk},
+    )
+    response = client.post(url, {'quantidade': '999.000'}, follow=True)
+    mensagens = [str(m) for m in response.context['messages']]
+    assert any('excede' in m for m in mensagens)
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_view_sem_permissao_403(
+    client, solicitante, req_atendida_view
+):
+    _login(client, solicitante)
+    item = req_atendida_view.itens.first()
+    url = reverse(
+        'requisicoes:registrar_devolucao',
+        kwargs={'pk': req_atendida_view.pk, 'item_pk': item.pk},
+    )
+    response = client.post(url, {'quantidade': '1.000'})
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_view_get_retorna_405(
+    client, aux_almoxarifado, req_atendida_view
+):
+    _login(client, aux_almoxarifado)
+    item = req_atendida_view.itens.first()
+    url = reverse(
+        'requisicoes:registrar_devolucao',
+        kwargs={'pk': req_atendida_view.pk, 'item_pk': item.pk},
+    )
+    response = client.get(url)
+    assert response.status_code == 405
