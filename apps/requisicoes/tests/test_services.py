@@ -2314,6 +2314,63 @@ def test_registrar_devolucao_permissao_negada_solicitante(
 
 
 @pytest.mark.django_db
+def test_registrar_devolucao_usuario_inativo(
+    requisicao_atendida_para_devolucao, aux_almoxarifado
+):
+    """Usuário inativo não pode registrar devolução."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    aux_almoxarifado.is_active = False
+    aux_almoxarifado.save(update_fields=['is_active'])
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    with pytest.raises(PermissaoNegada):
+        registrar_devolucao(
+            ator_id=aux_almoxarifado.pk,
+            requisicao_id=req.pk,
+            item_id=item.pk,
+            quantidade=Decimal('1'),
+        )
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_aceita_chefe_almoxarifado(
+    requisicao_atendida_para_devolucao, chefe_almoxarifado
+):
+    """Chefe de almoxarifado pode registrar devolução."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    resultado = registrar_devolucao(
+        ator_id=chefe_almoxarifado.pk,
+        requisicao_id=req.pk,
+        item_id=item.pk,
+        quantidade=Decimal('1'),
+    )
+    assert resultado.estado == EstadoRequisicao.ATENDIDA
+
+
+@pytest.mark.django_db
+def test_registrar_devolucao_aceita_superuser(
+    requisicao_atendida_para_devolucao, superuser
+):
+    """Superusuário pode registrar devolução."""
+    from apps.requisicoes.services import registrar_devolucao
+
+    req = requisicao_atendida_para_devolucao
+    item = req.itens.first()
+    resultado = registrar_devolucao(
+        ator_id=superuser.pk,
+        requisicao_id=req.pk,
+        item_id=item.pk,
+        quantidade=Decimal('1'),
+    )
+    assert resultado.estado == EstadoRequisicao.ATENDIDA
+
+
+@pytest.mark.django_db
 def test_registrar_devolucao_material_inativo(
     requisicao_atendida_para_devolucao, aux_almoxarifado
 ):

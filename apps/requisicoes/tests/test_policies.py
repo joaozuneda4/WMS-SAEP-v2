@@ -740,7 +740,7 @@ def _req_atendida_stub(solicitante, setor_obras):
 
     return Requisicao.objects.create(
         estado=EstadoRequisicao.ATENDIDA,
-        numero_publico='REQ-2026-000501',
+        numero_publico='REQ-2026-000800',
         criador=solicitante,
         beneficiario=solicitante,
         setor_beneficiario=setor_obras,

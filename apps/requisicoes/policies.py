@@ -409,8 +409,10 @@ def exigir_pode_separar_para_retirada(ator: User, requisicao: Requisicao) -> Non
 
 
 def pode_registrar_devolucao(ator: User, requisicao: Requisicao) -> bool:
-    """True se ator ativo e almoxarifado (chefe ou auxiliar) ou superusuário."""
+    """True se ator ativo, requisição atendida e almoxarifado (chefe ou auxiliar) ou superusuário."""
     if not ator.is_active:
+        return False
+    if requisicao.estado != EstadoRequisicao.ATENDIDA:
         return False
     if ator.is_superuser:
         return True

@@ -322,7 +322,7 @@ class RegistrarDevolucaoForm(forms.Form):
 
     quantidade = forms.DecimalField(
         label='Quantidade devolvida',
-        min_value=0,
+        min_value=Decimal('0.001'),
         decimal_places=3,
         widget=forms.NumberInput(
             attrs={
