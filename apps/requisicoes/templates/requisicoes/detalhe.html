@@ -188,7 +188,7 @@
             {% if item.entregue_liquida > 0 %}
               <div x-data="modalController({ id: '{{ item.modal_devolver_id }}' })">
                 {% url 'requisicoes:registrar_devolucao' requisicao.pk item.pk as devolver_url %}
-                {% include "components/modal.html" with id=item.modal_devolver_id titulo="Registrar devolução" descricao="Informe a quantidade a devolver ao estoque." action_url=devolver_url confirm_label="Registrar devolução" confirm_variant="primary" form=devolucao_form entregue_liquida=item.entregue_liquida form_body_template="requisicoes/partials/_modal_form_devolucao.html" %}
+                {% include "components/modal.html" with id=item.modal_devolver_id titulo="Registrar devolução" descricao="Informe a quantidade a devolver ao estoque." action_url=devolver_url confirm_label="Registrar devolução" confirm_variant="primary" form=devolucao_form item=item entregue_liquida=item.entregue_liquida form_body_template="requisicoes/partials/_modal_form_devolucao.html" %}
               </div>
             {% endif %}
           {% endfor %}

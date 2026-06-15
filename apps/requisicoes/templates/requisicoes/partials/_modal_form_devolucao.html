@@ -25,16 +25,10 @@
       value="{{ form.quantidade.value|default_if_none:'' }}"
       required
       aria-required="true"
-      {% if form.quantidade.errors or erro %}aria-invalid="true"{% endif %}
-      aria-describedby="{% if form.quantidade.errors %}modal-devolver-quantidade-erro-{{ item.pk }} {% endif %}{% if erro %}{{ id }}-erro{% endif %}"
+      {% if erro %}aria-invalid="true"{% endif %}
+      aria-describedby="{% if erro %}{{ id }}-erro{% endif %}"
       class="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
     >
-    {% if form.quantidade.errors %}
-      <p id="modal-devolver-quantidade-erro-{{ item.pk }}"
-         class="mt-1 text-xs text-red-600" role="alert">
-        {{ form.quantidade.errors|join:", " }}
-      </p>
-    {% endif %}
   </div>
 
   <div>
