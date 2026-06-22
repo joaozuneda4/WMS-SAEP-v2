@@ -3,6 +3,7 @@
 Toda mutação de ``SaldoEstoque`` passa por este módulo.
 """
 
+import logging
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import TypedDict
@@ -13,6 +14,8 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.core.exceptions import ConflitoDominio, DadosInvalidos
+
+logger = logging.getLogger(__name__)
 from apps.estoque.models import (
     Estoque,
     ItemSaidaExcepcional,
@@ -719,12 +722,18 @@ def _registrar_atualizacao_estoque_relevante(*, linhas, estoque, importacao, ato
 
     def _notificar_divergencia():
         for req_pk, criador_id, beneficiario_id in _snapshot:
-            _criar(
-                criador_id=criador_id,
-                beneficiario_id=beneficiario_id,
-                requisicao_id=req_pk,
-                tipo=_Tipo.DIVERGENCIA_ESTOQUE,
-            )
+            try:
+                _criar(
+                    criador_id=criador_id,
+                    beneficiario_id=beneficiario_id,
+                    requisicao_id=req_pk,
+                    tipo=_Tipo.DIVERGENCIA_ESTOQUE,
+                )
+            except Exception:
+                logger.exception(
+                    'Falha ao criar notificação de divergência pós-commit: requisicao_id=%s',
+                    req_pk,
+                )
 
     _tx.on_commit(_notificar_divergencia)
 
