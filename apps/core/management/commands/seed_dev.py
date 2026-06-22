@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from apps.accounts.models import Setor, SetorClassificacao, VinculoAuxiliar
 from apps.estoque.models import Estoque, Material, SaldoEstoque, UnidadeMedida
+from apps.notificacoes.models import Notificacao, TipoNotificacao
 from apps.requisicoes.models import SequenciaRequisicao
 
 
@@ -124,6 +125,7 @@ class Command(BaseCommand):
             estoque = _seed_estoque()
             _seed_saldos_iniciais_bootstrap_exception(estoque, materiais)
             _seed_sequencia_requisicao()
+            _seed_notificacoes_sample(usuarios)
 
         self.stdout.write(self.style.SUCCESS('Seed de desenvolvimento aplicado.'))
 
@@ -245,3 +247,31 @@ def _seed_saldos_iniciais_bootstrap_exception(estoque, materiais):
 
 def _seed_sequencia_requisicao():
     SequenciaRequisicao.objects.get_or_create(ano=timezone.localdate().year)
+
+
+def _seed_notificacoes_sample(usuarios):
+    Notificacao.objects.filter(
+        destinatario__matricula__in=['OBRAS001', 'OBRAS002']
+    ).delete()
+    Notificacao.objects.bulk_create(
+        [
+            Notificacao(
+                destinatario=usuarios['OBRAS001'],
+                tipo=TipoNotificacao.AUTORIZACAO,
+                requisicao_id=1,
+                lida=False,
+            ),
+            Notificacao(
+                destinatario=usuarios['OBRAS001'],
+                tipo=TipoNotificacao.ATENDIMENTO,
+                requisicao_id=2,
+                lida=True,
+            ),
+            Notificacao(
+                destinatario=usuarios['OBRAS002'],
+                tipo=TipoNotificacao.RECUSA,
+                requisicao_id=3,
+                lida=False,
+            ),
+        ]
+    )
