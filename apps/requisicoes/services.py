@@ -48,6 +48,7 @@ from apps.requisicoes.policies import (
     exigir_pode_recusar_requisicao,
     exigir_pode_retornar_para_rascunho,
     exigir_pode_atender_retirada,
+    exigir_pode_estornar_requisicao,
     exigir_pode_registrar_devolucao,
     exigir_pode_separar_para_retirada,
     pode_ser_beneficiario,
@@ -1235,3 +1236,112 @@ def copiar_requisicao(
     )
 
     return novo_rascunho
+
+
+@transaction.atomic
+def estornar_requisicao(
+    *,
+    ator_id: int,
+    requisicao_id: int,
+    justificativa: str,
+) -> Requisicao:
+    """Estorna requisição atendida, revertendo entregue líquida ao saldo físico (TR-021).
+
+    ATENDIDA → ESTORNADA. Emite MovimentacaoEstoque(tipo=estorno_requisicao) por item
+    com entregue_liquida > 0 + TimelineRequisicao(ESTORNO).
+    Lock: Requisicao primeiro, depois SaldoEstoque em ordem crescente (ADR-0005, EST-06).
+    """
+    try:
+        ator = User.objects.get(pk=ator_id)
+    except User.DoesNotExist:
+        raise DadosInvalidos(
+            'Ator não encontrado.', code='ator_nao_encontrado'
+        ) from None
+
+    try:
+        requisicao = Requisicao.objects.select_for_update().get(pk=requisicao_id)
+    except Requisicao.DoesNotExist:
+        raise DadosInvalidos(
+            'Requisição não encontrada.', code='requisicao_nao_encontrada'
+        ) from None
+
+    if requisicao.estado != EstadoRequisicao.ATENDIDA:
+        raise EstadoInvalido(
+            'Estorno só pode ser registrado em requisição atendida.',
+            code='estado_origem_invalido',
+        )
+
+    exigir_pode_estornar_requisicao(ator, requisicao)
+    verificar_transicao_valida(requisicao.estado, EstadoRequisicao.ESTORNADA)
+
+    justificativa_limpa = (justificativa or '').strip()
+    if not justificativa_limpa:
+        raise DadosInvalidos(
+            'A justificativa de estorno é obrigatória.',
+            code='justificativa_vazia',
+        )
+
+    itens = list(requisicao.itens.select_related('material').all())
+    itens_com_liquida = []
+    for item in itens:
+        liquida = entregue_liquida_por_item(
+            requisicao_id=requisicao_id, item_id=item.pk
+        )
+        if liquida > 0:
+            itens_com_liquida.append((item, liquida))
+
+    if not itens_com_liquida:
+        raise ConflitoDominio(
+            'Não há entregue líquida a estornar nesta requisição.',
+            code='sem_liquida_para_estorno',
+        )
+
+    material_ids = [item.material_id for item, _ in itens_com_liquida]
+    saldos = list(
+        SaldoEstoque.objects.select_for_update()
+        .select_related('material')
+        .filter(material_id__in=material_ids)
+        .order_by('estoque_id', 'material_id', 'id')
+    )
+    saldos_por_material: dict[int, SaldoEstoque] = {}
+    for saldo in saldos:
+        if saldo.material_id in saldos_por_material:
+            raise ConflitoDominio(
+                f"Mais de um saldo encontrado para o material '{saldo.material.nome}'.",
+                code='saldo_ambiguo',
+            )
+        saldos_por_material[saldo.material_id] = saldo
+
+    origem = OrigemMovimentacaoEstoque.de_requisicao(requisicao)
+
+    for item, liquida in itens_com_liquida:
+        saldo = saldos_por_material.get(item.material_id)
+        if saldo is None:
+            raise ConflitoDominio(
+                f"Saldo de estoque não encontrado para o material '{item.material.nome}'.",
+                code='saldo_nao_encontrado',
+            )
+        saldo.saldo_fisico = saldo.saldo_fisico + liquida
+        saldo.save(update_fields=['saldo_fisico'])
+        _registrar_movimentacao(
+            tipo=TipoMovimentacaoEstoque.ESTORNO_REQUISICAO,
+            material_id=item.material_id,
+            estoque_id=saldo.estoque_id,
+            delta_fisico=liquida,
+            delta_reservado=Decimal('0'),
+            origem=origem,
+            ator_id=ator_id,
+        )
+
+    requisicao.estado = EstadoRequisicao.ESTORNADA
+    requisicao.save(update_fields=['estado'])
+
+    TimelineRequisicao.objects.create(
+        requisicao=requisicao,
+        evento=EventoTimeline.ESTORNO,
+        ator=ator,
+        estado_resultante=EstadoRequisicao.ESTORNADA,
+        metadata={'justificativa': justificativa_limpa},
+    )
+
+    return requisicao

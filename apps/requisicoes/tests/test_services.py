@@ -2459,3 +2459,66 @@ def test_registrar_devolucao_requisicao_inexistente(aux_almoxarifado):
             quantidade=Decimal('1'),
         )
     assert excinfo.value.code == 'requisicao_nao_encontrada'
+
+
+# ---------------------------------------------------------------------------
+# TR-021: estornar_requisicao
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def requisicao_atendida_para_estorno(requisicao_pronta_retirada, aux_almoxarifado):
+    """Requisição atendida total pronta para receber estorno."""
+    item = requisicao_pronta_retirada.itens.first()
+    return registrar_atendimento(
+        ator_id=aux_almoxarifado.pk,
+        requisicao_id=requisicao_pronta_retirada.pk,
+        itens=[
+            {
+                'item_id': item.pk,
+                'quantidade_entregue': item.quantidade_autorizada,
+                'justificativa': '',
+            }
+        ],
+        retirante_nome='Carlos',
+    )
+
+
+@pytest.mark.django_db
+def test_estornar_requisicao_caminho_feliz(
+    requisicao_atendida_para_estorno, chefe_almoxarifado
+):
+    """Estorno reverte saldo físico, transita para ESTORNADA e emite ledger + timeline."""
+    from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+    from apps.estoque.selectors import entregue_liquida_por_item
+    from apps.requisicoes.services import estornar_requisicao
+
+    req = requisicao_atendida_para_estorno
+    item = req.itens.first()
+    saldo = item.material.saldos.get()
+    saldo_fisico_antes = saldo.saldo_fisico
+
+    resultado = estornar_requisicao(
+        ator_id=chefe_almoxarifado.pk,
+        requisicao_id=req.pk,
+        justificativa='Estorno por teste.',
+    )
+
+    saldo.refresh_from_db()
+    assert saldo.saldo_fisico == saldo_fisico_antes + item.quantidade_entregue
+    resultado.refresh_from_db()
+    assert resultado.estado == EstadoRequisicao.ESTORNADA
+
+    mov = MovimentacaoEstoque.objects.get(
+        requisicao=req,
+        material=item.material,
+        tipo=TipoMovimentacaoEstoque.ESTORNO_REQUISICAO,
+    )
+    assert mov.delta_fisico == item.quantidade_entregue
+    assert mov.delta_reservado == Decimal('0')
+
+    evento = resultado.eventos.filter(evento=EventoTimeline.ESTORNO).get()
+    assert evento.ator == chefe_almoxarifado
+
+    liquida = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
+    assert liquida == Decimal('0')

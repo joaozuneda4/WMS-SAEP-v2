@@ -461,3 +461,29 @@ def exigir_pode_copiar_requisicao(ator: 'User', requisicao: Requisicao) -> None:
             'Você não tem permissão para copiar esta requisição.',
             code='copiar_requisicao_negada',
         )
+
+
+def pode_estornar_requisicao(ator: 'User', requisicao: Requisicao) -> bool:
+    """True se ator ativo, requisição atendida e chefe de almoxarifado (ou superusuário).
+
+    Auxiliar de almoxarifado não possui esta permissão (TR-021).
+    """
+    if not ator.is_active:
+        return False
+    if requisicao.estado != EstadoRequisicao.ATENDIDA:
+        return False
+    if ator.is_superuser:
+        return True
+    setor = _setor_chefiado_ativo(ator)
+    if setor is None:
+        return False
+    from apps.accounts.models import SetorClassificacao
+    return setor.classificacao == SetorClassificacao.ALMOXARIFADO
+
+
+def exigir_pode_estornar_requisicao(ator: 'User', requisicao: Requisicao) -> None:
+    if not pode_estornar_requisicao(ator, requisicao):
+        raise PermissaoNegada(
+            'Apenas chefe de almoxarifado pode estornar uma requisição atendida.',
+            code='estornar_requisicao_negada',
+        )

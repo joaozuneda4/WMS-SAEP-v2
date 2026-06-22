@@ -35,6 +35,7 @@ TRANSICOES_VALIDAS: dict[str, set[str]] = {
     },
     EstadoRequisicao.ATENDIDA: {
         EstadoRequisicao.ATENDIDA,  # TR-020: registrar devolução
+        EstadoRequisicao.ESTORNADA,  # TR-021: estornar requisição atendida
     },
 }
 
