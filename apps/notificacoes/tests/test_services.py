@@ -64,7 +64,12 @@ def test_autorizar_requisicao_gera_notificacoes(
     req = criar_requisicao(
         ator_id=chefe_obras.pk,
         beneficiario_id=outro_solicitante.pk,
-        itens=[{'material_id': material_disponivel.pk, 'quantidade_solicitada': Decimal('2')}],
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('2'),
+            }
+        ],
     )
     enviar_para_autorizacao(ator_id=chefe_obras.pk, requisicao_id=req.pk)
     autorizar_requisicao(ator_id=chefe_obras.pk, requisicao_id=req.pk)
@@ -92,7 +97,12 @@ def test_recusar_requisicao_gera_notificacoes(
     req = criar_requisicao(
         ator_id=chefe_obras.pk,
         beneficiario_id=outro_solicitante.pk,
-        itens=[{'material_id': material_disponivel.pk, 'quantidade_solicitada': Decimal('1')}],
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('1'),
+            }
+        ],
     )
     enviar_para_autorizacao(ator_id=chefe_obras.pk, requisicao_id=req.pk)
     recusar_requisicao(
@@ -126,7 +136,12 @@ def test_registrar_atendimento_gera_notificacoes(
     req = criar_requisicao(
         ator_id=chefe_obras.pk,
         beneficiario_id=outro_solicitante.pk,
-        itens=[{'material_id': material_disponivel.pk, 'quantidade_solicitada': Decimal('1')}],
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('1'),
+            }
+        ],
     )
     enviar_para_autorizacao(ator_id=chefe_obras.pk, requisicao_id=req.pk)
     autorizar_requisicao(ator_id=chefe_obras.pk, requisicao_id=req.pk)
@@ -136,7 +151,13 @@ def test_registrar_atendimento_gera_notificacoes(
     registrar_atendimento(
         ator_id=chefe_almoxarifado.pk,
         requisicao_id=req.pk,
-        itens=[{'item_id': item.pk, 'quantidade_entregue': Decimal('1'), 'justificativa': ''}],
+        itens=[
+            {
+                'item_id': item.pk,
+                'quantidade_entregue': Decimal('1'),
+                'justificativa': '',
+            }
+        ],
         retirante_nome='Fulano',
     )
 
@@ -163,7 +184,12 @@ def test_autorizar_requisicao_criador_igual_beneficiario_uma_notificacao(
     req = criar_requisicao(
         ator_id=solicitante.pk,
         beneficiario_id=solicitante.pk,
-        itens=[{'material_id': material_disponivel.pk, 'quantidade_solicitada': Decimal('1')}],
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('1'),
+            }
+        ],
     )
     enviar_para_autorizacao(ator_id=solicitante.pk, requisicao_id=req.pk)
     autorizar_requisicao(ator_id=chefe_obras.pk, requisicao_id=req.pk)
@@ -249,8 +275,7 @@ def test_divergencia_estoque_gera_notificacoes_para_requisicao_afetada(
     )
 
     csv_bytes = (
-        f'CADPRO;DENOMINACAO;QUAN3\n'
-        f'{material.codigo};Material Critico;001.000\n'
+        f'CADPRO;DENOMINACAO;QUAN3\n{material.codigo};Material Critico;001.000\n'
     ).encode('utf-8')
     confirmar_importacao_scpi(
         ator_id=superuser.pk,
@@ -287,8 +312,7 @@ def test_divergencia_estoque_deduplica_criador_igual_beneficiario(
     )
 
     csv_bytes = (
-        f'CADPRO;DENOMINACAO;QUAN3\n'
-        f'{material.codigo};Material Critico 2;001.000\n'
+        f'CADPRO;DENOMINACAO;QUAN3\n{material.codigo};Material Critico 2;001.000\n'
     ).encode('utf-8')
     confirmar_importacao_scpi(
         ator_id=superuser.pk,

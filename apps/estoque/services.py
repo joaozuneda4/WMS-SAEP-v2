@@ -714,8 +714,7 @@ def _registrar_atualizacao_estoque_relevante(*, linhas, estoque, importacao, ato
     from apps.notificacoes.services import criar_notificacoes_para as _criar
 
     _snapshot = [
-        (req.pk, req.criador_id, req.beneficiario_id)
-        for req in req_por_id.values()
+        (req.pk, req.criador_id, req.beneficiario_id) for req in req_por_id.values()
     ]
 
     def _notificar_divergencia():
