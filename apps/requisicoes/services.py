@@ -1282,7 +1282,7 @@ def estornar_requisicao(
         )
 
     itens = list(requisicao.itens.select_related('material').all())
-    itens_com_liquida = []
+    itens_com_liquida: list[tuple] = []
     for item in itens:
         liquida = entregue_liquida_por_item(
             requisicao_id=requisicao_id, item_id=item.pk
@@ -1297,36 +1297,36 @@ def estornar_requisicao(
         )
 
     material_ids = [item.material_id for item, _ in itens_com_liquida]
-    saldos = list(
+    saldos_qs = list(
         SaldoEstoque.objects.select_for_update()
         .select_related('material')
         .filter(material_id__in=material_ids)
         .order_by('estoque_id', 'material_id', 'id')
     )
     saldos_por_material: dict[int, SaldoEstoque] = {}
-    for saldo in saldos:
-        if saldo.material_id in saldos_por_material:
+    for saldo_row in saldos_qs:
+        if saldo_row.material_id in saldos_por_material:
             raise ConflitoDominio(
-                f"Mais de um saldo encontrado para o material '{saldo.material.nome}'.",
+                f"Mais de um saldo encontrado para o material '{saldo_row.material.nome}'.",
                 code='saldo_ambiguo',
             )
-        saldos_por_material[saldo.material_id] = saldo
+        saldos_por_material[saldo_row.material_id] = saldo_row
 
     origem = OrigemMovimentacaoEstoque.de_requisicao(requisicao)
 
     for item, liquida in itens_com_liquida:
-        saldo = saldos_por_material.get(item.material_id)
-        if saldo is None:
+        saldo_item: SaldoEstoque | None = saldos_por_material.get(item.material_id)
+        if saldo_item is None:
             raise ConflitoDominio(
                 f"Saldo de estoque não encontrado para o material '{item.material.nome}'.",
                 code='saldo_nao_encontrado',
             )
-        saldo.saldo_fisico = saldo.saldo_fisico + liquida
-        saldo.save(update_fields=['saldo_fisico'])
+        saldo_item.saldo_fisico = saldo_item.saldo_fisico + liquida
+        saldo_item.save(update_fields=['saldo_fisico'])
         _registrar_movimentacao(
             tipo=TipoMovimentacaoEstoque.ESTORNO_REQUISICAO,
             material_id=item.material_id,
-            estoque_id=saldo.estoque_id,
+            estoque_id=saldo_item.estoque_id,
             delta_fisico=liquida,
             delta_reservado=Decimal('0'),
             origem=origem,

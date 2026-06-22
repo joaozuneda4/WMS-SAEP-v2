@@ -15,7 +15,14 @@ class ItemRequisicaoInline(admin.TabularInline):
 
 @admin.register(Requisicao)
 class RequisicaoAdmin(admin.ModelAdmin):
-    list_display = ('numero_publico', 'beneficiario', 'criador', 'setor_beneficiario', 'estado', 'criado_em')
+    list_display = (
+        'numero_publico',
+        'beneficiario',
+        'criador',
+        'setor_beneficiario',
+        'estado',
+        'criado_em',
+    )
     list_filter = ('estado', 'setor_beneficiario', 'criado_em')
     search_fields = ('numero_publico', 'beneficiario__nome', 'criador__nome')
     ordering = ('-criado_em',)
@@ -31,7 +38,13 @@ class RequisicaoAdmin(admin.ModelAdmin):
 
 @admin.register(ItemRequisicao)
 class ItemRequisicaoAdmin(admin.ModelAdmin):
-    list_display = ('requisicao', 'material', 'quantidade_solicitada', 'quantidade_autorizada', 'quantidade_entregue')
+    list_display = (
+        'requisicao',
+        'material',
+        'quantidade_solicitada',
+        'quantidade_autorizada',
+        'quantidade_entregue',
+    )
     list_filter = ('requisicao__estado', 'material')
     search_fields = ('requisicao__numero_publico', 'material__nome', 'material__codigo')
     ordering = ('requisicao', 'id')

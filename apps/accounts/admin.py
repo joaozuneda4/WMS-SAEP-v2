@@ -20,7 +20,18 @@ class UserAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {'fields': ('matricula', 'password')}),
         ('Informações Pessoais', {'fields': ('nome', 'email', 'setor')}),
-        ('Permissões', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        (
+            'Permissões',
+            {
+                'fields': (
+                    'is_active',
+                    'is_staff',
+                    'is_superuser',
+                    'groups',
+                    'user_permissions',
+                )
+            },
+        ),
         ('Datas Importantes', {'fields': ('last_login', 'date_joined')}),
     )
 

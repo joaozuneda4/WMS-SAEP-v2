@@ -477,7 +477,6 @@ def pode_estornar_requisicao(ator: 'User', requisicao: Requisicao) -> bool:
     setor = _setor_chefiado_ativo(ator)
     if setor is None:
         return False
-    from apps.accounts.models import SetorClassificacao
     return setor.classificacao == SetorClassificacao.ALMOXARIFADO
 
 
