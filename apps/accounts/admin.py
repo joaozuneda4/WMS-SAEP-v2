@@ -35,9 +35,15 @@ class SetorAdmin(admin.ModelAdmin):
         )
 
     def save_model(self, request, obj, form, change):
-        if change and 'chefe' in form.changed_data and obj.chefe_id is not None:
+        if change and 'chefe' in form.changed_data:
             from apps.accounts.services import trocar_chefe_setor
+            from apps.core.exceptions import ConflitoDominio
 
+            if obj.chefe_id is None:
+                raise ConflitoDominio(
+                    'Não é possível remover a chefia sem indicar um substituto.',
+                    code='chefe_nulo',
+                )
             trocar_chefe_setor(
                 ator_id=request.user.pk,
                 setor_id=obj.pk,
@@ -103,11 +109,14 @@ class VinculoAuxiliarAdmin(admin.ModelAdmin):
             )
 
             if obj.ativo:
-                ativar_vinculo_auxiliar(
+                vinculo = ativar_vinculo_auxiliar(
                     ator_id=request.user.pk,
                     usuario_id=obj.usuario_id,
                     setor_id=obj.setor_id,
                 )
+                obj.pk = vinculo.pk
+                return  # service já persistiu; super causaria INSERT duplo
             elif obj.pk:
                 desativar_vinculo_auxiliar(ator_id=request.user.pk, vinculo_id=obj.pk)
+                return  # service já persistiu desativado_em; super sobrescreveria
         super().save_model(request, obj, form, change)
