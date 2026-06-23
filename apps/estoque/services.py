@@ -838,3 +838,41 @@ def confirmar_importacao_scpi(
         )
 
     return importacao
+
+
+@transaction.atomic
+def desativar_material(*, ator_id: int, material_id: int) -> None:
+    """Desativa material do catálogo, bloqueando se houver saldo (EST-11)."""
+    from apps.estoque.models import Material
+    from apps.estoque.policies import exigir_pode_gerir_catalogo
+
+    try:
+        ator = User.objects.get(pk=ator_id)
+        material = Material.objects.select_for_update().get(pk=material_id)
+    except ObjectDoesNotExist as exc:
+        raise DadosInvalidos(
+            'Ator ou material inválido.', code='referencia_invalida'
+        ) from exc
+
+    exigir_pode_gerir_catalogo(ator)
+
+    if not material.ativo:
+        return
+
+    saldos = list(
+        SaldoEstoque.objects.select_for_update().filter(material_id=material_id)
+    )
+    for saldo in saldos:
+        if saldo.saldo_fisico != 0:
+            raise ConflitoDominio(
+                f"Material '{material.nome}' possui saldo físico ({saldo.saldo_fisico}). Zere o saldo antes de desativar.",
+                code='saldo_fisico_nao_zerado',
+            )
+        if saldo.saldo_reservado != 0:
+            raise ConflitoDominio(
+                f"Material '{material.nome}' possui saldo reservado ({saldo.saldo_reservado}). Libere as reservas antes de desativar.",
+                code='saldo_reservado_nao_zerado',
+            )
+
+    material.ativo = False
+    material.save(update_fields=['ativo'])

@@ -928,3 +928,61 @@ class TestLedgerConcorrenciaEST06:
         assert saldo.saldo_reservado == Decimal('10') + Decimal('2')
         # 2 movimentações criadas
         assert movs.count() == 2
+
+
+@pytest.mark.django_db
+class TestDesativarMaterial:
+    def _cria_material_com_saldo(self, estoque_principal, fisico, reservado):
+        from apps.estoque.models import Material, SaldoEstoque, UnidadeMedida
+
+        m = Material.objects.create(
+            codigo='DESATMAT001',
+            nome='Material Desativável',
+            unidade=UnidadeMedida.UNIDADE,
+            ativo=True,
+        )
+        SaldoEstoque.objects.create(
+            estoque=estoque_principal,
+            material=m,
+            saldo_fisico=fisico,
+            saldo_reservado=reservado,
+        )
+        return m
+
+    def test_saldo_fisico_nao_zerado_lanca_conflito(self, superuser, estoque_principal):
+        from apps.core.exceptions import ConflitoDominio
+        from apps.estoque.services import desativar_material
+
+        m = self._cria_material_com_saldo(estoque_principal, fisico=10, reservado=0)
+        with pytest.raises(ConflitoDominio) as exc_info:
+            desativar_material(ator_id=superuser.pk, material_id=m.pk)
+        assert exc_info.value.code == 'saldo_fisico_nao_zerado'
+
+    def test_saldo_reservado_nao_zerado_lanca_conflito(
+        self, superuser, estoque_principal
+    ):
+        from apps.core.exceptions import ConflitoDominio
+        from apps.estoque.services import desativar_material
+
+        m = self._cria_material_com_saldo(estoque_principal, fisico=0, reservado=5)
+        with pytest.raises(ConflitoDominio) as exc_info:
+            desativar_material(ator_id=superuser.pk, material_id=m.pk)
+        assert exc_info.value.code == 'saldo_reservado_nao_zerado'
+
+    def test_saldo_zerado_desativa_material(self, superuser, estoque_principal):
+        from apps.estoque.services import desativar_material
+
+        m = self._cria_material_com_saldo(estoque_principal, fisico=0, reservado=0)
+        desativar_material(ator_id=superuser.pk, material_id=m.pk)
+        m.refresh_from_db()
+        assert m.ativo is False
+
+    def test_ja_inativo_e_idempotente(self, superuser, estoque_principal):
+        from apps.estoque.services import desativar_material
+
+        m = self._cria_material_com_saldo(estoque_principal, fisico=0, reservado=0)
+        m.ativo = False
+        m.save(update_fields=['ativo'])
+        desativar_material(ator_id=superuser.pk, material_id=m.pk)
+        m.refresh_from_db()
+        assert m.ativo is False

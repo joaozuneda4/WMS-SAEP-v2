@@ -136,3 +136,17 @@ def exigir_pode_consultar_catalogo_estoque(usuario: 'User') -> None:
             'Apenas usuários ativos podem consultar o catálogo de estoque.',
             code='permissao_negada',
         )
+
+
+def pode_gerir_catalogo(ator: 'User') -> bool:
+    """Superusuário pode gerir (ativar/desativar) materiais do catálogo."""
+    return bool(ator.is_active and ator.is_superuser)
+
+
+def exigir_pode_gerir_catalogo(ator: 'User') -> None:
+    from apps.core.exceptions import PermissaoNegada
+
+    if not pode_gerir_catalogo(ator):
+        raise PermissaoNegada(
+            'Apenas superusuários podem gerir o catálogo de materiais.'
+        )

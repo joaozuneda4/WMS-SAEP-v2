@@ -19,6 +19,54 @@ class MaterialAdmin(admin.ModelAdmin):
     search_fields = ('codigo', 'nome')
     ordering = ('nome',)
 
+    def _pode_gerir(self, request):
+        from apps.estoque.policies import pode_gerir_catalogo
+
+        return pode_gerir_catalogo(request.user)
+
+    def has_add_permission(self, request):
+        return self._pode_gerir(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self._pode_gerir(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        from django.contrib import messages
+        from django.core.exceptions import PermissionDenied
+        from django.http import HttpResponseRedirect
+
+        from apps.core.exceptions import ErroDominio, PermissaoNegada
+
+        try:
+            return super().changeform_view(request, object_id, form_url, extra_context)
+        except PermissaoNegada as exc:
+            raise PermissionDenied(str(exc)) from exc
+        except ErroDominio as exc:
+            self.message_user(request, str(exc), level=messages.ERROR)
+            return HttpResponseRedirect(request.get_full_path())
+
+    def save_model(self, request, obj, form, change):
+        if change and 'ativo' in form.changed_data and not obj.ativo:
+            from apps.estoque.services import desativar_material
+
+            desativar_material(ator_id=request.user.pk, material_id=obj.pk)
+        super().save_model(request, obj, form, change)
+
+    def delete_model(self, request, obj):
+        from django.core.exceptions import PermissionDenied
+
+        raise PermissionDenied(
+            "Materiais não podem ser excluídos. Use o campo 'ativo' para desativar."
+        )
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        actions.pop('delete_selected', None)
+        return actions
+
 
 @admin.register(Estoque)
 class EstoqueAdmin(admin.ModelAdmin):
