@@ -19,6 +19,20 @@ class MaterialAdmin(admin.ModelAdmin):
     search_fields = ('codigo', 'nome')
     ordering = ('nome',)
 
+    def save_model(self, request, obj, form, change):
+        if change and 'ativo' in form.changed_data and not obj.ativo:
+            from django.core.exceptions import ValidationError
+
+            from apps.core.exceptions import ErroDominio
+            from apps.estoque.services import desativar_material
+
+            try:
+                desativar_material(ator_id=request.user.pk, material_id=obj.pk)
+            except ErroDominio as exc:
+                raise ValidationError(str(exc)) from exc
+            return
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(Estoque)
 class EstoqueAdmin(admin.ModelAdmin):
