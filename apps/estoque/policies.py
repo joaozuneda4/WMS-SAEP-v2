@@ -150,3 +150,38 @@ def exigir_pode_gerir_catalogo(ator: 'User') -> None:
         raise PermissaoNegada(
             'Apenas superusuários podem gerir o catálogo de materiais.'
         )
+
+
+def _eh_chefe_ou_aux_setor_nao_almox(ator: 'User') -> bool:
+    try:
+        setor = ator.setor_chefiado
+        if setor.ativo and setor.classificacao != SetorClassificacao.ALMOXARIFADO:
+            return True
+    except (AttributeError, ObjectDoesNotExist):
+        pass
+    return (
+        VinculoAuxiliar.objects.filter(usuario=ator, ativo=True, setor__ativo=True)
+        .exclude(setor__classificacao=SetorClassificacao.ALMOXARIFADO)
+        .exists()
+    )
+
+
+def pode_consultar_movimentacoes_estoque(ator: 'User') -> bool:
+    """Pode navegar o ledger de movimentações = tem visibilidade por papel.
+
+    Espelha o universo de ``movimentacoes_visiveis_para``: superuser, almoxarifado
+    (chefe/aux) ou chefe/aux de setor não-almox. Solicitante puro e inativo: não.
+    """
+    if not ator.is_active:
+        return False
+    if ator.is_superuser or _eh_almoxarifado(ator):
+        return True
+    return _eh_chefe_ou_aux_setor_nao_almox(ator)
+
+
+def exigir_pode_consultar_movimentacoes_estoque(ator: 'User') -> None:
+    if not pode_consultar_movimentacoes_estoque(ator):
+        raise PermissaoNegada(
+            'Você não tem permissão para consultar movimentações de estoque.',
+            code='permissao_negada',
+        )

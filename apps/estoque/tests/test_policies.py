@@ -254,3 +254,40 @@ class TestExigirPodeConsultarCatalogoEstoque:
 
         with pytest.raises(PermissaoNegada):
             exigir_pode_consultar_catalogo_estoque(usuario_inativo)
+
+
+class TestPodeConsultarMovimentacoesEstoque:
+    def test_superuser_pode(self, superuser):
+        from apps.estoque.policies import pode_consultar_movimentacoes_estoque
+
+        assert pode_consultar_movimentacoes_estoque(superuser) is True
+
+    def test_chefe_almoxarifado_pode(self, chefe_almoxarifado):
+        from apps.estoque.policies import pode_consultar_movimentacoes_estoque
+
+        assert pode_consultar_movimentacoes_estoque(chefe_almoxarifado) is True
+
+    def test_aux_almoxarifado_pode(self, aux_almoxarifado):
+        from apps.estoque.policies import pode_consultar_movimentacoes_estoque
+
+        assert pode_consultar_movimentacoes_estoque(aux_almoxarifado) is True
+
+    def test_chefe_setor_nao_almox_pode(self, chefe_obras):
+        from apps.estoque.policies import pode_consultar_movimentacoes_estoque
+
+        assert pode_consultar_movimentacoes_estoque(chefe_obras) is True
+
+    def test_aux_setor_nao_almox_pode(self, aux_obras):
+        from apps.estoque.policies import pode_consultar_movimentacoes_estoque
+
+        assert pode_consultar_movimentacoes_estoque(aux_obras) is True
+
+    def test_solicitante_puro_nao_pode(self, solicitante):
+        from apps.estoque.policies import pode_consultar_movimentacoes_estoque
+
+        assert pode_consultar_movimentacoes_estoque(solicitante) is False
+
+    def test_inativo_nao_pode(self, usuario_inativo):
+        from apps.estoque.policies import pode_consultar_movimentacoes_estoque
+
+        assert pode_consultar_movimentacoes_estoque(usuario_inativo) is False

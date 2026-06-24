@@ -7,6 +7,7 @@ compartilhado (topbar), evitando duplicação de policy em templates.
 from apps.estoque.policies import (
     pode_consultar_catalogo_estoque,
     pode_consultar_historico_scpi,
+    pode_consultar_movimentacoes_estoque,
     pode_consultar_saidas_excepcionais,
     pode_visualizar_preview_scpi,
 )
@@ -27,6 +28,7 @@ def flags_de_papel(request):
             'pode_visualizar_preview_scpi': False,
             'pode_consultar_historico_scpi': False,
             'pode_consultar_catalogo_estoque': False,
+            'pode_consultar_movimentacoes_estoque': False,
         }
     return {
         'pode_ver_fila_autorizacao': pode_ver_fila_autorizacao(usuario),
@@ -37,4 +39,7 @@ def flags_de_papel(request):
         'pode_visualizar_preview_scpi': pode_visualizar_preview_scpi(usuario),
         'pode_consultar_historico_scpi': pode_consultar_historico_scpi(usuario),
         'pode_consultar_catalogo_estoque': pode_consultar_catalogo_estoque(usuario),
+        'pode_consultar_movimentacoes_estoque': pode_consultar_movimentacoes_estoque(
+            usuario
+        ),
     }
