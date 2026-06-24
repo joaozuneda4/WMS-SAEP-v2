@@ -85,6 +85,18 @@
   --width-card-sm:           24rem;   /* max-w-sm — card de login */
 }
 
+/* ── Utilitário: disclosure nativo no mobile, sempre aberto no desktop ──────── */
+/*
+  <details class="filtros-disclosure"> força o conteúdo visível em sm+
+  sem depender do atributo open ou de JS. Usado na barra de filtros do
+  histórico de movimentações (progressive enhancement).
+*/
+@media (min-width: 40rem) {
+  .filtros-disclosure > :not(summary) {
+    display: block !important;
+  }
+}
+
 /* ── Componentes globais ──────────────────────────────────────────────────── */
 
 @layer components {

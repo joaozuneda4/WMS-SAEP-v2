@@ -19,16 +19,18 @@
 
   {% include 'estoque/partials/_chip_so_saidas.html' %}
 
-  {# Barra de filtros — disclosure nativo <details>/<summary> no mobile;
-     sm:!block força visibilidade no desktop sem JS (progressive enhancement). #}
-  <details class="mb-6">
+  {% comment %}
+  Barra de filtros: disclosure nativo details/summary no mobile.
+  sm:block! força visibilidade no desktop (Tailwind v4: importante como sufixo).
+  {% endcomment %}
+  <details class="mb-6 filtros-disclosure">
     <summary
       class="sm:hidden mb-4 flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
     >
       Filtros
       <span aria-hidden="true" class="ml-2 text-slate-400">▼</span>
     </summary>
-    <div class="sm:!block">
+    <div>
   <form
     method="get"
     action="{{ url_movimentacoes }}"
