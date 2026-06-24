@@ -157,6 +157,18 @@ def historico_movimentacoes_view(request):
     params_ordenacao['ordem'] = ordem_inversa
     url_ordenacao = '?' + params_ordenacao.urlencode()
 
+    # URLs do chip "só saídas": preservam o recorte atual (material, período,
+    # setor, ordem) e apenas alternam os tipos.
+    params_chip_on = request.GET.copy()
+    params_chip_on.pop('page', None)
+    params_chip_on.setlist('tipos', [t.value for t in TIPOS_SO_SAIDAS])
+    url_chip_so_saidas = '?' + params_chip_on.urlencode()
+
+    params_chip_off = request.GET.copy()
+    params_chip_off.pop('page', None)
+    params_chip_off.setlist('tipos', [])
+    url_chip_sem_so_saidas = '?' + params_chip_off.urlencode()
+
     contexto = {
         'page_obj': page_obj,
         'mostrar_filtro_setor': mostrar_filtro_setor,
@@ -172,6 +184,8 @@ def historico_movimentacoes_view(request):
         'ordem': ordem,
         'aria_sort': 'ascending' if ordem == 'asc' else 'descending',
         'url_ordenacao': url_ordenacao,
+        'url_chip_so_saidas': url_chip_so_saidas,
+        'url_chip_sem_so_saidas': url_chip_sem_so_saidas,
         'tem_filtro_ativo': tem_filtro_ativo,
         'so_saidas_ativo': so_saidas_ativo,
         'querystring_filtros': _querystring_sem_page(request.GET),

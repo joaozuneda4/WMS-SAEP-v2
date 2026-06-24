@@ -923,8 +923,24 @@ class TestHistoricoMovimentacoesFiltros:
         self, client, superuser, requisicao_autorizada
     ):
         client.force_login(superuser)
-        # Filtro sem resultado → mensagem de filtro.
-        filtrado = client.get(URL_MOVIMENTACOES, {'material': 'inexistente'})
-        assert b'nenhum resultado' in filtrado.content.lower() or (
-            'filtro'.encode() in filtrado.content.lower()
+        # Filtro sem resultado → mensagem específica de filtro, e NÃO a de
+        # ledger vazio.
+        filtrado = client.get(URL_MOVIMENTACOES, {'material': 'inexistente'}).content
+        assert 'Nenhum resultado para este filtro'.encode() in filtrado
+        assert 'Nenhuma movimentação encontrada'.encode() not in filtrado
+
+    def test_chip_so_saidas_preserva_filtros_atuais(
+        self, client, chefe_almoxarifado, setor_obras
+    ):
+        # Bug-regressão: alternar o chip não pode descartar o recorte atual.
+        client.force_login(chefe_almoxarifado)
+        response = client.get(
+            URL_MOVIMENTACOES,
+            {'material': 'parafuso', 'ordem': 'asc', 'setor': setor_obras.pk},
         )
+        url_chip = response.context['url_chip_so_saidas']
+        assert 'material=parafuso' in url_chip
+        assert 'ordem=asc' in url_chip
+        assert f'setor={setor_obras.pk}' in url_chip
+        assert 'tipos=consumo' in url_chip
+        assert 'tipos=saida_excepcional' in url_chip

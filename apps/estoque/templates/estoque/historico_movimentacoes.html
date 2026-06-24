@@ -22,8 +22,8 @@
   <div class="mb-4 flex flex-wrap items-center gap-2">
     {% if so_saidas_ativo %}
       <a
-        href="{{ url_movimentacoes }}"
-        hx-get="{{ url_movimentacoes }}"
+        href="{{ url_chip_sem_so_saidas }}"
+        hx-get="{{ url_chip_sem_so_saidas }}"
         hx-target="#resultados-movimentacoes"
         hx-push-url="true"
         aria-pressed="true"
@@ -35,8 +35,8 @@
       </a>
     {% else %}
       <a
-        href="{{ url_movimentacoes }}?tipos=consumo&tipos=saida_excepcional"
-        hx-get="{{ url_movimentacoes }}?tipos=consumo&tipos=saida_excepcional"
+        href="{{ url_chip_so_saidas }}"
+        hx-get="{{ url_chip_so_saidas }}"
         hx-target="#resultados-movimentacoes"
         hx-push-url="true"
         aria-pressed="false"
