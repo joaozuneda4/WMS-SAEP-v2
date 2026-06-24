@@ -20,6 +20,10 @@ Cobre o escopo dos três briefs produzidos: login, telas operacionais (listas) e
     devolucao/                  → Registrar devolução [fora de escopo atual]
 
 /admin/                         → Django admin (superuser)
+
+/estoque/
+  movimentacoes/                → Histórico de Movimentações (estoque:historico_movimentacoes)
+                                   [visível: almoxarifado (chefe/aux) + chefe/aux de setor]
 ```
 
 Páginas marcadas `[fora de escopo atual]` são mapeadas na IA para completude, mas não têm brief ainda.
@@ -57,6 +61,17 @@ Máximo de 4 links por papel. Links são condicionais — o usuário só vê o q
 | Superuser/staff | Admin |
 
 Usuário com múltiplos papéis: união dos links permitidos.
+
+> **Módulo Estoque** — navegação secundária dentro da área de almoxarifado (`_topbar_nav.html`):
+>
+> | Papel | Links visíveis |
+> |---|---|
+> | Chefe de almoxarifado | Atendimento · Saídas excepcionais · Catálogo de materiais · **Movimentações** · Importar SCPI · Histórico de importações SCPI |
+> | Auxiliar de almoxarifado | Atendimento · Saídas excepcionais · Catálogo de materiais · **Movimentações** · Importar SCPI · Histórico de importações SCPI |
+> | Chefe de setor | **Movimentações** (escopo do próprio setor) |
+> | Auxiliar de setor | **Movimentações** (escopo do próprio setor) |
+>
+> Condição RBAC para "Movimentações": `pode_consultar_movimentacoes_estoque` (derivado de `_eh_almoxarifado` ou vínculo de setor).
 
 ### Utility navigation (top nav, extremidade direita)
 
