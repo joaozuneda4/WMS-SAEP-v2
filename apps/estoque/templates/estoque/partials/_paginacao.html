@@ -1,6 +1,7 @@
 {% comment %}
-Paginação server-side reutilizável. Recebe `page_obj` (Paginator page).
-Navegação por links GET (?page=N). Alvos de toque min-h-11, focáveis.
+Paginação server-side reutilizável. Recebe `page_obj` (Paginator page) e,
+opcionalmente, `querystring_filtros` (querystring atual sem `page`) para
+preservar os filtros ativos ao navegar. Alvos de toque min-h-11, focáveis.
 {% endcomment %}
 {% if page_obj.paginator.num_pages > 1 %}
   <nav
@@ -17,7 +18,7 @@ Navegação por links GET (?page=N). Alvos de toque min-h-11, focáveis.
     <div class="flex items-center gap-2">
       {% if page_obj.has_previous %}
         <a
-          href="?page={{ page_obj.previous_page_number }}"
+          href="?{% if querystring_filtros %}{{ querystring_filtros }}&{% endif %}page={{ page_obj.previous_page_number }}"
           class="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
         >
           Anterior
@@ -33,7 +34,7 @@ Navegação por links GET (?page=N). Alvos de toque min-h-11, focáveis.
 
       {% if page_obj.has_next %}
         <a
-          href="?page={{ page_obj.next_page_number }}"
+          href="?{% if querystring_filtros %}{{ querystring_filtros }}&{% endif %}page={{ page_obj.next_page_number }}"
           class="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
         >
           Próxima

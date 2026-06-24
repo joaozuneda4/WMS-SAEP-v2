@@ -798,3 +798,174 @@ class TestHistoricoMovimentacoesView:
         assert 'Badge semântico'.encode() not in response.content
         assert 'Célula de delta'.encode() not in response.content
         assert 'Paginação server-side'.encode() not in response.content
+
+
+class TestHistoricoMovimentacoesFiltros:
+    """Camada de filtros HTMX sobre o ledger (issue #7)."""
+
+    def test_filtro_material_reduz_resultado(
+        self, client, superuser, requisicao_autorizada
+    ):
+        client.force_login(superuser)
+        com = client.get(URL_MOVIMENTACOES, {'material': 'MAT001'})
+        sem = client.get(URL_MOVIMENTACOES, {'material': 'inexistente'})
+        assert com.context['page_obj'].paginator.count >= 1
+        assert sem.context['page_obj'].paginator.count == 0
+
+    def test_requisicao_htmx_devolve_so_partial(
+        self, client, superuser, requisicao_autorizada
+    ):
+        client.force_login(superuser)
+        response = client.get(URL_MOVIMENTACOES, HTTP_HX_REQUEST='true')
+        assert response.status_code == 200
+        nomes = {t.name for t in response.templates}
+        assert 'estoque/partials/_tabela_movimentacoes.html' in nomes
+        # Não renderiza o template completo (app-bar) num swap parcial.
+        assert 'estoque/historico_movimentacoes.html' not in nomes
+
+    def test_requisicao_normal_devolve_template_completo(
+        self, client, superuser, requisicao_autorizada
+    ):
+        client.force_login(superuser)
+        response = client.get(URL_MOVIMENTACOES)
+        nomes = {t.name for t in response.templates}
+        assert 'estoque/historico_movimentacoes.html' in nomes
+
+    def test_ordenacao_asc_inverte_cronologia(
+        self,
+        client,
+        superuser,
+        requisicao_autorizada,
+        material_disponivel,
+        estoque_principal,
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+
+        req, _ = requisicao_autorizada
+        for _ in range(2):
+            MovimentacaoEstoque.objects.create(
+                tipo=TipoMovimentacaoEstoque.CONSUMO,
+                material=material_disponivel,
+                estoque=estoque_principal,
+                delta_fisico=Decimal('-1'),
+                delta_reservado=Decimal('-1'),
+                requisicao=req,
+                ator=superuser,
+            )
+        client.force_login(superuser)
+        desc = client.get(URL_MOVIMENTACOES).context['page_obj'].object_list
+        asc = (
+            client.get(URL_MOVIMENTACOES, {'ordem': 'asc'})
+            .context['page_obj']
+            .object_list
+        )
+        assert [m.pk for m in asc] == [m.pk for m in reversed(list(desc))]
+        assert client.get(URL_MOVIMENTACOES, {'ordem': 'asc'}).context['ordem'] == 'asc'
+
+    def test_filtro_setor_visivel_so_para_almox(
+        self, client, chefe_almoxarifado, chefe_obras
+    ):
+        client.force_login(chefe_almoxarifado)
+        assert client.get(URL_MOVIMENTACOES).context['mostrar_filtro_setor'] is True
+        client.force_login(chefe_obras)
+        assert client.get(URL_MOVIMENTACOES).context['mostrar_filtro_setor'] is False
+
+    def test_chefe_setor_nao_filtra_por_setor_via_querystring(
+        self, client, chefe_obras, requisicao_autorizada, movimentacao_outro_setor
+    ):
+        # Mesmo forçando ?setor=<outro> na URL, chefe de setor não vaza dado.
+        setor_ti = movimentacao_outro_setor.requisicao.setor_beneficiario_id
+        client.force_login(chefe_obras)
+        response = client.get(URL_MOVIMENTACOES, {'setor': setor_ti})
+        assert response.status_code == 200
+        pks = {m.pk for m in response.context['page_obj'].object_list}
+        assert movimentacao_outro_setor.pk not in pks
+
+    def test_querystring_invalida_nao_quebra(
+        self, client, superuser, requisicao_autorizada
+    ):
+        client.force_login(superuser)
+        response = client.get(
+            URL_MOVIMENTACOES,
+            {
+                'data_ini': 'abc',
+                'data_fim': '2026-13-99',
+                'setor': 'xyz',
+                'ordem': 'lixo',
+                'tipos': 'nao_existe',
+                'page': 'foo',
+            },
+        )
+        assert response.status_code == 200
+
+    def test_chip_so_saidas_marca_estado_ativo(
+        self, client, superuser, requisicao_autorizada
+    ):
+        client.force_login(superuser)
+        ativo = client.get(
+            URL_MOVIMENTACOES,
+            {'tipos': ['consumo', 'saida_excepcional']},
+        )
+        inativo = client.get(URL_MOVIMENTACOES)
+        assert ativo.context['so_saidas_ativo'] is True
+        assert inativo.context['so_saidas_ativo'] is False
+
+    def test_chip_so_saidas_reemitido_via_oob_no_swap_htmx(
+        self, client, superuser, requisicao_autorizada
+    ):
+        # Bug-regressão: o chip vive fora de #resultados-movimentacoes, então
+        # numa resposta HTMX precisa ser reemitido como out-of-band para o
+        # estado ativo e a URL de alternância refletirem o novo recorte.
+        client.force_login(superuser)
+        parcial = client.get(
+            URL_MOVIMENTACOES,
+            {'tipos': ['consumo', 'saida_excepcional']},
+            HTTP_HX_REQUEST='true',
+        ).content
+        assert b'id="chip-so-saidas"' in parcial
+        assert b'hx-swap-oob="true"' in parcial
+        assert b'aria-current="true"' in parcial
+
+    def test_chip_so_saidas_sem_oob_na_pagina_completa(
+        self, client, superuser, requisicao_autorizada
+    ):
+        # Render completo: chip único, sem atributo OOB (evita id duplicado).
+        client.force_login(superuser)
+        conteudo = client.get(URL_MOVIMENTACOES).content
+        assert conteudo.count(b'id="chip-so-saidas"') == 1
+        assert b'hx-swap-oob' not in conteudo
+
+    def test_flag_tem_filtro_ativo(self, client, superuser, requisicao_autorizada):
+        client.force_login(superuser)
+        com = client.get(URL_MOVIMENTACOES, {'material': 'x'})
+        sem = client.get(URL_MOVIMENTACOES)
+        assert com.context['tem_filtro_ativo'] is True
+        assert sem.context['tem_filtro_ativo'] is False
+
+    def test_empty_state_contextual_distingue_filtro_de_ledger_vazio(
+        self, client, superuser, requisicao_autorizada
+    ):
+        client.force_login(superuser)
+        # Filtro sem resultado → mensagem específica de filtro, e NÃO a de
+        # ledger vazio.
+        filtrado = client.get(URL_MOVIMENTACOES, {'material': 'inexistente'}).content
+        assert 'Nenhum resultado para este filtro'.encode() in filtrado
+        assert 'Nenhuma movimentação encontrada'.encode() not in filtrado
+
+    def test_chip_so_saidas_preserva_filtros_atuais(
+        self, client, chefe_almoxarifado, setor_obras
+    ):
+        # Bug-regressão: alternar o chip não pode descartar o recorte atual.
+        client.force_login(chefe_almoxarifado)
+        response = client.get(
+            URL_MOVIMENTACOES,
+            {'material': 'parafuso', 'ordem': 'asc', 'setor': setor_obras.pk},
+        )
+        url_chip = response.context['url_chip_so_saidas']
+        assert 'material=parafuso' in url_chip
+        assert 'ordem=asc' in url_chip
+        assert f'setor={setor_obras.pk}' in url_chip
+        assert 'tipos=consumo' in url_chip
+        assert 'tipos=saida_excepcional' in url_chip

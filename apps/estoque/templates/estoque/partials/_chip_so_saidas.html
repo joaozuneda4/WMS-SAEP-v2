@@ -1,0 +1,35 @@
+{% comment %}
+Chip "só saídas" — atalho de 1 clique para consumo + saída excepcional.
+Link (não submit) para garantir os dois tipos numa única requisição.
+Vive fora do alvo do swap (#resultados-movimentacoes); por isso é
+re-renderizado via out-of-band nas respostas HTMX (oob_chip=True) para
+refletir o estado ativo e alternar a URL on/off. Contexto: so_saidas_ativo,
+url_chip_so_saidas, url_chip_sem_so_saidas.
+{% endcomment %}
+<div id="chip-so-saidas" class="mb-4 flex flex-wrap items-center gap-2"{% if oob_chip %} hx-swap-oob="true"{% endif %}>
+  {% if so_saidas_ativo %}
+    <a
+      href="{{ url_chip_sem_so_saidas }}"
+      hx-get="{{ url_chip_sem_so_saidas }}"
+      hx-target="#resultados-movimentacoes"
+      hx-push-url="true"
+      aria-current="true"
+      class="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-blue-300 bg-blue-100 px-3 py-1.5 text-sm font-medium text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+    >
+      <span aria-hidden="true">↧</span>
+      Só saídas
+      <span class="text-blue-500" aria-hidden="true">✕</span>
+    </a>
+  {% else %}
+    <a
+      href="{{ url_chip_so_saidas }}"
+      hx-get="{{ url_chip_so_saidas }}"
+      hx-target="#resultados-movimentacoes"
+      hx-push-url="true"
+      class="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+    >
+      <span aria-hidden="true">↧</span>
+      Só saídas
+    </a>
+  {% endif %}
+</div>

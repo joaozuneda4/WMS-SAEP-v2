@@ -10,98 +10,133 @@
 <div class="max-w-screen-xl mx-auto">
 
   <p class="mb-6 max-w-3xl text-sm text-slate-600">
-    Histórico imutável das movimentações de estoque visíveis ao seu papel, da mais
-    recente para a mais antiga.
+    Histórico imutável das movimentações de estoque visíveis ao seu papel. Filtre por
+    material, tipo, período{% if mostrar_filtro_setor %} ou setor{% endif %}; o recorte
+    fica na URL e pode ser compartilhado.
   </p>
 
-  {% if page_obj.object_list %}
+  {% url 'estoque:historico_movimentacoes' as url_movimentacoes %}
 
-    {# Mobile: cards empilhados #}
-    <div class="space-y-3 sm:hidden">
-      {% for mov in page_obj.object_list %}
-        <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div class="flex items-start justify-between gap-3">
-            {% include 'estoque/partials/_badge_tipo_movimentacao.html' with tipo=mov.tipo rotulo=mov.get_tipo_display %}
-            <p class="shrink-0 text-xs text-slate-500">{{ mov.criado_em|date:"d/m/Y H:i" }}</p>
-          </div>
+  {% include 'estoque/partials/_chip_so_saidas.html' %}
 
-          <h2 class="mt-3 break-words text-sm font-semibold text-slate-900">
-            {{ mov.material }}
-          </h2>
+  {# Barra de filtros — GET + HTMX, troca só o bloco de resultados #}
+  <form
+    method="get"
+    action="{{ url_movimentacoes }}"
+    hx-get="{{ url_movimentacoes }}"
+    hx-target="#resultados-movimentacoes"
+    hx-push-url="true"
+    class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+  >
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <label for="filtro-material" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+          Material
+        </label>
+        <input
+          type="search"
+          id="filtro-material"
+          name="material"
+          value="{{ filtros.material }}"
+          placeholder="Código ou nome"
+          class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+      </div>
 
-          <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Δ Físico</dt>
-              <dd class="mt-0.5">{% include 'estoque/partials/_delta_movimentacao.html' with valor=mov.delta_fisico %}</dd>
-            </div>
-            <div>
-              <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Δ Reservado</dt>
-              <dd class="mt-0.5">{% include 'estoque/partials/_delta_movimentacao.html' with valor=mov.delta_reservado %}</dd>
-            </div>
-            <div>
-              <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Origem</dt>
-              <dd class="mt-0.5 text-slate-800">
-                {% if mov.requisicao_id %}{{ mov.requisicao.numero_publico|default:"—" }}{% else %}{{ mov.saida_excepcional.numero_publico|default:"—" }}{% endif %}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Ator</dt>
-              <dd class="mt-0.5 text-slate-800">{{ mov.ator.nome }}</dd>
-            </div>
-          </dl>
-        </article>
-      {% endfor %}
+      <div>
+        <label for="filtro-data-ini" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+          De
+        </label>
+        <input
+          type="date"
+          id="filtro-data-ini"
+          name="data_ini"
+          value="{{ filtros.data_ini }}"
+          class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+      </div>
+
+      <div>
+        <label for="filtro-data-fim" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+          Até
+        </label>
+        <input
+          type="date"
+          id="filtro-data-fim"
+          name="data_fim"
+          value="{{ filtros.data_fim }}"
+          class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+      </div>
+
+      {% if mostrar_filtro_setor %}
+        <div>
+          <label for="filtro-setor" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+            Setor
+          </label>
+          <select
+            id="filtro-setor"
+            name="setor"
+            class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <option value="">Todos os setores</option>
+            {% for setor_opcao in setores_disponiveis %}
+              <option value="{{ setor_opcao.pk }}" {% if filtros.setor == setor_opcao.pk %}selected{% endif %}>
+                {{ setor_opcao.nome }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endif %}
     </div>
 
-    {# Desktop: tabela densa #}
-    <div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:block">
-      <table class="min-w-full divide-y divide-slate-200">
-        <caption class="sr-only">Movimentações de estoque, ordenadas da mais recente para a mais antiga.</caption>
-        <thead class="bg-slate-50">
-          <tr>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Data/hora</th>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tipo</th>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Material</th>
-            <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Δ Físico</th>
-            <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Δ Reservado</th>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Origem</th>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Ator</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100 bg-white">
-          {% for mov in page_obj.object_list %}
-            <tr class="hover:bg-slate-50">
-              <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{{ mov.criado_em|date:"d/m/Y H:i" }}</td>
-              <td class="whitespace-nowrap px-4 py-3 text-sm">
-                {% include 'estoque/partials/_badge_tipo_movimentacao.html' with tipo=mov.tipo rotulo=mov.get_tipo_display %}
-              </td>
-              <td class="max-w-xs truncate px-4 py-3 text-sm font-medium text-slate-900">{{ mov.material }}</td>
-              <td class="whitespace-nowrap px-4 py-3 text-right text-sm">{% include 'estoque/partials/_delta_movimentacao.html' with valor=mov.delta_fisico %}</td>
-              <td class="whitespace-nowrap px-4 py-3 text-right text-sm">{% include 'estoque/partials/_delta_movimentacao.html' with valor=mov.delta_reservado %}</td>
-              <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">
-                {% if mov.requisicao_id %}{{ mov.requisicao.numero_publico|default:"—" }}{% else %}{{ mov.saida_excepcional.numero_publico|default:"—" }}{% endif %}
-              </td>
-              <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">{{ mov.ator.nome }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    {# Multi-seleção de tipo #}
+    <fieldset class="mt-4">
+      <legend class="text-xs font-medium uppercase tracking-wide text-slate-500">Tipo</legend>
+      <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+        {% for valor, rotulo in tipos_opcoes %}
+          <label class="inline-flex min-h-11 items-center gap-2 py-1 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              name="tipos"
+              value="{{ valor }}"
+              {% if valor in filtros.tipos %}checked{% endif %}
+              class="h-5 w-5 rounded border-slate-300 text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+            {{ rotulo }}
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    {# Preserva ordenação corrente ao submeter os filtros #}
+    {% if ordem == 'asc' %}<input type="hidden" name="ordem" value="asc">{% endif %}
+
+    <div class="mt-4 flex flex-wrap items-center gap-2">
+      <button
+        type="submit"
+        class="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      >
+        Aplicar filtros
+      </button>
+      {% if tem_filtro_ativo %}
+        <a
+          href="{{ url_movimentacoes }}"
+          hx-get="{{ url_movimentacoes }}"
+          hx-target="#resultados-movimentacoes"
+          hx-push-url="true"
+          class="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+        >
+          Limpar filtros
+        </a>
+      {% endif %}
     </div>
+  </form>
 
-    {% include 'estoque/partials/_paginacao.html' with page_obj=page_obj %}
-
-  {% else %}
-
-    {# Empty state — ledger visível vazio #}
-    <div class="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-      <svg class="mx-auto mb-4 h-10 w-10 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v4l5-5-5-5v4z"/>
-      </svg>
-      <h2 class="text-base font-medium text-slate-700">Nenhuma movimentação encontrada</h2>
-      <p class="mt-1 text-sm text-slate-500">Ainda não há movimentações de estoque visíveis para o seu papel.</p>
-    </div>
-
-  {% endif %}
+  {# Wrapper estável do swap HTMX: alvo persistente (id + aria-live único). O partial entrega só o conteúdo interno. #}
+  <div id="resultados-movimentacoes" aria-live="polite" aria-atomic="true">
+    {% include 'estoque/partials/_tabela_movimentacoes.html' %}
+  </div>
 
 </div>
 {% endblock %}

@@ -1,6 +1,6 @@
 {% comment %}
 Célula de delta assinado. Recebe `valor` (Decimal). Sinal +/− explícito
-(não depende só de cor); zero atenuado em text-slate-400. tabular-nums para
+(não depende só de cor); zero atenuado em text-slate-500 (AA: ~4.6:1). tabular-nums para
 alinhamento de colunas numéricas.
 {% endcomment %}
 {% if valor > 0 %}
@@ -8,5 +8,5 @@ alinhamento de colunas numéricas.
 {% elif valor < 0 %}
   <span class="tabular-nums font-medium text-slate-800">{{ valor }}</span>
 {% else %}
-  <span class="tabular-nums text-slate-400">0</span>
+  <span class="tabular-nums text-slate-500">0</span>
 {% endif %}
