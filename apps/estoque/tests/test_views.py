@@ -990,6 +990,7 @@ class TestHistoricoMovimentacoesResponsivo:
         # garantir visibilidade permanente no mobile sem abrir o disclosure.
         client.force_login(chefe_almoxarifado)
         response = client.get(URL_MOVIMENTACOES)
+        assert response.status_code == 200
         content = response.content.decode()
         pos_chip = content.find('id="chip-so-saidas"')
         pos_details = content.find('<details')
@@ -1004,5 +1005,6 @@ class TestHistoricoMovimentacoesResponsivo:
         # aria-atomic="true" para anunciar swaps HTMX a tecnologias assistivas.
         client.force_login(chefe_almoxarifado)
         response = client.get(URL_MOVIMENTACOES)
+        assert response.status_code == 200
         assert b'aria-live="polite"' in response.content
         assert b'aria-atomic="true"' in response.content
