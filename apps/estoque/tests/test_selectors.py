@@ -646,3 +646,218 @@ class TestMovimentacoesVisiveisPara:
         # asseverado diretamente sobre criado_em (não via pk).
         assert len(criados) >= 2
         assert criados == sorted(criados, reverse=True)
+
+
+class TestFiltrarMovimentacoes:
+    """Selector de filtro aplicado SOBRE o queryset já escopado por
+    movimentacoes_visiveis_para — nunca amplia o universo visível."""
+
+    @pytest.mark.django_db
+    def test_filtra_material_por_codigo_icontains(
+        self, superuser, requisicao_autorizada
+    ):
+        from apps.estoque.selectors import (
+            filtrar_movimentacoes,
+            movimentacoes_visiveis_para,
+        )
+
+        visiveis = movimentacoes_visiveis_para(superuser.pk)
+
+        com_match = filtrar_movimentacoes(
+            visiveis,
+            material='mat001',
+            tipos=[],
+            data_ini=None,
+            data_fim=None,
+            setor=None,
+        )
+        sem_match = filtrar_movimentacoes(
+            visiveis,
+            material='inexistente',
+            tipos=[],
+            data_ini=None,
+            data_fim=None,
+            setor=None,
+        )
+
+        assert com_match.exists()
+        assert not sem_match.exists()
+
+    @pytest.mark.django_db
+    def test_filtra_material_por_nome_icontains(self, superuser, requisicao_autorizada):
+        from apps.estoque.selectors import (
+            filtrar_movimentacoes,
+            movimentacoes_visiveis_para,
+        )
+
+        visiveis = movimentacoes_visiveis_para(superuser.pk)
+        # material_disponivel.nome == 'Parafuso M6'
+        resultado = filtrar_movimentacoes(
+            visiveis,
+            material='parafuso',
+            tipos=[],
+            data_ini=None,
+            data_fim=None,
+            setor=None,
+        )
+        assert resultado.exists()
+
+    @pytest.mark.django_db
+    def test_filtra_por_tipos_lista(
+        self, superuser, requisicao_autorizada, saida_registrada
+    ):
+        from apps.estoque.models import TipoMovimentacaoEstoque
+        from apps.estoque.selectors import (
+            filtrar_movimentacoes,
+            movimentacoes_visiveis_para,
+        )
+
+        visiveis = movimentacoes_visiveis_para(superuser.pk)
+        so_saida = filtrar_movimentacoes(
+            visiveis,
+            material=None,
+            tipos=[TipoMovimentacaoEstoque.SAIDA_EXCEPCIONAL],
+            data_ini=None,
+            data_fim=None,
+            setor=None,
+        )
+        assert so_saida.filter(saida_excepcional__isnull=False).exists()
+        assert not so_saida.filter(tipo=TipoMovimentacaoEstoque.RESERVA).exists()
+
+    @pytest.mark.django_db
+    def test_tipos_invalidos_sao_descartados(self, superuser, requisicao_autorizada):
+        from apps.estoque.selectors import (
+            filtrar_movimentacoes,
+            movimentacoes_visiveis_para,
+        )
+
+        visiveis = movimentacoes_visiveis_para(superuser.pk)
+        # Apenas valor inválido → tratado como lista vazia (no-op), não vazio.
+        resultado = filtrar_movimentacoes(
+            visiveis,
+            material=None,
+            tipos=['nao_existe'],
+            data_ini=None,
+            data_fim=None,
+            setor=None,
+        )
+        assert resultado.count() == visiveis.count()
+
+    @pytest.mark.django_db
+    def test_periodo_inclusivo_sobre_criado_em(self, superuser, requisicao_autorizada):
+        import datetime
+
+        from django.utils import timezone
+
+        from apps.estoque.selectors import (
+            filtrar_movimentacoes,
+            movimentacoes_visiveis_para,
+        )
+
+        visiveis = movimentacoes_visiveis_para(superuser.pk)
+        hoje = timezone.localdate()
+        ontem = hoje - datetime.timedelta(days=1)
+
+        # data_ini e data_fim == hoje: inclui (período inclusivo).
+        inclui = filtrar_movimentacoes(
+            visiveis,
+            material=None,
+            tipos=[],
+            data_ini=hoje,
+            data_fim=hoje,
+            setor=None,
+        )
+        assert inclui.exists()
+
+        # data_fim == ontem: exclui movimentações de hoje.
+        exclui = filtrar_movimentacoes(
+            visiveis,
+            material=None,
+            tipos=[],
+            data_ini=None,
+            data_fim=ontem,
+            setor=None,
+        )
+        assert not exclui.exists()
+
+    @pytest.mark.django_db
+    def test_filtra_por_setor(self, superuser, requisicao_autorizada, setor_obras):
+        from apps.estoque.selectors import (
+            filtrar_movimentacoes,
+            movimentacoes_visiveis_para,
+        )
+
+        visiveis = movimentacoes_visiveis_para(superuser.pk)
+        do_obras = filtrar_movimentacoes(
+            visiveis,
+            material=None,
+            tipos=[],
+            data_ini=None,
+            data_fim=None,
+            setor=setor_obras.pk,
+        )
+        assert do_obras.exists()
+        assert all(
+            m.requisicao.setor_beneficiario_id == setor_obras.pk for m in do_obras
+        )
+
+    @pytest.mark.django_db
+    def test_setor_nao_amplia_universo_visivel(
+        self, chefe_obras, requisicao_autorizada, movimentacao_outro_setor
+    ):
+        from apps.estoque.selectors import (
+            filtrar_movimentacoes,
+            movimentacoes_visiveis_para,
+        )
+
+        # Chefe de obras só enxerga obras. Filtrar pelo setor TI (de
+        # movimentacao_outro_setor) NÃO pode vazar dado do outro setor.
+        visiveis = movimentacoes_visiveis_para(chefe_obras.pk)
+        setor_ti_id = movimentacao_outro_setor.requisicao.setor_beneficiario_id
+
+        resultado = filtrar_movimentacoes(
+            visiveis,
+            material=None,
+            tipos=[],
+            data_ini=None,
+            data_fim=None,
+            setor=setor_ti_id,
+        )
+        assert not resultado.exists()
+
+    @pytest.mark.django_db
+    def test_filtros_combinados(self, superuser, requisicao_autorizada, setor_obras):
+        from apps.estoque.models import TipoMovimentacaoEstoque
+        from apps.estoque.selectors import (
+            filtrar_movimentacoes,
+            movimentacoes_visiveis_para,
+        )
+
+        visiveis = movimentacoes_visiveis_para(superuser.pk)
+        resultado = filtrar_movimentacoes(
+            visiveis,
+            material='MAT001',
+            tipos=[TipoMovimentacaoEstoque.RESERVA],
+            data_ini=None,
+            data_fim=None,
+            setor=setor_obras.pk,
+        )
+        assert resultado.exists()
+
+    @pytest.mark.django_db
+    def test_sem_filtros_e_noop(self, superuser, requisicao_autorizada):
+        from apps.estoque.selectors import (
+            filtrar_movimentacoes,
+            movimentacoes_visiveis_para,
+        )
+
+        visiveis = movimentacoes_visiveis_para(superuser.pk)
+        resultado = filtrar_movimentacoes(
+            visiveis,
+            material=None,
+            tipos=[],
+            data_ini=None,
+            data_fim=None,
+            setor=None,
+        )
+        assert resultado.count() == visiveis.count()

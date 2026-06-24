@@ -1,9 +1,10 @@
 import csv
 import io
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
-from django.db.models import Count, QuerySet
+from django.db.models import Count, Q, QuerySet
 
 from apps.accounts.models import SetorClassificacao, User, VinculoAuxiliar
 from apps.estoque.models import (
@@ -379,3 +380,47 @@ def movimentacoes_visiveis_para(ator_id: int) -> QuerySet[MovimentacaoEstoque]:
         return base_qs.filter(requisicao__setor_beneficiario_id__in=setores)
 
     return base_qs.none()
+
+
+def filtrar_movimentacoes(
+    qs: QuerySet[MovimentacaoEstoque],
+    *,
+    material: str | None,
+    tipos: list[str],
+    data_ini: date | None,
+    data_fim: date | None,
+    setor: int | None,
+) -> QuerySet[MovimentacaoEstoque]:
+    """Estreita o queryset de movimentações já escopado por RBAC.
+
+    Aplica filtros **sobre** o ``qs`` recebido (resultado de
+    ``movimentacoes_visiveis_para``), de forma que o filtro nunca amplia o
+    universo visível — é sempre um ``AND`` adicional. Em particular, ``setor``
+    aplicado sobre um qs já escopado a um setor não vaza dado de outro setor.
+
+    - ``material``: busca por ``codigo`` OU ``nome`` (icontains); vazio → no-op.
+    - ``tipos``: lista de ``TipoMovimentacaoEstoque``; valores fora do enum são
+      descartados; lista vazia → no-op.
+    - ``data_ini`` / ``data_fim``: período **inclusivo** sobre o dia de
+      ``criado_em``; ``None`` → no-op.
+    - ``setor``: ``requisicao__setor_beneficiario_id``; ``None`` → no-op.
+    """
+    if material:
+        qs = qs.filter(
+            Q(material__codigo__icontains=material)
+            | Q(material__nome__icontains=material)
+        )
+
+    tipos_validos = [t for t in tipos if t in TipoMovimentacaoEstoque.values]
+    if tipos_validos:
+        qs = qs.filter(tipo__in=tipos_validos)
+
+    if data_ini is not None:
+        qs = qs.filter(criado_em__date__gte=data_ini)
+    if data_fim is not None:
+        qs = qs.filter(criado_em__date__lte=data_fim)
+
+    if setor is not None:
+        qs = qs.filter(requisicao__setor_beneficiario_id=setor)
+
+    return qs
