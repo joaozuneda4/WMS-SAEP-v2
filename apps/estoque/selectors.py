@@ -6,7 +6,8 @@ from decimal import Decimal, InvalidOperation
 
 from django.db.models import Count, Q, QuerySet
 
-from apps.accounts.models import SetorClassificacao, User, VinculoAuxiliar
+from apps.accounts.models import User
+from apps.accounts.papeis import papel_efetivo
 from apps.estoque.models import (
     MovimentacaoEstoque,
     SaidaExcepcional,
@@ -309,39 +310,12 @@ def entregue_liquida_por_item(*, requisicao_id: int, item_id: int) -> Decimal:
 
 def _eh_almoxarifado(ator: User) -> bool:
     """True se o ator é chefe ou auxiliar ativo de um setor ALMOXARIFADO ativo."""
-    try:
-        setor = ator.setor_chefiado
-        if setor.ativo and setor.classificacao == SetorClassificacao.ALMOXARIFADO:
-            return True
-    except Exception:
-        pass
-    return VinculoAuxiliar.objects.filter(
-        usuario=ator,
-        ativo=True,
-        setor__ativo=True,
-        setor__classificacao=SetorClassificacao.ALMOXARIFADO,
-    ).exists()
+    return papel_efetivo(ator).eh_almoxarifado
 
 
 def _setores_visiveis_nao_almox(ator: User) -> list[int]:
-    """IDs de setores não-almox ativos onde o ator é chefe OU auxiliar ativo.
-
-    Cobre chefe e auxiliar (o helper análogo de requisicoes cobre só chefe).
-    """
-    setores: set[int] = set()
-    try:
-        setor = ator.setor_chefiado
-        if setor.ativo and setor.classificacao != SetorClassificacao.ALMOXARIFADO:
-            setores.add(setor.pk)
-    except Exception:
-        pass
-    vinculos = (
-        VinculoAuxiliar.objects.filter(usuario=ator, ativo=True, setor__ativo=True)
-        .exclude(setor__classificacao=SetorClassificacao.ALMOXARIFADO)
-        .values_list('setor_id', flat=True)
-    )
-    setores.update(vinculos)
-    return list(setores)
+    """IDs de setores não-almox ativos onde o ator é chefe OU auxiliar ativo."""
+    return list(papel_efetivo(ator).setores_em_escopo)
 
 
 def movimentacoes_visiveis_para(ator_id: int) -> QuerySet[MovimentacaoEstoque]:

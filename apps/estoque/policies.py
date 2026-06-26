@@ -1,25 +1,12 @@
 from django.core.exceptions import ObjectDoesNotExist
 
-from apps.accounts.models import SetorClassificacao, User, VinculoAuxiliar
+from apps.accounts.models import SetorClassificacao, User
+from apps.accounts.papeis import papel_efetivo
 from apps.core.exceptions import PermissaoNegada
 
 
 def _eh_almoxarifado(usuario: User) -> bool:
-    try:
-        setor_chefiado = usuario.setor_chefiado
-        if (
-            setor_chefiado.classificacao == SetorClassificacao.ALMOXARIFADO
-            and setor_chefiado.ativo
-        ):
-            return True
-    except (AttributeError, ObjectDoesNotExist):
-        pass
-    return VinculoAuxiliar.objects.filter(
-        usuario=usuario,
-        ativo=True,
-        setor__classificacao=SetorClassificacao.ALMOXARIFADO,
-        setor__ativo=True,
-    ).exists()
+    return papel_efetivo(usuario).eh_almoxarifado
 
 
 def pode_consultar_saidas_excepcionais(ator: User) -> bool:
@@ -153,17 +140,7 @@ def exigir_pode_gerir_catalogo(ator: 'User') -> None:
 
 
 def _eh_chefe_ou_aux_setor_nao_almox(ator: 'User') -> bool:
-    try:
-        setor = ator.setor_chefiado
-        if setor.ativo and setor.classificacao != SetorClassificacao.ALMOXARIFADO:
-            return True
-    except (AttributeError, ObjectDoesNotExist):
-        pass
-    return (
-        VinculoAuxiliar.objects.filter(usuario=ator, ativo=True, setor__ativo=True)
-        .exclude(setor__classificacao=SetorClassificacao.ALMOXARIFADO)
-        .exists()
-    )
+    return bool(papel_efetivo(ator).setores_em_escopo)
 
 
 def pode_consultar_movimentacoes_estoque(ator: 'User') -> bool:

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from django.db.models import QuerySet
 
-from apps.accounts.models import SetorClassificacao, VinculoAuxiliar
+from apps.accounts.papeis import papel_efetivo
 from apps.core.exceptions import PermissaoNegada
 from apps.requisicoes.models import EstadoRequisicao, Requisicao
 
@@ -26,61 +26,17 @@ if TYPE_CHECKING:
 
 def _eh_almoxarifado(usuario: User) -> bool:
     """True se o usuário tem papel ativo de chefe ou auxiliar de almoxarifado."""
-    # Chefe de almoxarifado
-    try:
-        setor_chefiado = usuario.setor_chefiado
-        if (
-            setor_chefiado.classificacao == SetorClassificacao.ALMOXARIFADO
-            and setor_chefiado.ativo
-        ):
-            return True
-    except Exception:
-        pass
-    # Auxiliar de almoxarifado
-    return VinculoAuxiliar.objects.filter(
-        usuario=usuario,
-        ativo=True,
-        setor__classificacao=SetorClassificacao.ALMOXARIFADO,
-        setor__ativo=True,
-    ).exists()
+    return papel_efetivo(usuario).eh_almoxarifado
 
 
 def _setores_escopo_setor(usuario: User) -> list[int]:
     """IDs de setores não-almox onde o usuário tem papel ativo (chefe ou auxiliar)."""
-    ids: set[int] = set()
-    # Chefe de setor
-    try:
-        setor_chefiado = usuario.setor_chefiado
-        if (
-            setor_chefiado.classificacao != SetorClassificacao.ALMOXARIFADO
-            and setor_chefiado.ativo
-        ):
-            ids.add(setor_chefiado.pk)
-    except Exception:
-        pass
-    # Auxiliares de setor não-almox
-    vinculos = (
-        VinculoAuxiliar.objects.filter(
-            usuario=usuario,
-            ativo=True,
-            setor__ativo=True,
-        )
-        .exclude(setor__classificacao=SetorClassificacao.ALMOXARIFADO)
-        .values_list('setor_id', flat=True)
-    )
-    ids.update(vinculos)
-    return list(ids)
+    return list(papel_efetivo(usuario).setores_em_escopo)
 
 
-def _setor_chefiado_ativo(usuario: User):
-    """Setor ativo chefiado pelo usuário, se existir."""
-    try:
-        setor = usuario.setor_chefiado
-    except Exception:
-        return None
-    if not setor.ativo:
-        return None
-    return setor
+def _setor_chefiado_ativo(usuario: User) -> int | None:
+    """PK do setor ativo chefiado pelo usuário, ou None se não chefia nenhum ativo."""
+    return papel_efetivo(usuario).setor_chefiado_ativo_id
 
 
 # ---------------------------------------------------------------------------
@@ -344,8 +300,8 @@ def pode_recusar_requisicao(ator: User, requisicao: Requisicao) -> bool:
         return False
     if ator.is_superuser:
         return True
-    setor = _setor_chefiado_ativo(ator)
-    return bool(setor is not None and requisicao.setor_beneficiario_id == setor.pk)
+    setor_id = _setor_chefiado_ativo(ator)
+    return bool(setor_id is not None and requisicao.setor_beneficiario_id == setor_id)
 
 
 def exigir_pode_recusar_requisicao(ator: User, requisicao: Requisicao) -> None:
@@ -474,10 +430,7 @@ def pode_estornar_requisicao(ator: 'User', requisicao: Requisicao) -> bool:
         return False
     if ator.is_superuser:
         return True
-    setor = _setor_chefiado_ativo(ator)
-    if setor is None:
-        return False
-    return setor.classificacao == SetorClassificacao.ALMOXARIFADO
+    return papel_efetivo(ator).eh_chefe_de_almoxarifado
 
 
 def exigir_pode_estornar_requisicao(ator: 'User', requisicao: Requisicao) -> None:
