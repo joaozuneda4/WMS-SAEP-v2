@@ -54,9 +54,13 @@ casos de uso compostos vazavam para as views.
 
 ### Service atômico vs. service composto; dono único da transação
 
-- **Service atômico** — executa **uma** transição de domínio.
+- **Service atômico** — executa **uma** operação de domínio (no sentido de
+  **Operação** do glossário: transição origem→destino + evento de timeline; é o
+  mesmo conceito de "operação" usado em ADR-0011 e em `transitions.py`).
 - **Service composto** — orquestra **vários** services atômicos e é o **dono da
-  `transaction.atomic`**. Não duplica lógica: apenas coordena e sequencia.
+  `transaction.atomic`**. É **orquestrador sem lógica de domínio própria**: não
+  duplica lógica, apenas coordena e ordena a execução, sem mutar estado
+  diretamente.
 
 A view **seleciona** qual caso de uso executar; nunca abre transação nem
 sequencia operações de domínio. Caso concreto: `nova_requisicao` abria
@@ -83,6 +87,11 @@ impacto em chamadores. Cada submódulo é uma capability relativamente
 independente; coordenação entre capabilities mora nos compostos, evitando
 imports cruzados entre submódulos.
 
+A mutação de domínio continua concentrada nos services **atômicos** — a regra
+de "único ponto de mutação" do `CONVENTIONS.md` permanece intacta. O service
+composto não é um segundo ponto de mutação independente: é só a fronteira
+transacional que coordena os atômicos.
+
 ### Forms/formsets entregam value objects tipados, não dicts
 
 Quando a transformação depende **apenas** dos dados submetidos, ela é
@@ -91,3 +100,10 @@ responsabilidade do form/formset, que entrega **value objects tipados** (estilo
 form **não** chama o service nem conhece seu comando. Transformações que exigem
 consulta ou regra de negócio ficam fora do form. Isso tira das views o shaping
 manual de payload de domínio.
+
+Limite com as exceções de domínio: a validação de **qualidade de input**
+continua no form (Django `ValidationError`, ADR-0011); **invariantes de
+domínio** permanecem no service, que lança as exceções de
+`apps.core.exceptions` (ex.: `DadosInvalidos`), traduzidas na view por
+`traduz_erro_dominio` (ADR-0011). O VO entregue pelo form carrega input válido —
+não encapsula erro de domínio em dict genérico.

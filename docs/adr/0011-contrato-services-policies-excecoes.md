@@ -107,6 +107,10 @@ def exigir_pode_autorizar_requisicao(ator: User, requisicao: Requisicao) -> None
         raise PermissaoNegada("Você não pode autorizar esta requisição.")
 ```
 
+> **Substituído pela Emenda 2026-06-26.** A assinatura passou a
+> `pode_x(papel: PapelEfetivo, recurso)`; o `ator: User` acima é histórico.
+> Ver "Policies recebem `PapelEfetivo`".
+
 Regras:
 - `exigir_pode_*` sempre delega para `pode_*` — uma única fonte de verdade.
 - Services chamam `exigir_pode_*` após carregar as entidades, antes de aplicar efeitos.
@@ -138,6 +142,10 @@ def verificar_transicao_valida(operacao: str, requisicao: Requisicao) -> Transic
         )
     return transicao
 ```
+
+> **Substituído pela Emenda 2026-06-26.** O campo `operacao` passou a ser o enum
+> `Operacao` (não `str`) e a tabela é keyed por `Operacao`. Ver "Transições
+> keyed por operação".
 
 Services chamam `verificar_transicao_valida` antes de aplicar qualquer efeito. A tabela não contém: policy, saldo, quantidade, lógica de parcial/total — isso fica nos services.
 
@@ -193,12 +201,16 @@ flags no detalhe da requisição). `transitions.py` volta a ser **keyed por
 `evento_timeline`. Consumidores únicos da mesma tabela:
 
 - `verificar_transicao_valida(operacao, requisicao)` (services);
-- `acoes_disponiveis(papel, requisicao) -> frozenset[Operacao]` (UI, services).
+- `acoes_disponiveis(papel, requisicao) -> frozenset[Operacao]` — selector em
+  `apps/requisicoes/selectors.py`, consumido por UI e services.
 
 Separação estrita de níveis: a tabela responde "operação permitida **neste
 estado**?"; a policy responde "**este papel** pode executá-la?". A tabela nunca
-codifica autorização. As flags de template viram projeções (`Operacao.X in
-acoes`). Metadados de execução de uma operação (ex.: `CancelamentoInfo` com
+codifica autorização. Ordem de composição em `acoes_disponiveis`: primeiro o
+estado (filtra Operações permitidas pela tabela de transições), depois o papel
+(filtra pelas policies sobre o `PapelEfetivo`). As flags de apresentação viram
+projeções (`Operacao.X in acoes`). Metadados de execução de uma operação (ex.:
+`CancelamentoInfo` com
 `requer_justificativa`/`libera_reserva`) viajam como **classificação de
 domínio**, sem strings de apresentação.
 
@@ -208,16 +220,35 @@ A tradução exceção de domínio → resposta HTTP estava replicada em ~50 blo
 `try/except` com drift (ex.: `PermissaoNegada` ora 403, ora mensagem; `JsonResponse`
 vs redirect). Passa a existir um **tradutor puro**:
 
-```text
-traduz_erro_dominio(exc) -> ErroPresentation(status, severity, default_message)
+```python
+@dataclass(frozen=True)
+class ErroPresentation:
+    status: int       # status HTTP quando o endpoint responde com código
+    severity: str     # nível de message: error/warning/success/info
+    default_message: str
+
+
+def traduz_erro_dominio(exc: ErroDominio) -> ErroPresentation: ...
 ```
 
-Independente de Django/HTMX/forms/templates. A **view** materializa a resposta
-concreta (`messages` + redirect / `JsonResponse` / `render` / `PermissionDenied`).
-O mapeamento canônico (`PermissaoNegada → 403`; `DadosInvalidos → error`;
-`EstadoInvalido`/`ConflitoDominio → warning`) é a fonte única **por padrão**.
-Divergências são permitidas só por requisito de contrato do endpoint (JSON,
-re-render de form HTMX), como **override explícito e documentado** — nunca
-acidente. Casos cuja resposta depende de estado intermediário da UI (re-render
-de formulário) **não usam** o tradutor. `severity` alinha com os níveis do
-contrato de mensagens (`error`/`warning`/`success`/`info`).
+`ErroPresentation` é dataclass **imutável**, independente de
+Django/HTMX/forms/templates (estes são superfície de framework, mantida em
+inglês por AGENTS.md). A **view** materializa a resposta concreta (`messages` +
+redirect / `JsonResponse` / `render` / `PermissionDenied`).
+
+Mapeamento canônico (fonte única **por padrão**):
+
+| Exceção | `severity` | `status` |
+|---|---|---|
+| `PermissaoNegada` | error | `403` |
+| `DadosInvalidos` | error | `422` |
+| `EstadoInvalido` | warning | `409` |
+| `ConflitoDominio` | warning | `409` |
+
+`severity` rege o fluxo padrão `message` + redirect (PRG, HTTP 302 — `status`
+não se aplica aí). `status` é usado quando o endpoint responde com código
+(`PermissionDenied`/403, endpoints `JsonResponse`). Divergências são permitidas
+só por requisito de contrato do endpoint (JSON, re-render de form HTMX), como
+**substituição explícita e documentada** — nunca acidente. Casos cuja resposta
+depende de estado intermediário da UI (re-render de formulário) **não usam** o
+tradutor.

@@ -231,13 +231,20 @@ modelada explicitamente, não absorvida por uma FK genérica.
 
 ## Emenda — 2026-06-26 (revisão de arquitetura)
 
-Quando TR-020/TR-021 foram implementadas, `requisicoes` passou a mutar o ledger
-**por fora** do boundary deste ADR: importa o helper privado
-`_registrar_movimentacao`, trava `SaldoEstoque.objects.select_for_update()` e
-monta as linhas à mão para devolução e estorno. Três das cinco operações vão
-pela interface pública do estoque; duas furam o encapsulamento. A invariante
-"saldo nunca muda sem movimentação" passa a depender de o **chamador** lembrar
-de fazer as duas coisas — a localidade que o ledger deveria garantir vaza.
+> **Natureza desta emenda.** Registra **decisões** de arquitetura (estado-alvo),
+> a serem implementadas pelas issues #48–#58; o código atual ainda **não** as
+> reflete. Os trechos que descrevem o **problema atual** estão marcados. Onde a
+> assinatura-alvo difere do código vigente, ambas aparecem.
+
+**Problema atual.** Não existem comandos públicos de devolução/estorno no app de
+estoque; por isso `requisicoes` muta o ledger **por fora** do boundary deste
+ADR: importa o helper privado `_registrar_movimentacao`
+(`apps/requisicoes/services.py:30`, chamado em `:1119` e `:1382`), trava
+`SaldoEstoque.objects.select_for_update()` e monta as linhas à mão para
+devolução e estorno. Três das cinco operações vão pela interface pública do
+estoque; duas furam o encapsulamento. A invariante "saldo nunca muda sem
+movimentação" passa a depender de o **chamador** lembrar de fazer as duas
+coisas — a localidade que o ledger deveria garantir vaza.
 
 ### Toda mutação de saldo atrás de comandos de negócio completos
 
@@ -269,6 +276,13 @@ leitura (promover a tipo de referência frozen se um terceiro parâmetro surgir)
 `requisicoes` resolve `item → material` **antes** de chamar. `estoque` deixa de
 importar `requisicoes.models`: a dependência fica unidirecional `requisicoes →
 estoque`.
+
+**Estado atual vs. alvo.** Hoje o selector é
+`entregue_liquida_por_item(*, requisicao_id, item_id)` e **ainda importa**
+`apps.requisicoes.models.ItemRequisicao` para resolver o material — a aresta
+reversa `estoque → requisicoes` **persiste**. O alvo acima
+(`(requisicao_id, material_id)`, sem import reverso) é **pendente** (issue #50);
+até a implementação, código e este contrato divergem conscientemente.
 
 ### Tipos do seam = contrato explícito + factory
 
