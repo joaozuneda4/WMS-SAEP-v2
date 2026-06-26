@@ -22,13 +22,25 @@ class PapelEfetivo:
 
 def papel_efetivo(usuario: User) -> PapelEfetivo:
     """Único boundary de IO para derivação de papel efetivo."""
+    if not usuario.is_active:
+        return PapelEfetivo(
+            eh_almoxarifado=False,
+            eh_chefe_de_almoxarifado=False,
+            setores_em_escopo=(),
+            setor_chefiado_ativo_id=None,
+            pode_ser_beneficiario=False,
+        )
     setor_chefiado = None
     try:
         setor_chefiado = usuario.setor_chefiado
     except (AttributeError, ObjectDoesNotExist):
         pass
 
-    setor_ativo = setor_chefiado if (setor_chefiado is not None and setor_chefiado.ativo) else None
+    setor_ativo = (
+        setor_chefiado
+        if (setor_chefiado is not None and setor_chefiado.ativo)
+        else None
+    )
     setor_chefiado_ativo_id = setor_ativo.pk if setor_ativo is not None else None
     eh_chefe_de_almoxarifado = (
         setor_ativo is not None
@@ -36,8 +48,9 @@ def papel_efetivo(usuario: User) -> PapelEfetivo:
     )
 
     vinculos = list(
-        VinculoAuxiliar.objects.filter(usuario=usuario, ativo=True, setor__ativo=True)
-        .values('setor_id', 'setor__classificacao')
+        VinculoAuxiliar.objects.filter(
+            usuario=usuario, ativo=True, setor__ativo=True
+        ).values('setor_id', 'setor__classificacao')
     )
 
     eh_auxiliar_de_almoxarifado = any(

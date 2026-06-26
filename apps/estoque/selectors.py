@@ -346,10 +346,14 @@ def movimentacoes_visiveis_para(ator_id: int) -> QuerySet[MovimentacaoEstoque]:
     if not ator.is_active:
         return base_qs.none()
 
-    if ator.is_superuser or _eh_almoxarifado(ator):
+    if ator.is_superuser:
         return base_qs
 
-    setores = _setores_visiveis_nao_almox(ator)
+    papel = papel_efetivo(ator)
+    if papel.eh_almoxarifado:
+        return base_qs
+
+    setores = list(papel.setores_em_escopo)
     if setores:
         return base_qs.filter(requisicao__setor_beneficiario_id__in=setores)
 

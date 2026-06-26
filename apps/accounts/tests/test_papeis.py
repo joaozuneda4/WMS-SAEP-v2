@@ -50,7 +50,9 @@ def test_papel_efetivo_e_imutavel():
 def setor_comum(db):
     from apps.accounts.models import Setor, SetorClassificacao
 
-    return Setor.objects.create(codigo='SC', nome='Setor Comum', classificacao=SetorClassificacao.COMUM)
+    return Setor.objects.create(
+        codigo='SC', nome='Setor Comum', classificacao=SetorClassificacao.COMUM
+    )
 
 
 @pytest.fixture
@@ -66,7 +68,9 @@ def setor_almox(db):
 def usuario(db, setor_comum):
     from apps.accounts.models import User
 
-    return User.objects.create_user(matricula='U99', nome='Usuário Teste', password='x', setor=setor_comum)
+    return User.objects.create_user(
+        matricula='U99', nome='Usuário Teste', password='x', setor=setor_comum
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -194,12 +198,36 @@ def test_setor_chefiado_inativo_auxiliar_almox(usuario, setor_almox, setor_comum
 
 
 @pytest.mark.django_db
+def test_usuario_inativo_nao_tem_papel_operacional(db, setor_almox):
+    """Usuário inativo com chefia ativa: todos os flags operacionais False, sem hit no banco."""
+    from apps.accounts.models import User
+    from apps.accounts.papeis import papel_efetivo
+
+    inativo = User.objects.create_user(
+        matricula='U96', nome='Inativo Chefe', password='x', is_active=False
+    )
+    setor_almox.chefe = inativo
+    setor_almox.ativo = True
+    setor_almox.save()
+
+    papel = papel_efetivo(inativo)
+
+    assert papel.eh_almoxarifado is False
+    assert papel.eh_chefe_de_almoxarifado is False
+    assert papel.setores_em_escopo == ()
+    assert papel.setor_chefiado_ativo_id is None
+    assert papel.pode_ser_beneficiario is False
+
+
+@pytest.mark.django_db
 def test_pode_ser_beneficiario_inativo(db):
     """Usuário inativo: pode_ser_beneficiario False mesmo com setor."""
     from apps.accounts.models import Setor, SetorClassificacao, User
     from apps.accounts.papeis import papel_efetivo
 
-    setor = Setor.objects.create(codigo='SX', nome='Setor X', classificacao=SetorClassificacao.COMUM)
+    setor = Setor.objects.create(
+        codigo='SX', nome='Setor X', classificacao=SetorClassificacao.COMUM
+    )
     inativo = User.objects.create_user(
         matricula='U98', nome='Inativo', password='x', setor=setor, is_active=False
     )
@@ -215,7 +243,9 @@ def test_pode_ser_beneficiario_sem_setor(db):
     from apps.accounts.models import User
     from apps.accounts.papeis import papel_efetivo
 
-    sem_setor = User.objects.create_user(matricula='U97', nome='Sem Setor', password='x')
+    sem_setor = User.objects.create_user(
+        matricula='U97', nome='Sem Setor', password='x'
+    )
 
     papel = papel_efetivo(sem_setor)
 

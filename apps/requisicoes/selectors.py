@@ -77,11 +77,11 @@ def requisicoes_visiveis_para(ator_id: int) -> QuerySet[Requisicao]:
     nao_rascunho = ~Q(estado=EstadoRequisicao.RASCUNHO)
     filtro = Q(criador_id=ator.pk) | (Q(beneficiario_id=ator.pk) & nao_rascunho)
 
-    setores_chefiados = _setores_chefiados_nao_almox(ator)
-    if setores_chefiados:
-        filtro |= Q(setor_beneficiario_id__in=setores_chefiados) & nao_rascunho
+    papel = papel_efetivo(ator)
+    if papel.setor_chefiado_ativo_id is not None and not papel.eh_chefe_de_almoxarifado:
+        filtro |= Q(setor_beneficiario_id=papel.setor_chefiado_ativo_id) & nao_rascunho
 
-    if _eh_almoxarifado(ator):
+    if papel.eh_almoxarifado:
         filtro |= nao_rascunho
 
     return base_qs.filter(filtro).distinct()

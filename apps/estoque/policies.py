@@ -151,9 +151,10 @@ def pode_consultar_movimentacoes_estoque(ator: 'User') -> bool:
     """
     if not ator.is_active:
         return False
-    if ator.is_superuser or _eh_almoxarifado(ator):
+    if ator.is_superuser:
         return True
-    return _eh_chefe_ou_aux_setor_nao_almox(ator)
+    papel = papel_efetivo(ator)
+    return papel.eh_almoxarifado or bool(papel.setores_em_escopo)
 
 
 def exigir_pode_consultar_movimentacoes_estoque(ator: 'User') -> None:
