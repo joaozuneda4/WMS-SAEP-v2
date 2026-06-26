@@ -22,13 +22,13 @@ Referência: ADR-0004 (emenda 2026-06-26), issue #48.
 | `cancelamento.py` | `_descartar_rascunho_impl`, `descartar_rascunho`, `cancelar_ou_descartar_requisicao`, `_cancelar_requisicao_impl`, `cancelar_requisicao` |
 | `atendimento.py` | `ItemAtendimentoEntrada`, `separar_para_retirada`, `registrar_atendimento`, `registrar_devolucao` |
 | `copia.py` | `copiar_requisicao` |
-| `composites.py` | (placeholder vazio — coordenação futura entre capabilities) |
 | `__init__.py` | reexporta toda a API pública listada abaixo |
 
-**Por que `cancelar_ou_descartar_requisicao` fica em `cancelamento.py` e não em `composites.py`:**
+**Por que `cancelar_ou_descartar_requisicao` fica em `cancelamento.py`:**
 Ela coordena apenas dentro do domínio de cancelamento (dispatch para `_descartar_rascunho_impl` ou
-`_cancelar_requisicao_impl`), sem depender de nenhuma outra capability. `composites.py` é reservado
-para coordenação genuinamente cross-capability.
+`_cancelar_requisicao_impl`), sem depender de nenhuma outra capability. `composites.py` não é
+criado neste refactor — arquivos nascem com conteúdo; será adicionado quando existir coordenação
+genuinamente cross-capability.
 
 **Por que `_validar_itens` fica em `ciclo_vida.py` e não em `atendimento.py`:**
 `_validar_itens` é helper de `criar_requisicao` e `editar_rascunho`. Atendimento usa
@@ -96,7 +96,6 @@ __all__ = [
 | Create | `apps/requisicoes/services/cancelamento.py` |
 | Create | `apps/requisicoes/services/atendimento.py` |
 | Create | `apps/requisicoes/services/copia.py` |
-| Create | `apps/requisicoes/services/composites.py` |
 
 Nenhum caller alterado.
 
