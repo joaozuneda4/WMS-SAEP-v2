@@ -1159,11 +1159,18 @@ def test_autorizar_requisicao_bloqueia_estoque_sem_efeitos_parciais(
     reservado_antes = saldo.saldo_reservado
     fisico_antes = saldo.saldo_fisico
 
-    with pytest.raises((DadosInvalidos, ConflitoDominio)):
+    exc_type = ConflitoDominio if modo == 'insuficiente' else DadosInvalidos
+    exc_code = {
+        'inativo': 'material_inativo',
+        'divergente': 'material_sem_saldo',
+        'insuficiente': 'saldo_insuficiente',
+    }[modo]
+    with pytest.raises(exc_type) as excinfo:
         autorizar_requisicao(
             ator_id=chefe_obras.pk,
             requisicao_id=requisicao_aguardando.pk,
         )
+    assert excinfo.value.code == exc_code
 
     requisicao_aguardando.refresh_from_db()
     item = requisicao_aguardando.itens.get()
