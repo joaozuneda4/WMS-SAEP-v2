@@ -36,14 +36,6 @@ def materiais_para_requisicao(q: str = '', limite: int = 20) -> QuerySet:
     return qs.order_by('nome')[:limite]
 
 
-def _setores_chefiados_nao_almox(ator: User) -> list[int]:
-    """IDs dos setores não-almoxarifado ativos chefiados pelo ator."""
-    papel = papel_efetivo(ator)
-    if papel.setor_chefiado_ativo_id is not None and not papel.eh_chefe_de_almoxarifado:
-        return [papel.setor_chefiado_ativo_id]
-    return []
-
-
 def _eh_almoxarifado(ator: User) -> bool:
     """True se o ator tem papel ativo de chefe ou auxiliar de almoxarifado."""
     return papel_efetivo(ator).eh_almoxarifado
