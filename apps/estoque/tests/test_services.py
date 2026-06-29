@@ -519,11 +519,16 @@ class TestConfirmarImportacaoScpiTimelineRequisicoes:
 
         # SCPI diz 8 (divergente de WMS=10), mas saldo_fisico=10 >= saldo_reservado=5
         csv_bytes = self._csv(m.codigo, 'Parafuso M8', '8.000')
+        from apps.requisicoes.services.ciclo_vida import (
+            registrar_timeline_divergencia_importacao,
+        )
+
         confirmar_importacao_scpi(
             ator_id=superuser.pk,
             conteudo_bytes=csv_bytes,
             arquivo_nome='nao_crit.csv',
             estoque_id=estoque_principal.pk,
+            _pos_importacao_hook=registrar_timeline_divergencia_importacao,
         )
 
         assert not TimelineRequisicao.objects.filter(
@@ -539,11 +544,16 @@ class TestConfirmarImportacaoScpiTimelineRequisicoes:
         from apps.requisicoes.models import EventoTimeline, TimelineRequisicao
 
         csv_bytes = self._csv(material_scpi_critico.codigo, 'Tinta Branca 18L', '1.000')
+        from apps.requisicoes.services.ciclo_vida import (
+            registrar_timeline_divergencia_importacao,
+        )
+
         confirmar_importacao_scpi(
             ator_id=superuser.pk,
             conteudo_bytes=csv_bytes,
             arquivo_nome='sem_req.csv',
             estoque_id=estoque_principal.pk,
+            _pos_importacao_hook=registrar_timeline_divergencia_importacao,
         )
 
         assert not TimelineRequisicao.objects.filter(
@@ -1001,7 +1011,13 @@ class TestRegistrarDevolucaoEstoque:
     """Contrato de registrar_devolucao_estoque."""
 
     def _setup_consumo(self, req, material, estoque, ator, quantidade):
-        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+        from django.db.models import F
+
+        from apps.estoque.models import (
+            MovimentacaoEstoque,
+            SaldoEstoque,
+            TipoMovimentacaoEstoque,
+        )
 
         MovimentacaoEstoque.objects.create(
             tipo=TipoMovimentacaoEstoque.CONSUMO,
@@ -1011,6 +1027,10 @@ class TestRegistrarDevolucaoEstoque:
             delta_reservado=-quantidade,
             requisicao=req,
             ator=ator,
+        )
+        SaldoEstoque.objects.filter(material=material, estoque=estoque).update(
+            saldo_fisico=F('saldo_fisico') - quantidade,
+            saldo_reservado=F('saldo_reservado') - quantidade,
         )
 
     @pytest.mark.django_db
@@ -1163,7 +1183,13 @@ class TestEstornarRequisicaoEstoque:
     """Contrato de estornar_requisicao_estoque."""
 
     def _setup_consumo(self, req, material, estoque, ator, quantidade):
-        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+        from django.db.models import F
+
+        from apps.estoque.models import (
+            MovimentacaoEstoque,
+            SaldoEstoque,
+            TipoMovimentacaoEstoque,
+        )
 
         MovimentacaoEstoque.objects.create(
             tipo=TipoMovimentacaoEstoque.CONSUMO,
@@ -1173,6 +1199,10 @@ class TestEstornarRequisicaoEstoque:
             delta_reservado=-quantidade,
             requisicao=req,
             ator=ator,
+        )
+        SaldoEstoque.objects.filter(material=material, estoque=estoque).update(
+            saldo_fisico=F('saldo_fisico') - quantidade,
+            saldo_reservado=F('saldo_reservado') - quantidade,
         )
 
     @pytest.mark.django_db

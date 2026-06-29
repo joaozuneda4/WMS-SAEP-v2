@@ -288,7 +288,7 @@ class TestEntregaLiquidaPorMaterial:
 
         req, item = requisicao_autorizada
         resultado = entregue_liquida_por_material(
-            requisicao_id=req.pk, material_id=material_disponivel.pk
+            requisicao_id=req.pk, material_id=item.material_id
         )
         assert resultado == Decimal('0')
 
@@ -318,7 +318,7 @@ class TestEntregaLiquidaPorMaterial:
         )
 
         resultado = entregue_liquida_por_material(
-            requisicao_id=req.pk, material_id=material_disponivel.pk
+            requisicao_id=req.pk, material_id=item.material_id
         )
         assert resultado == Decimal('4')
 
@@ -357,7 +357,7 @@ class TestEntregaLiquidaPorMaterial:
         )
 
         resultado = entregue_liquida_por_material(
-            requisicao_id=req.pk, material_id=material_disponivel.pk
+            requisicao_id=req.pk, material_id=item.material_id
         )
         assert resultado == Decimal('3')
 
