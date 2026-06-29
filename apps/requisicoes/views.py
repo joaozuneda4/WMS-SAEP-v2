@@ -24,7 +24,7 @@ from apps.core.exceptions import (
     PermissaoNegada,
 )
 from apps.estoque.models import SaldoEstoque
-from apps.estoque.selectors import entregue_liquida_por_item
+from apps.estoque.selectors import entregue_liquida_por_material
 from apps.requisicoes.forms import (
     ItemAtendimentoFormSet,
     ItemRequisicaoFormSet,
@@ -114,8 +114,8 @@ def _detalhe_context(
     )
     if pode_devolver:
         for item in itens:
-            item.entregue_liquida = entregue_liquida_por_item(
-                requisicao_id=requisicao.pk, item_id=item.pk
+            item.entregue_liquida = entregue_liquida_por_material(
+                requisicao_id=requisicao.pk, material_id=item.material_id
             )
             item.modal_devolver_id = f'devolver-{item.pk}'
     eventos = list(

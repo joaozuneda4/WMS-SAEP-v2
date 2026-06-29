@@ -2198,7 +2198,7 @@ def test_registrar_devolucao_caminho_feliz(
 ):
     """Devolução incrementa saldo físico, não muda estado, emite ledger e timeline."""
     from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
-    from apps.estoque.selectors import entregue_liquida_por_item
+    from apps.estoque.selectors import entregue_liquida_por_material
     from apps.requisicoes.services import registrar_devolucao
 
     req = requisicao_atendida_para_devolucao
@@ -2234,7 +2234,9 @@ def test_registrar_devolucao_caminho_feliz(
     evento = resultado.eventos.filter(evento=EventoTimeline.DEVOLUCAO_REGISTRADA).get()
     assert evento.ator == aux_almoxarifado
 
-    liquida = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
+    liquida = entregue_liquida_por_material(
+        requisicao_id=req.pk, material_id=item.material_id
+    )
     assert liquida == item.quantidade_entregue - quantidade_devolver
 
 
@@ -2497,7 +2499,7 @@ def test_estornar_requisicao_caminho_feliz(
 ):
     """Estorno reverte saldo físico, transita para ESTORNADA e emite ledger + timeline."""
     from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
-    from apps.estoque.selectors import entregue_liquida_por_item
+    from apps.estoque.selectors import entregue_liquida_por_material
     from apps.requisicoes.services import estornar_requisicao
 
     req = requisicao_atendida_para_estorno
@@ -2527,7 +2529,9 @@ def test_estornar_requisicao_caminho_feliz(
     evento = resultado.eventos.filter(evento=EventoTimeline.ESTORNO).get()
     assert evento.ator == chefe_almoxarifado
 
-    liquida = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
+    liquida = entregue_liquida_por_material(
+        requisicao_id=req.pk, material_id=item.material_id
+    )
     assert liquida == Decimal('0')
 
 
@@ -2536,7 +2540,7 @@ def test_estornar_requisicao_respeita_liquida_pos_devolucao(
     requisicao_atendida_para_estorno, chefe_almoxarifado, aux_almoxarifado
 ):
     """Estorno opera sobre entregue líquida, não entregue bruta (não double-count com devolução)."""
-    from apps.estoque.selectors import entregue_liquida_por_item
+    from apps.estoque.selectors import entregue_liquida_por_material
     from apps.requisicoes.services import estornar_requisicao, registrar_devolucao
 
     req = requisicao_atendida_para_estorno
@@ -2552,7 +2556,9 @@ def test_estornar_requisicao_respeita_liquida_pos_devolucao(
 
     saldo = item.material.saldos.get()
     saldo_fisico_antes_estorno = saldo.saldo_fisico
-    liquida_esperada = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
+    liquida_esperada = entregue_liquida_por_material(
+        requisicao_id=req.pk, material_id=item.material_id
+    )
 
     resultado = estornar_requisicao(
         ator_id=chefe_almoxarifado.pk,

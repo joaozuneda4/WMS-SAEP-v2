@@ -273,7 +273,7 @@ class TestDenominacaoScpiNoPreview:
         assert linhas[0].denominacao_scpi == ''
 
 
-class TestEntregaLiquidaPorItem:
+class TestEntregaLiquidaPorMaterial:
     @pytest.mark.django_db
     def test_sem_consumo_retorna_zero(
         self,
@@ -284,10 +284,12 @@ class TestEntregaLiquidaPorItem:
     ):
         from decimal import Decimal
 
-        from apps.estoque.selectors import entregue_liquida_por_item
+        from apps.estoque.selectors import entregue_liquida_por_material
 
         req, item = requisicao_autorizada
-        resultado = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
+        resultado = entregue_liquida_por_material(
+            requisicao_id=req.pk, material_id=material_disponivel.pk
+        )
         assert resultado == Decimal('0')
 
     @pytest.mark.django_db
@@ -301,7 +303,7 @@ class TestEntregaLiquidaPorItem:
         from decimal import Decimal
 
         from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
-        from apps.estoque.selectors import entregue_liquida_por_item
+        from apps.estoque.selectors import entregue_liquida_por_material
 
         req, item = requisicao_autorizada
 
@@ -315,7 +317,9 @@ class TestEntregaLiquidaPorItem:
             ator=chefe_almoxarifado,
         )
 
-        resultado = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
+        resultado = entregue_liquida_por_material(
+            requisicao_id=req.pk, material_id=material_disponivel.pk
+        )
         assert resultado == Decimal('4')
 
     @pytest.mark.django_db
@@ -329,7 +333,7 @@ class TestEntregaLiquidaPorItem:
         from decimal import Decimal
 
         from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
-        from apps.estoque.selectors import entregue_liquida_por_item
+        from apps.estoque.selectors import entregue_liquida_por_material
 
         req, item = requisicao_autorizada
 
@@ -352,37 +356,10 @@ class TestEntregaLiquidaPorItem:
             ator=chefe_almoxarifado,
         )
 
-        resultado = entregue_liquida_por_item(requisicao_id=req.pk, item_id=item.pk)
-        assert resultado == Decimal('3')
-
-    @pytest.mark.django_db
-    def test_item_nao_pertence_requisicao_lanca_dados_invalidos(
-        self,
-        chefe_almoxarifado,
-        estoque_principal,
-        material_disponivel,
-        requisicao_autorizada,
-        setor_obras,
-        solicitante,
-    ):
-        from apps.core.exceptions import DadosInvalidos
-        from apps.estoque.selectors import entregue_liquida_por_item
-        from apps.requisicoes.models import EstadoRequisicao, Requisicao
-
-        req, item = requisicao_autorizada
-
-        outra_req = Requisicao.objects.create(
-            estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
-            numero_publico='REQ-2025-999',
-            criador=solicitante,
-            beneficiario=solicitante,
-            setor_beneficiario=setor_obras,
+        resultado = entregue_liquida_por_material(
+            requisicao_id=req.pk, material_id=material_disponivel.pk
         )
-
-        with pytest.raises(DadosInvalidos) as exc_info:
-            entregue_liquida_por_item(requisicao_id=outra_req.pk, item_id=item.pk)
-
-        assert exc_info.value.code == 'item_nao_pertence_requisicao'
+        assert resultado == Decimal('3')
 
 
 class TestListarHistoricoImportacoesScpi:
