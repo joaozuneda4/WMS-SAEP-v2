@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -797,10 +798,23 @@ def registrar_devolucao_estoque(
             code='quantidade_invalida',
         )
 
+    consumo_entry = (
+        MovimentacaoEstoque.objects.filter(
+            requisicao_id=requisicao_id,
+            material_id=material_id,
+            tipo=TipoMovimentacaoEstoque.CONSUMO,
+        )
+        .values('estoque_id')
+        .first()
+    )
+    saldo_filter: dict = {'material_id': material_id}
+    if consumo_entry:
+        saldo_filter['estoque_id'] = consumo_entry['estoque_id']
+
     saldos = list(
         SaldoEstoque.objects.select_for_update()
         .select_related('material')
-        .filter(material_id=material_id)
+        .filter(**saldo_filter)
         .order_by('estoque_id', 'material_id', 'id')
     )
 
@@ -869,10 +883,30 @@ def estornar_requisicao_estoque(
         ) from None
 
     material_ids = list(dict.fromkeys(material_ids))
+
+    consumo_estoques: dict[int, int] = dict(
+        MovimentacaoEstoque.objects.filter(
+            requisicao_id=requisicao_id,
+            material_id__in=material_ids,
+            tipo=TipoMovimentacaoEstoque.CONSUMO,
+        )
+        .values_list('material_id', 'estoque_id')
+        .distinct()
+    )
+    if consumo_estoques:
+        saldo_q = Q()
+        for mid in material_ids:
+            if mid in consumo_estoques:
+                saldo_q |= Q(material_id=mid, estoque_id=consumo_estoques[mid])
+            else:
+                saldo_q |= Q(material_id=mid)
+    else:
+        saldo_q = Q(material_id__in=material_ids)
+
     saldos = list(
         SaldoEstoque.objects.select_for_update()
         .select_related('material')
-        .filter(material_id__in=material_ids)
+        .filter(saldo_q)
         .order_by('estoque_id', 'material_id', 'id')
     )
 
@@ -894,6 +928,11 @@ def estornar_requisicao_estoque(
                     f"'{saldos_do_material[0].material.nome}'."
                 ),
                 code='saldo_ambiguo',
+            )
+        if not saldos_do_material[0].material.ativo:
+            raise ConflitoDominio(
+                f"Material '{saldos_do_material[0].material.nome}' está inativo.",
+                code='material_inativo',
             )
 
     from apps.estoque.selectors import entregue_liquida_por_material
