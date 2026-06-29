@@ -1,0 +1,36 @@
+rules:
+  - id: python-security-baseline
+    patterns:
+      - pattern-either:
+          - pattern: eval(...)
+          - pattern: exec(...)
+    message: Eval/exec detectado — risco segurança
+    languages: [python]
+    severity: ERROR
+
+  - id: sql-injection-risk
+    patterns:
+      - pattern-either:
+          - pattern: cursor.execute($X + ...)
+          - pattern: cursor.execute($X % ...)
+          - pattern: cursor.execute(f"...")
+          - pattern: query = $X + ...
+          - pattern: query = $X % ...
+    message: Possível SQL injection — usar parameterização
+    languages: [python]
+    severity: WARNING
+
+  - id: hardcoded-secrets
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: password = "..."
+              - pattern: PASSWORD = "..."
+              - pattern: secret = "..."
+              - pattern: SECRET = "..."
+              - pattern: SECRET_KEY = "..."
+              - pattern: api_key = "..."
+              - pattern: API_KEY = "..."
+    message: Secret hardcoded — mover para env/config
+    languages: [python]
+    severity: ERROR

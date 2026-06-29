@@ -474,7 +474,7 @@ class TestConfirmarImportacaoScpiView:
     """Contrato HTTP de confirmar_importacao_scpi_view (POST) + sucesso_importacao_scpi_view (GET)."""
 
     URL_PREVIEW = '/estoque/importacao-scpi/pre-visualizacao/'
-    URL = '/estoque/importacao-scpi/confirmar/'
+    URL = '/requisicoes/importacao-scpi/confirmar/'
 
     def _csv(self, cadpro: str = '000.888.001', quantidade: str = '10.000') -> bytes:
         return f'CADPRO;DENOMINACAO;QUAN3\n{cadpro};Teste;{quantidade}\n'.encode(

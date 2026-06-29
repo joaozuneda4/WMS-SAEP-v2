@@ -13,15 +13,14 @@ from typing import TypedDict
 from django.db import transaction
 
 from apps.accounts.models import User
-from apps.core.exceptions import ConflitoDominio, DadosInvalidos, EstadoInvalido
-from apps.estoque.models import SaldoEstoque, TipoMovimentacaoEstoque
-from apps.estoque.selectors import entregue_liquida_por_item
+from apps.core.exceptions import DadosInvalidos, EstadoInvalido
+from apps.estoque.models import SaldoEstoque
 from apps.estoque.services import (
-    ItemAtendimentoSaldo,
     OrigemMovimentacaoEstoque,
-    _registrar_movimentacao,
     consumir_e_liberar_reservas_para_atendimento,
+    registrar_devolucao_estoque,
 )
+from apps.estoque.types import ItemAtendimentoSaldo
 from apps.notificacoes.models import TipoNotificacao
 from apps.notificacoes.services import criar_notificacoes_para
 from apps.requisicoes.models import (
@@ -428,50 +427,10 @@ def registrar_devolucao(
             code='item_nao_pertence_requisicao',
         ) from None
 
-    entregue_liquida = entregue_liquida_por_item(
-        requisicao_id=requisicao_id, item_id=item_id
-    )
-    if quantidade > entregue_liquida:
-        raise ConflitoDominio(
-            'A quantidade devolvida excede a entregue líquida do item.',
-            code='quantidade_excede_entregue_liquida',
-        )
-
-    saldos = list(
-        SaldoEstoque.objects.select_for_update()
-        .select_related('material')
-        .filter(material_id=item.material_id)
-        .order_by('estoque_id', 'id')
-    )
-    if not saldos:
-        raise ConflitoDominio(
-            'Saldo de estoque não encontrado para o material.',
-            code='saldo_nao_encontrado',
-        )
-    if len(saldos) > 1:
-        raise ConflitoDominio(
-            f"Mais de um saldo encontrado para o material '{saldos[0].material.nome}'.",
-            code='saldo_ambiguo',
-        )
-    saldo = saldos[0]
-
-    if not saldo.material.ativo:
-        raise ConflitoDominio(
-            f"Material '{saldo.material.nome}' está inativo.",
-            code='material_inativo',
-        )
-
-    saldo.saldo_fisico = saldo.saldo_fisico + quantidade
-    saldo.save(update_fields=['saldo_fisico'])
-
-    origem = OrigemMovimentacaoEstoque.de_requisicao(requisicao)
-    _registrar_movimentacao(
-        tipo=TipoMovimentacaoEstoque.DEVOLUCAO,
+    registrar_devolucao_estoque(
+        requisicao_id=requisicao_id,
         material_id=item.material_id,
-        estoque_id=saldo.estoque_id,
-        delta_fisico=quantidade,
-        delta_reservado=Decimal('0'),
-        origem=origem,
+        quantidade=quantidade,
         ator_id=ator_id,
     )
 

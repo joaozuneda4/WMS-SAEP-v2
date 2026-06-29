@@ -38,6 +38,11 @@ urlpatterns = [
         name='registrar_devolucao',
     ),
     path('itens/nova-linha/', views.nova_linha_item, name='nova_linha_item'),
+    path(
+        'importacao-scpi/confirmar/',
+        views.confirmar_importacao_scpi_view,
+        name='confirmar_importacao_scpi',
+    ),
     path('materiais/busca/', views.buscar_materiais, name='buscar_materiais'),
     path(
         'beneficiarios/busca/', views.buscar_beneficiarios, name='buscar_beneficiarios'

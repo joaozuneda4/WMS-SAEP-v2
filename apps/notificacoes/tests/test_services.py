@@ -275,6 +275,9 @@ def test_divergencia_estoque_gera_notificacoes_para_requisicao_afetada(
 ):
     """Importação SCPI com divergência crítica → notifica criador e beneficiário."""
     from apps.estoque.services import confirmar_importacao_scpi
+    from apps.requisicoes.services.ciclo_vida import (
+        registrar_timeline_divergencia_importacao,
+    )
 
     material = _criar_material_critico(estoque_principal)
     req = _criar_requisicao_autorizada(
@@ -292,6 +295,7 @@ def test_divergencia_estoque_gera_notificacoes_para_requisicao_afetada(
         conteudo_bytes=csv_bytes,
         arquivo_nome='import_critico.csv',
         estoque_id=estoque_principal.pk,
+        _pos_importacao_hook=registrar_timeline_divergencia_importacao,
     )
 
     notifs = Notificacao.objects.filter(
@@ -309,6 +313,9 @@ def test_divergencia_estoque_deduplica_criador_igual_beneficiario(
 ):
     """Divergência com criador == beneficiário → 1 notificação."""
     from apps.estoque.services import confirmar_importacao_scpi
+    from apps.requisicoes.services.ciclo_vida import (
+        registrar_timeline_divergencia_importacao,
+    )
 
     material = _criar_material_critico(estoque_principal)
     # força codigo único para não colidir com outro teste
@@ -329,6 +336,7 @@ def test_divergencia_estoque_deduplica_criador_igual_beneficiario(
         conteudo_bytes=csv_bytes,
         arquivo_nome='import_dedup.csv',
         estoque_id=estoque_principal.pk,
+        _pos_importacao_hook=registrar_timeline_divergencia_importacao,
     )
 
     notifs = Notificacao.objects.filter(

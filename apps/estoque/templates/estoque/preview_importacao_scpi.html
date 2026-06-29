@@ -419,7 +419,7 @@
       {% if pode_confirmar %}
         <form
           method="post"
-          action="{% url 'estoque:confirmar_importacao_scpi' %}"
+          action="{% url 'requisicoes:confirmar_importacao_scpi' %}"
           x-data="{ confirmando: false }"
           @submit="confirmando = true"
           class="inline"

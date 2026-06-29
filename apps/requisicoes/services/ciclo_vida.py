@@ -11,15 +11,15 @@ from decimal import Decimal, InvalidOperation
 from typing import TypedDict
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.core.exceptions import ConflitoDominio, DadosInvalidos, EstadoInvalido
-from apps.estoque.models import Material, SaldoEstoque, TipoMovimentacaoEstoque
-from apps.estoque.selectors import entregue_liquida_por_item
+from apps.core.exceptions import DadosInvalidos, EstadoInvalido
+from apps.estoque.models import Material, SaldoEstoque
 from apps.estoque.services import (
     OrigemMovimentacaoEstoque,
-    _registrar_movimentacao,
+    estornar_requisicao_estoque,
     reservar_saldos_para_autorizacao,
 )
 from apps.notificacoes.models import TipoNotificacao
@@ -626,57 +626,12 @@ def estornar_requisicao(
             code='justificativa_vazia',
         )
 
-    itens = list(requisicao.itens.select_related('material').all())
-    itens_com_liquida: list[tuple] = []
-    for item in itens:
-        liquida = entregue_liquida_por_item(
-            requisicao_id=requisicao_id, item_id=item.pk
-        )
-        if liquida > 0:
-            itens_com_liquida.append((item, liquida))
-
-    if not itens_com_liquida:
-        raise ConflitoDominio(
-            'Não há entregue líquida a estornar nesta requisição.',
-            code='sem_liquida_para_estorno',
-        )
-
-    material_ids = [item.material_id for item, _ in itens_com_liquida]
-    saldos_qs = list(
-        SaldoEstoque.objects.select_for_update()
-        .select_related('material')
-        .filter(material_id__in=material_ids)
-        .order_by('estoque_id', 'material_id', 'id')
+    itens = list(requisicao.itens.values_list('material_id', flat=True))
+    estornar_requisicao_estoque(
+        requisicao_id=requisicao_id,
+        material_ids=list(itens),
+        ator_id=ator_id,
     )
-    saldos_por_material: dict[int, SaldoEstoque] = {}
-    for saldo_row in saldos_qs:
-        if saldo_row.material_id in saldos_por_material:
-            raise ConflitoDominio(
-                f"Mais de um saldo encontrado para o material '{saldo_row.material.nome}'.",
-                code='saldo_ambiguo',
-            )
-        saldos_por_material[saldo_row.material_id] = saldo_row
-
-    origem = OrigemMovimentacaoEstoque.de_requisicao(requisicao)
-
-    for item, liquida in itens_com_liquida:
-        saldo_item: SaldoEstoque | None = saldos_por_material.get(item.material_id)
-        if saldo_item is None:
-            raise ConflitoDominio(
-                f"Saldo de estoque não encontrado para o material '{item.material.nome}'.",
-                code='saldo_nao_encontrado',
-            )
-        saldo_item.saldo_fisico = saldo_item.saldo_fisico + liquida
-        saldo_item.save(update_fields=['saldo_fisico'])
-        _registrar_movimentacao(
-            tipo=TipoMovimentacaoEstoque.ESTORNO_REQUISICAO,
-            material_id=item.material_id,
-            estoque_id=saldo_item.estoque_id,
-            delta_fisico=liquida,
-            delta_reservado=Decimal('0'),
-            origem=origem,
-            ator_id=ator_id,
-        )
 
     requisicao.estado = EstadoRequisicao.ESTORNADA
     requisicao.save(update_fields=['estado', 'atualizado_em'])
@@ -690,3 +645,97 @@ def estornar_requisicao(
     )
 
     return requisicao
+
+
+def registrar_timeline_divergencia_importacao(
+    *, linhas, estoque, importacao, ator
+) -> None:
+    """Cria TimelineRequisicao para requisições autorizadas afetadas por divergência crítica.
+
+    Chamado como hook por confirmar_importacao_scpi dentro da mesma transação.
+    Divergência crítica = saldo_fisico < saldo_reservado após importação SCPI.
+    """
+    existing_material_ids = [
+        linha.material_id for linha in linhas if linha.material_id is not None
+    ]
+    if not existing_material_ids:
+        return
+
+    saldos_criticos = {
+        s.material_id: s
+        for s in SaldoEstoque.objects.filter(
+            material_id__in=existing_material_ids,
+            estoque=estoque,
+            saldo_fisico__lt=F('saldo_reservado'),
+        )
+        .select_for_update()
+        .order_by('estoque_id', 'material_id', 'id')
+        .only('material_id', 'saldo_fisico', 'saldo_reservado')
+    }
+    if not saldos_criticos:
+        return
+
+    material_info = {
+        linha.material_id: {
+            'codigo': linha.cadpro,
+            'nome': linha.nome_material or linha.denominacao_scpi,
+        }
+        for linha in linhas
+        if linha.material_id in saldos_criticos
+    }
+
+    itens = list(
+        ItemRequisicao.objects.filter(
+            material_id__in=saldos_criticos.keys(),
+            requisicao__estado=EstadoRequisicao.AUTORIZADA,
+            quantidade_autorizada__gt=0,
+        ).select_related('requisicao')
+    )
+    if not itens:
+        return
+
+    req_materiais: dict[int, list[dict]] = {}
+    for item in itens:
+        req_id = item.requisicao_id
+        if req_id not in req_materiais:
+            req_materiais[req_id] = []
+        req_materiais[req_id].append(material_info[item.material_id])
+
+    req_por_id = {item.requisicao_id: item.requisicao for item in itens}
+
+    TimelineRequisicao.objects.bulk_create(
+        [
+            TimelineRequisicao(
+                requisicao=req_por_id[req_id],
+                evento=EventoTimeline.ATUALIZACAO_ESTOQUE_RELEVANTE,
+                ator=ator,
+                estado_resultante=None,
+                metadata={
+                    'importacao_id': importacao.pk,
+                    'materiais': mats,
+                },
+            )
+            for req_id, mats in req_materiais.items()
+        ]
+    )
+
+    _snapshot = [
+        (req.pk, req.criador_id, req.beneficiario_id) for req in req_por_id.values()
+    ]
+
+    def _notificar_divergencia():
+        for req_pk, criador_id, beneficiario_id in _snapshot:
+            try:
+                criar_notificacoes_para(
+                    criador_id=criador_id,
+                    beneficiario_id=beneficiario_id,
+                    requisicao_id=req_pk,
+                    tipo=TipoNotificacao.DIVERGENCIA_ESTOQUE,
+                )
+            except Exception:
+                logger.exception(
+                    'Falha ao criar notificação de divergência pós-commit: requisicao_id=%s',
+                    req_pk,
+                )
+
+    transaction.on_commit(_notificar_divergencia)

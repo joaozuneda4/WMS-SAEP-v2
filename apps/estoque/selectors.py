@@ -273,34 +273,24 @@ TIPOS_MOVIMENTO_ENTREGA_LIQUIDA = [
 ]
 
 
-def entregue_liquida_por_item(*, requisicao_id: int, item_id: int) -> Decimal:
-    """Calcula a quantidade entregue líquida de um item de requisição via ledger.
+def entregue_liquida_por_material(*, requisicao_id: int, material_id: int) -> Decimal:
+    """Calcula a quantidade entregue líquida de um material de requisição via ledger.
 
     Entregue líquida = −Σ delta_fisico para movimentações do tipo consumo,
-    devolucao ou estorno_requisicao vinculadas à requisição e ao material do item.
+    devolucao ou estorno_requisicao vinculadas à requisição e ao material.
 
     Leitura pura: não faz select_for_update. Quem muta deve travar a requisição
-    antes de chamar (ADR-0005). Levanta DadosInvalidos se item_id não pertence
-    à requisicao_id.
+    antes de chamar (ADR-0005) — o lock da Requisição garante que nenhuma nova
+    movimentação será inserida para esse (requisicao_id, material_id) durante a
+    operação.
     """
     from django.db.models import Sum
 
     from apps.estoque.models import MovimentacaoEstoque
-    from apps.requisicoes.models import ItemRequisicao
-
-    try:
-        item = ItemRequisicao.objects.get(pk=item_id, requisicao_id=requisicao_id)
-    except ItemRequisicao.DoesNotExist as exc:
-        from apps.core.exceptions import DadosInvalidos
-
-        raise DadosInvalidos(
-            'Item não pertence à requisição informada.',
-            code='item_nao_pertence_requisicao',
-        ) from exc
 
     resultado = MovimentacaoEstoque.objects.filter(
         requisicao_id=requisicao_id,
-        material_id=item.material_id,
+        material_id=material_id,
         tipo__in=TIPOS_MOVIMENTO_ENTREGA_LIQUIDA,
     ).aggregate(total=Sum('delta_fisico'))
 

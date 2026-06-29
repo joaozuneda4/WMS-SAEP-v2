@@ -6,14 +6,19 @@ Toda mutação de ``SaldoEstoque`` passa por este módulo.
 import logging
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import TypedDict
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.core.exceptions import ConflitoDominio, DadosInvalidos
+from apps.estoque.types import (
+    ItemAtendimentoSaldo,
+    ItemLiberacaoReserva,
+    ItemReservaEstoque,
+)
 from apps.estoque.models import (
     Estoque,
     ItemSaidaExcepcional,
@@ -100,11 +105,6 @@ def _registrar_movimentacao(
         saida_excepcional_id=origem.saida_excepcional_id,
         ator_id=ator_id,
     )
-
-
-class ItemReservaEstoque(TypedDict):
-    material_id: int
-    quantidade_solicitada: Decimal
 
 
 @transaction.atomic
@@ -209,11 +209,6 @@ def reservar_saldos_para_autorizacao(
         )
 
 
-class ItemLiberacaoReserva(TypedDict):
-    material_id: int
-    quantidade_reservada: Decimal
-
-
 @transaction.atomic
 def liberar_reservas_para_cancelamento(
     *,
@@ -308,12 +303,6 @@ def liberar_reservas_para_cancelamento(
             origem=origem,
             ator_id=ator_id,
         )
-
-
-class ItemAtendimentoSaldo(TypedDict):
-    material_id: int
-    quantidade_autorizada: Decimal
-    quantidade_entregue: Decimal
 
 
 @transaction.atomic
@@ -635,115 +624,13 @@ def estornar_saida_excepcional(
     return saida
 
 
-def _registrar_atualizacao_estoque_relevante(*, linhas, estoque, importacao, ator):
-    """Registra evento de timeline em requisições autorizadas afetadas por divergência crítica."""
-    from django.db.models import F
-
-    from apps.estoque.models import SaldoEstoque
-    from apps.requisicoes.models import (
-        EstadoRequisicao,
-        EventoTimeline,
-        ItemRequisicao,
-        TimelineRequisicao,
-    )
-
-    # Todos os materiais existentes no import (excluir 'novo' — ainda sem material_id)
-    existing_material_ids = [
-        linha.material_id for linha in linhas if linha.material_id is not None
-    ]
-    if not existing_material_ids:
-        return
-
-    saldos_criticos = {
-        s.material_id: s
-        for s in SaldoEstoque.objects.filter(
-            material_id__in=existing_material_ids,
-            estoque=estoque,
-            saldo_fisico__lt=F('saldo_reservado'),
-        )
-        .select_for_update()
-        .only('material_id', 'saldo_fisico', 'saldo_reservado')
-    }
-    if not saldos_criticos:
-        return
-
-    material_info = {
-        linha.material_id: {
-            'codigo': linha.cadpro,
-            'nome': linha.nome_material or linha.denominacao_scpi,
-        }
-        for linha in linhas
-        if linha.material_id in saldos_criticos
-    }
-
-    itens = list(
-        ItemRequisicao.objects.filter(
-            material_id__in=saldos_criticos.keys(),
-            requisicao__estado=EstadoRequisicao.AUTORIZADA,
-            quantidade_autorizada__gt=0,
-        ).select_related('requisicao')
-    )
-    if not itens:
-        return
-
-    req_materiais: dict[int, list[dict]] = {}
-    for item in itens:
-        req_id = item.requisicao_id
-        if req_id not in req_materiais:
-            req_materiais[req_id] = []
-        req_materiais[req_id].append(material_info[item.material_id])
-
-    req_por_id = {item.requisicao_id: item.requisicao for item in itens}
-
-    TimelineRequisicao.objects.bulk_create(
-        [
-            TimelineRequisicao(
-                requisicao=req_por_id[req_id],
-                evento=EventoTimeline.ATUALIZACAO_ESTOQUE_RELEVANTE,
-                ator=ator,
-                estado_resultante=None,
-                metadata={
-                    'importacao_id': importacao.pk,
-                    'materiais': mats,
-                },
-            )
-            for req_id, mats in req_materiais.items()
-        ]
-    )
-
-    from django.db import transaction as _tx
-
-    from apps.notificacoes.models import TipoNotificacao as _Tipo
-    from apps.notificacoes.services import criar_notificacoes_para as _criar
-
-    _snapshot = [
-        (req.pk, req.criador_id, req.beneficiario_id) for req in req_por_id.values()
-    ]
-
-    def _notificar_divergencia():
-        for req_pk, criador_id, beneficiario_id in _snapshot:
-            try:
-                _criar(
-                    criador_id=criador_id,
-                    beneficiario_id=beneficiario_id,
-                    requisicao_id=req_pk,
-                    tipo=_Tipo.DIVERGENCIA_ESTOQUE,
-                )
-            except Exception:
-                logger.exception(
-                    'Falha ao criar notificação de divergência pós-commit: requisicao_id=%s',
-                    req_pk,
-                )
-
-    _tx.on_commit(_notificar_divergencia)
-
-
 def confirmar_importacao_scpi(
     *,
     ator_id: int,
     conteudo_bytes: bytes,
     arquivo_nome: str,
     estoque_id: int,
+    _pos_importacao_hook=None,
 ):
     """Confirma importação SCPI: bloqueia reimportação, cria novos materiais e grava metadados."""
     import hashlib
@@ -830,12 +717,13 @@ def confirmar_importacao_scpi(
                 code='reimportacao_bloqueada',
             )
 
-        _registrar_atualizacao_estoque_relevante(
-            linhas=linhas,
-            estoque=estoque,
-            importacao=importacao,
-            ator=ator,
-        )
+        if _pos_importacao_hook is not None:
+            _pos_importacao_hook(
+                linhas=linhas,
+                estoque=estoque,
+                importacao=importacao,
+                ator=ator,
+            )
 
     return importacao
 
@@ -876,3 +764,204 @@ def desativar_material(*, ator_id: int, material_id: int) -> None:
 
     material.ativo = False
     material.save(update_fields=['ativo'])
+
+
+@transaction.atomic
+def registrar_devolucao_estoque(
+    *,
+    requisicao_id: int,
+    material_id: int,
+    quantidade: Decimal,
+    ator_id: int,
+) -> None:
+    """Registra devolução de material ao estoque por uma requisição.
+
+    Incrementa saldo_fisico e emite ledger DEVOLUCAO. O caller deve garantir
+    que a Requisicao está travada antes de chamar (ADR-0005), o que impede
+    inserções concorrentes de MovimentacaoEstoque para o mesmo par
+    (requisicao_id, material_id).
+    """
+    try:
+        User.objects.only('pk').get(pk=ator_id)
+    except User.DoesNotExist:
+        raise DadosInvalidos(
+            'Ator não encontrado.', code='ator_nao_encontrado'
+        ) from None
+
+    if not quantidade.is_finite():
+        raise DadosInvalidos(
+            'Quantidade deve ser um número finito.', code='quantidade_invalida'
+        )
+    if quantidade <= 0:
+        raise DadosInvalidos(
+            'Quantidade deve ser maior que zero.',
+            code='quantidade_invalida',
+        )
+
+    consumo_entry = (
+        MovimentacaoEstoque.objects.filter(
+            requisicao_id=requisicao_id,
+            material_id=material_id,
+            tipo=TipoMovimentacaoEstoque.CONSUMO,
+        )
+        .values('estoque_id')
+        .first()
+    )
+    saldo_filter: dict = {'material_id': material_id}
+    if consumo_entry:
+        saldo_filter['estoque_id'] = consumo_entry['estoque_id']
+
+    saldos = list(
+        SaldoEstoque.objects.select_for_update()
+        .select_related('material')
+        .filter(**saldo_filter)
+        .order_by('estoque_id', 'material_id', 'id')
+    )
+
+    if not saldos:
+        raise ConflitoDominio(
+            'Saldo de estoque não encontrado para o material.',
+            code='saldo_nao_encontrado',
+        )
+    if len(saldos) > 1:
+        raise ConflitoDominio(
+            f"Mais de um saldo encontrado para o material '{saldos[0].material.nome}'.",
+            code='saldo_ambiguo',
+        )
+
+    saldo = saldos[0]
+    if not saldo.material.ativo:
+        raise ConflitoDominio(
+            f"Material '{saldo.material.nome}' está inativo.",
+            code='material_inativo',
+        )
+
+    from apps.estoque.selectors import entregue_liquida_por_material
+
+    liquida = entregue_liquida_por_material(
+        requisicao_id=requisicao_id, material_id=material_id
+    )
+
+    if quantidade > liquida:
+        raise ConflitoDominio(
+            'Quantidade de devolução excede o entregue líquido da requisição.',
+            code='quantidade_excede_entregue_liquida',
+        )
+
+    saldo.saldo_fisico = saldo.saldo_fisico + quantidade
+    saldo.save(update_fields=['saldo_fisico'])
+
+    _registrar_movimentacao(
+        tipo=TipoMovimentacaoEstoque.DEVOLUCAO,
+        material_id=material_id,
+        estoque_id=saldo.estoque_id,
+        delta_fisico=quantidade,
+        delta_reservado=Decimal('0'),
+        origem=OrigemMovimentacaoEstoque(requisicao_id=requisicao_id),
+        ator_id=ator_id,
+    )
+
+
+@transaction.atomic
+def estornar_requisicao_estoque(
+    *,
+    requisicao_id: int,
+    material_ids: list[int],
+    ator_id: int,
+) -> None:
+    """Estorna toda a entrega líquida de uma requisição, restaurando saldo_fisico.
+
+    Para cada material_id: incrementa saldo_fisico pelo entregue líquido e emite
+    ledger ESTORNO_REQUISICAO. Locks adquiridos em ordem determinística
+    (estoque_id, material_id, id) — ADR-0005.
+    """
+    try:
+        User.objects.only('pk').get(pk=ator_id)
+    except User.DoesNotExist:
+        raise DadosInvalidos(
+            'Ator não encontrado.', code='ator_nao_encontrado'
+        ) from None
+
+    material_ids = list(dict.fromkeys(material_ids))
+
+    consumo_estoques: dict[int, int] = dict(
+        MovimentacaoEstoque.objects.filter(
+            requisicao_id=requisicao_id,
+            material_id__in=material_ids,
+            tipo=TipoMovimentacaoEstoque.CONSUMO,
+        )
+        .values_list('material_id', 'estoque_id')
+        .distinct()
+    )
+    if consumo_estoques:
+        saldo_q = Q()
+        for mid in material_ids:
+            if mid in consumo_estoques:
+                saldo_q |= Q(material_id=mid, estoque_id=consumo_estoques[mid])
+            else:
+                saldo_q |= Q(material_id=mid)
+    else:
+        saldo_q = Q(material_id__in=material_ids)
+
+    saldos = list(
+        SaldoEstoque.objects.select_for_update()
+        .select_related('material')
+        .filter(saldo_q)
+        .order_by('estoque_id', 'material_id', 'id')
+    )
+
+    saldos_por_material: dict[int, list[SaldoEstoque]] = {}
+    for saldo in saldos:
+        saldos_por_material.setdefault(saldo.material_id, []).append(saldo)
+
+    for material_id in material_ids:
+        saldos_do_material = saldos_por_material.get(material_id)
+        if not saldos_do_material:
+            raise ConflitoDominio(
+                'Saldo de estoque não encontrado para um dos materiais.',
+                code='saldo_nao_encontrado',
+            )
+        if len(saldos_do_material) > 1:
+            raise ConflitoDominio(
+                (
+                    f'Mais de um saldo encontrado para o material '
+                    f"'{saldos_do_material[0].material.nome}'."
+                ),
+                code='saldo_ambiguo',
+            )
+        if not saldos_do_material[0].material.ativo:
+            raise ConflitoDominio(
+                f"Material '{saldos_do_material[0].material.nome}' está inativo.",
+                code='material_inativo',
+            )
+
+    from apps.estoque.selectors import entregue_liquida_por_material
+
+    itens_com_liquida: list[tuple[int, Decimal]] = []
+    for material_id in material_ids:
+        liquida = entregue_liquida_por_material(
+            requisicao_id=requisicao_id, material_id=material_id
+        )
+        if liquida > Decimal('0'):
+            itens_com_liquida.append((material_id, liquida))
+
+    if not itens_com_liquida:
+        raise ConflitoDominio(
+            'Nenhum item com entregue líquida para estornar.',
+            code='sem_liquida_para_estorno',
+        )
+
+    origem = OrigemMovimentacaoEstoque(requisicao_id=requisicao_id)
+    for material_id, liquida in itens_com_liquida:
+        saldo = saldos_por_material[material_id][0]
+        saldo.saldo_fisico = saldo.saldo_fisico + liquida
+        saldo.save(update_fields=['saldo_fisico'])
+        _registrar_movimentacao(
+            tipo=TipoMovimentacaoEstoque.ESTORNO_REQUISICAO,
+            material_id=material_id,
+            estoque_id=saldo.estoque_id,
+            delta_fisico=liquida,
+            delta_reservado=Decimal('0'),
+            origem=origem,
+            ator_id=ator_id,
+        )

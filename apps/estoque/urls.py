@@ -46,11 +46,6 @@ urlpatterns = [
         name='preview_importacao_scpi',
     ),
     path(
-        'importacao-scpi/confirmar/',
-        views.confirmar_importacao_scpi_view,
-        name='confirmar_importacao_scpi',
-    ),
-    path(
         'importacao-scpi/confirmada/<int:pk>/',
         views.sucesso_importacao_scpi_view,
         name='sucesso_importacao_scpi',
