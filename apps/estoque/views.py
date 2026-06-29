@@ -460,7 +460,6 @@ def preview_importacao_scpi_view(request):
     )
 
 
-
 @login_required
 @require_http_methods(['GET'])
 def sucesso_importacao_scpi_view(request, pk: int):
