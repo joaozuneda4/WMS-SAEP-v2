@@ -9,7 +9,13 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
-from apps.core.exceptions import ConflitoDominio, DadosInvalidos, PermissaoNegada
+from apps.core.exceptions import (
+    ConflitoDominio,
+    DadosInvalidos,
+    ErroDominio,
+    PermissaoNegada,
+)
+from apps.core.presentation import traduz_erro_dominio
 from apps.estoque.models import Estoque, SaldoEstoque, TipoMovimentacaoEstoque
 from apps.estoque.policies import (
     exigir_pode_consultar_movimentacoes_estoque,
@@ -383,8 +389,9 @@ def estornar_saida_excepcional_view(request, pk: int):
             saida_id=pk,
             justificativa=justificativa,
         )
-    except (DadosInvalidos, ConflitoDominio) as exc:
-        messages.error(request, str(exc))
+    except ErroDominio as exc:
+        pres = traduz_erro_dominio(exc)
+        getattr(messages, pres.severity)(request, str(exc))
         return redirect('estoque:detalhe_saida_excepcional', pk=pk)
 
     messages.success(request, f'Saída {saida.numero_publico} estornada com sucesso.')

@@ -208,6 +208,25 @@ def test_nova_requisicao_post_chefe_cria_para_outro_setor_falha(
     assert not Requisicao.objects.filter(criador=chefe_obras).exists()
 
 
+# drift 1: PermissaoNegada no escopo de criação deve virar 403, não messages+redirect
+@pytest.mark.django_db
+def test_nova_requisicao_permissao_negada_retorna_403(client, solicitante):
+    """Drift 1 (canônico): PermissaoNegada em resolver_escopo_criacao_requisicao deve
+    retornar 403, nunca messages.error + redirect."""
+    from unittest.mock import patch
+
+    from apps.core.exceptions import PermissaoNegada
+
+    _login(client, solicitante)
+    with patch(
+        'apps.requisicoes.views.resolver_escopo_criacao_requisicao',
+        side_effect=PermissaoNegada('Sem papel de solicitante'),
+    ):
+        resp = client.get(reverse('requisicoes:nova_requisicao'))
+
+    assert resp.status_code == 403
+
+
 # ---------------------------------------------------------------------------
 # GET /requisicoes/<pk>/editar/
 # ---------------------------------------------------------------------------
@@ -320,6 +339,37 @@ def test_editar_rascunho_post_material_inativo_retorna_200_com_erro(
     assert resp.status_code == 200
 
 
+# drift 2: EstadoInvalido no editar_rascunho deve ser warning, não error
+@pytest.mark.django_db
+def test_editar_rascunho_estado_invalido_mostra_warning(
+    client, solicitante, rascunho_solicitante, material_disponivel
+):
+    """Drift 2 (canônico): EstadoInvalido em editar_rascunho deve gerar
+    messages.warning, nunca messages.error."""
+    from unittest.mock import patch
+
+    from django.contrib.messages import constants as message_constants
+
+    from apps.core.exceptions import EstadoInvalido
+
+    _login(client, solicitante)
+    url = reverse('requisicoes:editar_rascunho', kwargs={'pk': rascunho_solicitante.pk})
+    with patch(
+        'apps.requisicoes.views.editar_rascunho',
+        side_effect=EstadoInvalido('Rascunho não pode ser editado neste estado'),
+    ):
+        resp = client.post(
+            url,
+            _formset_post(material_disponivel.pk),
+            follow=True,
+        )
+
+    assert resp.status_code == 200
+    msgs = list(resp.context['messages'])
+    assert any(m.level == message_constants.WARNING for m in msgs)
+    assert not any(m.level == message_constants.ERROR for m in msgs)
+
+
 # ---------------------------------------------------------------------------
 # GET /requisicoes/materiais/busca/
 # ---------------------------------------------------------------------------
@@ -353,6 +403,27 @@ def test_buscar_materiais_shape(client, solicitante, material_disponivel):
         assert 'nome' in r
         assert 'codigo' in r
         assert 'saldo_disponivel' in r
+
+
+# opt-out: PermissaoNegada → JsonResponse 403 (não messages+redirect)
+@pytest.mark.django_db
+def test_buscar_materiais_permissao_negada_retorna_json_403(client, solicitante):
+    """Opt-out de buscar_materiais: PermissaoNegada deve retornar JsonResponse 403,
+    não redirect com messages (ADR-0011 emenda 2026-06-26)."""
+    from unittest.mock import patch
+
+    from apps.core.exceptions import PermissaoNegada
+
+    _login(client, solicitante)
+    with patch(
+        'apps.requisicoes.views.resolver_escopo_criacao_requisicao',
+        side_effect=PermissaoNegada(),
+    ):
+        resp = client.get(reverse('requisicoes:buscar_materiais'))
+
+    assert resp.status_code == 403
+    assert resp['Content-Type'].startswith('application/json')
+    assert 'error' in resp.json()
 
 
 # ---------------------------------------------------------------------------
@@ -2314,6 +2385,75 @@ def test_copiar_requisicao_view_post_estado_invalido_exibe_erro(
     assert any('atendidas ou recusadas' in m for m in mensagens)
 
 
+# drift 3a: PermissaoNegada em copiar deve virar 403, não messages.error
+@pytest.mark.django_db
+def test_copiar_requisicao_view_permissao_negada_retorna_403(
+    client, solicitante, material_disponivel
+):
+    """Drift 3a (canônico): PermissaoNegada em copiar_requisicao deve retornar 403."""
+    from unittest.mock import patch
+
+    from apps.core.exceptions import PermissaoNegada
+
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('1'),
+            }
+        ],
+    )
+    _login(client, solicitante)
+    with patch(
+        'apps.requisicoes.views.copiar_requisicao',
+        side_effect=PermissaoNegada('Sem permissão'),
+    ):
+        resp = client.post(reverse('requisicoes:copiar', kwargs={'pk': req.pk}))
+
+    assert resp.status_code == 403
+
+
+# drift 3b: EstadoInvalido em copiar deve ser warning, não error
+@pytest.mark.django_db
+def test_copiar_requisicao_view_estado_invalido_mostra_warning(
+    client, solicitante, material_disponivel
+):
+    """Drift 3b (canônico): EstadoInvalido em copiar_requisicao deve gerar
+    messages.warning, nunca messages.error."""
+    from unittest.mock import patch
+
+    from django.contrib.messages import constants as message_constants
+
+    from apps.core.exceptions import EstadoInvalido
+
+    req = criar_requisicao(
+        ator_id=solicitante.pk,
+        beneficiario_id=solicitante.pk,
+        itens=[
+            {
+                'material_id': material_disponivel.pk,
+                'quantidade_solicitada': Decimal('1'),
+            }
+        ],
+    )
+    _login(client, solicitante)
+    with patch(
+        'apps.requisicoes.views.copiar_requisicao',
+        side_effect=EstadoInvalido('Estado inválido para cópia'),
+    ):
+        resp = client.post(
+            reverse('requisicoes:copiar', kwargs={'pk': req.pk}),
+            follow=True,
+        )
+
+    assert resp.status_code == 200
+    msgs = list(resp.context['messages'])
+    assert any(m.level == message_constants.WARNING for m in msgs)
+    assert not any(m.level == message_constants.ERROR for m in msgs)
+
+
 # ---------------------------------------------------------------------------
 # registrar_devolucao_view (TR-020)
 # ---------------------------------------------------------------------------
@@ -2404,6 +2544,37 @@ def test_registrar_devolucao_view_quantidade_excede_avisa(
     assert any('excede' in m for m in mensagens)
 
 
+# drift 4: DadosInvalidos em devolucao deve ser error, não warning
+@pytest.mark.django_db
+def test_registrar_devolucao_view_dados_invalidos_mostra_error(
+    client, aux_almoxarifado, req_atendida_view
+):
+    """Drift 4 (canônico): DadosInvalidos em registrar_devolucao deve gerar
+    messages.error, nunca messages.warning."""
+    from unittest.mock import patch
+
+    from django.contrib.messages import constants as message_constants
+
+    from apps.core.exceptions import DadosInvalidos
+
+    _login(client, aux_almoxarifado)
+    item = req_atendida_view.itens.first()
+    url = reverse(
+        'requisicoes:registrar_devolucao',
+        kwargs={'pk': req_atendida_view.pk, 'item_pk': item.pk},
+    )
+    with patch(
+        'apps.requisicoes.views.registrar_devolucao',
+        side_effect=DadosInvalidos('Quantidade inválida'),
+    ):
+        resp = client.post(url, {'quantidade': '1.000'}, follow=True)
+
+    assert resp.status_code == 200
+    msgs = list(resp.context['messages'])
+    assert any(m.level == message_constants.ERROR for m in msgs)
+    assert not any(m.level == message_constants.WARNING for m in msgs)
+
+
 @pytest.mark.django_db
 def test_registrar_devolucao_view_sem_permissao_403(
     client, solicitante, req_atendida_view
@@ -2482,6 +2653,33 @@ def test_estornar_view_sem_justificativa_exibe_warning(
     assert any('justificativa' in m.lower() or 'obrigat' in m.lower() for m in msgs)
     req_atendida_view.refresh_from_db()
     assert req_atendida_view.estado == EstadoRequisicao.ATENDIDA
+
+
+# drift 5: DadosInvalidos em estorno deve ser error, não warning
+@pytest.mark.django_db
+def test_estornar_view_dados_invalidos_mostra_error(
+    client, chefe_almoxarifado, req_atendida_view
+):
+    """Drift 5 (canônico): DadosInvalidos em estornar_requisicao deve gerar
+    messages.error, nunca messages.warning."""
+    from unittest.mock import patch
+
+    from django.contrib.messages import constants as message_constants
+
+    from apps.core.exceptions import DadosInvalidos
+
+    _login(client, chefe_almoxarifado)
+    url = reverse('requisicoes:estornar', kwargs={'pk': req_atendida_view.pk})
+    with patch(
+        'apps.requisicoes.views.estornar_requisicao',
+        side_effect=DadosInvalidos('Justificativa insuficiente'),
+    ):
+        resp = client.post(url, {'justificativa': 'motivo'}, follow=True)
+
+    assert resp.status_code == 200
+    msgs = list(resp.context['messages'])
+    assert any(m.level == message_constants.ERROR for m in msgs)
+    assert not any(m.level == message_constants.WARNING for m in msgs)
 
 
 @pytest.mark.django_db

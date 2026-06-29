@@ -20,9 +20,11 @@ from django.views.decorators.http import require_GET, require_http_methods
 from apps.core.exceptions import (
     ConflitoDominio,
     DadosInvalidos,
+    ErroDominio,
     EstadoInvalido,
     PermissaoNegada,
 )
+from apps.core.presentation import traduz_erro_dominio
 from apps.estoque.models import SaldoEstoque
 from apps.estoque.selectors import entregue_liquida_por_material
 from apps.requisicoes.forms import (
@@ -313,8 +315,7 @@ def nova_requisicao(request):
     try:
         escopo = resolver_escopo_criacao_requisicao(request.user)
     except PermissaoNegada as exc:
-        messages.error(request, str(exc))
-        return redirect('core:home')
+        raise PermissionDenied(str(exc))
 
     if request.method == 'POST':
         form = RequisicaoCriacaoForm(
@@ -431,8 +432,11 @@ def editar_rascunho_view(request, pk: int):
                     itens=itens,
                     observacao_geral=form.cleaned_data.get('observacao_geral', ''),
                 )
-            except (PermissaoNegada, DadosInvalidos, EstadoInvalido) as exc:
-                messages.error(request, str(exc))
+            except PermissaoNegada as exc:
+                raise PermissionDenied(str(exc))
+            except ErroDominio as exc:
+                pres = traduz_erro_dominio(exc)
+                getattr(messages, pres.severity)(request, str(exc))
             else:
                 messages.success(request, 'Rascunho salvo com sucesso.')
                 return redirect('requisicoes:detalhe', pk=requisicao.pk)
@@ -1075,8 +1079,11 @@ def copiar_requisicao_view(request, pk: int):
             ator_id=request.user.pk,
             requisicao_id=requisicao.pk,
         )
-    except (PermissaoNegada, DadosInvalidos, EstadoInvalido) as exc:
-        messages.error(request, str(exc))
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+    except ErroDominio as exc:
+        pres = traduz_erro_dominio(exc)
+        getattr(messages, pres.severity)(request, str(exc))
         return _render_detalhe(request, requisicao)
 
     messages.success(
@@ -1105,8 +1112,9 @@ def registrar_devolucao_view(request, pk: int, item_pk: int) -> HttpResponse:
         )
     except PermissaoNegada as exc:
         raise PermissionDenied(str(exc))
-    except (ConflitoDominio, DadosInvalidos, EstadoInvalido) as exc:
-        messages.warning(request, str(exc))
+    except ErroDominio as exc:
+        pres = traduz_erro_dominio(exc)
+        getattr(messages, pres.severity)(request, str(exc))
     else:
         messages.success(request, 'Devolução registrada com sucesso.')
     return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))
@@ -1129,8 +1137,9 @@ def estornar_requisicao_view(request, pk: int) -> HttpResponse:
         )
     except PermissaoNegada as exc:
         raise PermissionDenied(str(exc))
-    except (ConflitoDominio, DadosInvalidos, EstadoInvalido) as exc:
-        messages.warning(request, str(exc))
+    except ErroDominio as exc:
+        pres = traduz_erro_dominio(exc)
+        getattr(messages, pres.severity)(request, str(exc))
     else:
         messages.success(request, 'Requisição estornada com sucesso.')
     return _htmx_redirect(request, reverse('requisicoes:detalhe', args=[pk]))

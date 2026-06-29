@@ -224,6 +224,39 @@ class TestNovaSaidaExcepcionalView:
         assert 'login' in response['Location']
         assert SaidaExcepcional.objects.count() == 0
 
+    def test_dados_invalidos_do_service_rerendera_form_nao_redirect(
+        self, client, chefe_almoxarifado, estoque_principal, material_disponivel
+    ):
+        """Opt-out: DadosInvalidos do service deve re-renderizar form com erro_geral,
+        não redirect com messages (estado UI intermediário)."""
+        from unittest.mock import patch
+
+        from apps.core.exceptions import DadosInvalidos
+
+        client.force_login(chefe_almoxarifado)
+        with patch(
+            'apps.estoque.views.registrar_saida_excepcional',
+            side_effect=DadosInvalidos('material inativo'),
+        ):
+            response = client.post(
+                URL_NOVA,
+                data={
+                    'motivo': 'avaria',
+                    'observacao': 'Teste opt-out',
+                    'itens-TOTAL_FORMS': '1',
+                    'itens-INITIAL_FORMS': '0',
+                    'itens-MIN_NUM_FORMS': '0',
+                    'itens-MAX_NUM_FORMS': '1000',
+                    'itens-0-material_id': str(material_disponivel.pk),
+                    'itens-0-quantidade': '5',
+                },
+            )
+
+        assert response.status_code == 200
+        assert 'erro_geral' in response.context
+        assert response.context['erro_geral'] == 'material inativo'
+        assert not list(response.wsgi_request._messages)
+
 
 class TestBuscarMateriasSaidaExcepcionalView:
     def test_chefe_recebe_json(self, client, chefe_almoxarifado, material_disponivel):
@@ -250,6 +283,17 @@ class TestBuscarMateriasSaidaExcepcionalView:
     def test_anonimo_redirecionado(self, client):
         response = client.get(URL_BUSCAR)
         assert response.status_code == 302
+
+    def test_aux_permissao_negada_retorna_json_403_nao_redirect(
+        self, client, aux_almoxarifado
+    ):
+        """Opt-out: PermissaoNegada em buscar_materiais_saida_excepcional deve retornar
+        JsonResponse 403 (não redirect com messages)."""
+        client.force_login(aux_almoxarifado)
+        response = client.get(URL_BUSCAR)
+        assert response.status_code == 403
+        assert response['Content-Type'].startswith('application/json')
+        assert 'error' in response.json()
 
 
 class TestDetalheSaidaExcepcionalView:
@@ -389,7 +433,7 @@ class TestEstornarSaidaExcepcionalView:
         messages_list = list(response.wsgi_request._messages)
         assert any(m.tags == 'error' for m in messages_list)
 
-    def test_saida_ja_estornada_redireciona_com_mensagem_erro(
+    def test_saida_ja_estornada_redireciona_com_mensagem_warning(
         self, client, chefe_almoxarifado, saida_registrada
     ):
         from apps.estoque.services import estornar_saida_excepcional
@@ -407,7 +451,31 @@ class TestEstornarSaidaExcepcionalView:
         assert response.status_code == 302
         assert str(saida_registrada.pk) in response['Location']
         messages_list = list(response.wsgi_request._messages)
-        assert any(m.tags == 'error' for m in messages_list)
+        assert any(m.tags == 'warning' for m in messages_list)
+        assert not any(m.tags == 'error' for m in messages_list)
+
+    def test_conflito_dominio_mostra_warning_nao_error(
+        self, client, chefe_almoxarifado, saida_registrada
+    ):
+        """Drift 6 (canônico): ConflitoDominio em estornar_saida_excepcional deve
+        gerar messages.warning, nunca messages.error."""
+        from unittest.mock import patch
+
+        from apps.core.exceptions import ConflitoDominio
+
+        client.force_login(chefe_almoxarifado)
+        with patch(
+            'apps.estoque.services.estornar_saida_excepcional',
+            side_effect=ConflitoDominio('Já estornada'),
+        ):
+            response = client.post(
+                self._url(saida_registrada.pk),
+                data={'justificativa': 'Motivo'},
+            )
+
+        messages_list = list(response.wsgi_request._messages)
+        assert any(m.tags == 'warning' for m in messages_list)
+        assert not any(m.tags == 'error' for m in messages_list)
 
 
 class TestPreviewImportacaoScpiView:
