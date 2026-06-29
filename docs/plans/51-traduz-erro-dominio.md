@@ -137,7 +137,7 @@ Esses testes travam o comportamento atual de `JsonResponse`/`render` inline, imp
 Da `docs/matriz-invariantes.md`:
 - Fluxo PRG (message+redirect) não usa status HTTP — `traduz_erro_dominio.status` é **ignorado** nesses fluxos.
 - `PermissaoNegada` em views HTMX/PRG → `raise PermissionDenied`, nunca `messages.error`.
-- Endpoints JSON retornam status via `traduz_erro_dominio(exc).status`; `severity` não se aplica.
+- Endpoints JSON canônicos (futuros) podem usar `traduz_erro_dominio(exc).status`; `severity` não se aplica nesses fluxos. Opt-outs existentes (`buscar_materiais`, `buscar_materiais_saida_excepcional_view`) mantêm status local em `JsonResponse(..., status=...)` diretamente — `traduz_erro_dominio` não é chamado nessas views.
 
 ---
 
@@ -145,6 +145,6 @@ Da `docs/matriz-invariantes.md`:
 
 | Risco | Mitigação |
 |---|---|
-| Subtipo futuro de `ErroDominio` sem entrada no mapa | Fallback genérico (severity='error', status=500); sem log no tradutor (puro). Detecção: o teste `test_presentation.py` inclui um subtipo-sentinela que deve cair no fallback — falha ao compilar se o mapa for expandido sem teste correspondente. Observabilidade em produção fica na camada de view (logging de exceção inesperada), fora do escopo deste módulo. |
+| Subtipo futuro de `ErroDominio` sem entrada no mapa | Fallback genérico (severity='error', status=500); sem log no tradutor (puro). Detecção: o teste `test_presentation.py` inclui um subtipo-sentinela que deve cair no fallback — falha no teste se o mapa for expandido sem teste correspondente. Observabilidade em produção fica na camada de view (logging de exceção inesperada), fora do escopo deste módulo. |
 | Opt-out não documentado → silencioso | Checklist de revisão: todo `except` que diverge do padrão canônico deve ter comentário `# opt-out: <razão>` |
 | Migração parcial deixa drifts remanescentes | Grep final por `messages.warning.*DadosInvalidos\|messages.error.*EstadoInvalido\|messages.error.*Conflito` antes do PR delivery |
