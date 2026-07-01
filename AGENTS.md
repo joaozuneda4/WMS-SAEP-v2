@@ -1,97 +1,100 @@
+# AGENTS.md — WMS-SAEP-v2
+
 @/Users/jmzr/.codex/RTK.md
 
 <!-- context7 -->
-Use Context7 MCP to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service -- even well-known ones like Tailwind or Django. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer -- your training data may not reflect recent changes. Prefer this over web search for library docs.
+Use o Context7 MCP para buscar documentação atualizada sempre que o usuário perguntar sobre uma biblioteca, framework, SDK, API, CLI ou serviço de nuvem — mesmo os bem conhecidos, como Tailwind ou Django. Isso inclui sintaxe de API, configuração, migração de versão, debugging específico de biblioteca, instruções de setup e uso de CLI. Use mesmo quando achar que já sabe a resposta — seu treinamento pode não refletir mudanças recentes. Prefira isso a busca na web para documentação de bibliotecas.
 <!-- context7 -->
 
-## Context7 library IDs quick reference:
+## Referência rápida de IDs de biblioteca no Context7:
 - Django 6: `/django/django/6_0a1`
-- DRF: `/websites/django-rest-framework`
 - django-htmx: `/adamchainz/django-htmx`
 - Tailwind CSS: `/tailwindlabs/tailwindcss.com`
 - Alpine.js: `/websites/alpinejs_dev`
 
+> Este projeto é server-rendered (Django + HTMX + Alpine.js, sem camada de API REST). `django-rest-framework` não é dependência — não busque a documentação dele a menos que a stack mude.
+
 <!-- serena -->
-Use Serena MCP for semantic codebase understanding and symbol-aware code navigation whenever the user asks about an existing project, repository, module, class, function, or implementation detail.
+Use o Serena MCP para entendimento semântico do código e navegação ciente de símbolos sempre que o usuário perguntar sobre um projeto, repositório, módulo, classe, função ou detalhe de implementação existente.
 <!-- serena -->
 
-## Agent skills
+## Skills de agente
 
-### Issue tracker
+### Rastreador de issues
 
-Issues and PRDs are tracked in GitHub Issues for `JMZR-SAEP/WMS-SAEP-v2`. See `docs/agents/issue-tracker.md`.
+Issues e PRDs são rastreados como GitHub Issues em `JMZR-SAEP/WMS-SAEP-v2`. Veja `docs/agents/issue-tracker.md`.
 
-### Triage labels
+### Labels de triagem
 
-Use the default triage vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+Use o vocabulário padrão de triagem: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human` e `wontfix`. Veja `docs/agents/triage-labels.md`.
 
-### Domain docs
+### Documentação de domínio
 
-Single-context repo. Use `docs/agents/domain.md` as the routing guide for domain documentation.
+Repositório de contexto único. Use `docs/agents/domain.md` como guia de roteamento para a documentação de domínio.
 
-If docs and memory disagree, trust live docs/code first and update Serena memory when the decision is durable.
+Se a documentação e a memória divergirem, confie primeiro na documentação/código vivos e atualize a memória do Serena quando a decisão for durável.
 
-### Design handoff
+### Handoff de design
 
-For UI/frontend work, use `.design/` as the required design handoff before implementing or reviewing screens.
+Para trabalho de UI/frontend, use `.design/` como handoff de design obrigatório antes de implementar ou revisar telas.
 
-Read the applicable files first:
+Leia primeiro os arquivos aplicáveis:
 
-- `.design/INFORMATION_ARCHITECTURE.md` for routes, navigation, page hierarchy, user flows, labels, and URL strategy.
-- `.design/TASKS.md` for the current UI build breakdown generated from the briefs.
-- `.design/<area>/DESIGN_BRIEF.md` for screen-specific UX, layout, interaction, responsive, accessibility, copy, and out-of-scope decisions.
+- `.design/INFORMATION_ARCHITECTURE.md` para rotas, navegação, hierarquia de páginas, fluxos de usuário, labels e estratégia de URL.
+- `.design/TASKS.md` para o breakdown atual de construção de UI gerado a partir dos briefs.
+- `.design/<area>/DESIGN_BRIEF.md` para UX, layout, interação, responsividade, acessibilidade, copy e decisões de fora do escopo específicas de cada tela.
 
-`.design/` guides implementation and review, but it does not override accepted ADRs, `docs/design-system.md`, `docs/CONVENTIONS.md`, domain rules, tests, or live code. If `.design/` conflicts with those sources, surface the conflict before implementing.
+`.design/` orienta implementação e revisão, mas não sobrepõe ADRs aceitos, `docs/design-system.md`, `docs/CONVENTIONS.md`, regras de domínio, testes ou código vivo. Se `.design/` conflitar com essas fontes, exponha o conflito antes de implementar.
 
-When implementing UI from `.design/`, keep the scope to the referenced brief/task unless the user explicitly expands it.
+Ao implementar UI a partir de `.design/`, mantenha o escopo restrito ao brief/task referenciado, a menos que o usuário peça expansão explicitamente.
 
-### Code conventions
+### Convenções de código
 
-Do not duplicate project rules here. Use these sources:
+Não duplique regras do projeto aqui. Use estas fontes:
 
-- Layered architecture and implementation rules: `docs/CONVENTIONS.md` and ADR-0004.
-- Service/policy/domain-exception contract: ADR-0011.
-- Test strategy: ADR-0010.
-- Server-rendered frontend and design system: `docs/design-system.md` and ADR-0008.
-- UI/frontend handoff: `.design/`, especially `.design/INFORMATION_ARCHITECTURE.md`, `.design/TASKS.md`, and the relevant `.design/<area>/DESIGN_BRIEF.md`.
-- Seed/dev data contract: ADR-0009.
+- Arquitetura em camadas e regras de implementação: `docs/CONVENTIONS.md` e ADR-0004.
+- Contrato service/policy/exceção de domínio: ADR-0011.
+- Estratégia de testes: ADR-0010.
+- Frontend server-rendered e design system: `docs/design-system.md` e ADR-0008.
+- Handoff de UI/frontend: `.design/`, especialmente `.design/INFORMATION_ARCHITECTURE.md`, `.design/TASKS.md` e o `.design/<area>/DESIGN_BRIEF.md` relevante.
+- Contrato de dados de seed/dev: ADR-0009.
 
-## Project commands
+## Comandos do projeto
 
-- Run tests: `uv run pytest -q -ra --tb=short --strict-markers --disable-warnings`
-- Format code: `uv run ruff format .`
-- Check format: `uv run ruff format --check .`
+- Rodar testes: `uv run pytest -q -ra --tb=short --strict-markers --disable-warnings -n logical` (bate com o CI; `-n logical` roda a suíte em paralelo via pytest-xdist)
+- Formatar código: `uv run ruff format .`
+- Checar formatação: `uv run ruff format --check .`
 - Lint: `uv run ruff check .`
-- Type check: `uv run mypy apps`
+- Checagem de tipos: `uv run mypy apps`
 
-> **Never use redirections, pipes, `tail`, `head`, `grep`, or output truncation.** When a command fails, use the `[full output: ...]` path emitted by the RTK Tee System to inspect the complete raw output without rerunning the command.
+> **Nunca use redirecionamentos, pipes, `tail`, `head`, `grep` ou truncamento de saída.** Quando um comando falhar, use o caminho `[full output: ...]` emitido pelo RTK Tee System para inspecionar a saída bruta completa sem reexecutar o comando.
 
-## Ephemeral development environment
+## Ambiente de desenvolvimento efêmero
 
-The local environment is disposable in dev.
+O ambiente local é descartável em dev.
 
-- the local database may be deleted and recreated;
-- the default flow is reset database -> apply migrations -> load minimal data, when the corresponding command exists;
-- local migrations are unversioned and ignored by `.gitignore`;
-- `make init` must be used during the initial project setup to create .venv and install dependencies;
-- at this stage of the project, every edit to `models` or schema must be followed by `make setup`, so the workflow does not depend on manual migration management;
-- app migrations must be treated as ephemeral artifacts: before testing or completing an implementation that changes the schema, delete and recreate the local migrations from scratch, simulating a clean first execution of the app;
-- creating new migration files is not part of the normal delivery in this ephemeral context;
-- the source of truth for structural changes is `models`, constraints, indexes, domain rules, and tests; local migrations only materialize the local database;
-- tasks without structural changes may follow an incremental flow; a full reset is mandatory only for schema/model changes or when the local environment is inconsistent;
-- ADR-0009 define `seed_dev`/`make seed-dev` como contrato de seed local; o target existe no Makefile e pode ser executado.
+- o banco de dados local pode ser apagado e recriado;
+- o fluxo padrão é resetar banco -> aplicar migrations -> carregar dados mínimos, quando o comando correspondente existir;
+- migrations locais não são versionadas e estão no `.gitignore`;
+- `make init` deve ser usado no setup inicial do projeto para criar o .venv e instalar dependências;
+- nesta fase do projeto, toda edição em `models` ou schema deve ser seguida de `make setup`, para que o fluxo não dependa de gerenciamento manual de migrations;
+- migrations do app devem ser tratadas como artefatos efêmeros: antes de testar ou finalizar uma implementação que muda o schema, apague e recrie as migrations locais do zero, simulando uma execução inicial limpa do app;
+- criar novos arquivos de migration não faz parte da entrega normal neste contexto efêmero;
+- a fonte de verdade para mudanças estruturais são `models`, constraints, índices, regras de domínio e testes; migrations locais só materializam o banco local;
+- tarefas sem mudança estrutural podem seguir um fluxo incremental; reset completo é obrigatório só para mudanças de schema/model ou quando o ambiente local está inconsistente;
+- a ADR-0009 define `seed_dev`/`make seed-dev` como o contrato de seed local; o target existe no Makefile e pode ser executado diretamente.
 
-## Language convention
+## Convenção de idioma
 
-- Domain identifiers use PT-BR: models, fields, choices, services, policies, selectors, and domain functions/variables. This keeps code aligned with the ubiquitous language and the `CONTEXT.md` glossary.
-- The technical/framework surface stays in English where the framework imposes it: app package names (e.g. `accounts`), inherited Django attributes (`is_active`, `is_staff`, `is_superuser`, `USERNAME_FIELD`), and standard hooks.
-- URLs use PT-BR slugs (e.g. `/requisicoes/`, `/requisicoes/nova/`).
-- Documentation and code comments must use PT-BR.
-- Django models must always define `verbose_name` and `verbose_name_plural` in PT-BR.
+- Identificadores de domínio usam PT-BR: models, fields, choices, services, policies, selectors e funções/variáveis de domínio. Isso mantém o código alinhado à linguagem ubíqua e ao glossário do `CONTEXT.md`.
+- A superfície técnica/de framework permanece em inglês onde o framework impõe isso: nomes de pacote de app (ex. `accounts`), atributos herdados do Django (`is_active`, `is_staff`, `is_superuser`, `USERNAME_FIELD`) e hooks padrão.
+- URLs usam slugs em PT-BR (ex. `/requisicoes/`, `/requisicoes/nova/`).
+- Documentação e comentários de código devem usar PT-BR.
+- Models do Django devem sempre definir `verbose_name` e `verbose_name_plural` em PT-BR.
 
-## Git workflow
+## Fluxo de trabalho git
 
-- **Never commit directly to main** — always create a feature branch first.
-- Confirm the current branch before any commit operation.
-- Branch names: `feat/{desc}`, `fix/{desc}`, `refactor/{desc}`, `test/{desc}`, `docs/{desc}`, `chore/{desc}`.
-- Commits must be small, cohesive, and reversible — one logical unit per commit.
+- **Nunca commitar direto na main** — sempre criar uma branch de feature primeiro.
+- Confirmar a branch atual antes de qualquer operação de commit.
+- Nomes de branch: `feat/{desc}`, `fix/{desc}`, `refactor/{desc}`, `test/{desc}`, `docs/{desc}`, `chore/{desc}`.
+- Commits devem ser pequenos, coesos e reversíveis — uma unidade lógica por commit.
