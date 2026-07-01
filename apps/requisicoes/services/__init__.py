@@ -30,10 +30,12 @@ from apps.requisicoes.services.ciclo_vida import (
     recusar_requisicao,
     retornar_para_rascunho,
 )
+from apps.requisicoes.services.composites import criar_e_enviar_requisicao
 from apps.requisicoes.services.copia import copiar_requisicao
 
 __all__ = [
     'ItemInput',
+    'criar_e_enviar_requisicao',
     'criar_requisicao',
     'editar_rascunho',
     'enviar_para_autorizacao',

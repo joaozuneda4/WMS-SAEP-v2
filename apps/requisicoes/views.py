@@ -8,7 +8,6 @@ from apps.accounts.papeis import papel_efetivo
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
 from django.db.models import DecimalField, ExpressionWrapper, F, Sum
 from django.forms import BooleanField
 from django.forms.formsets import DELETION_FIELD_NAME
@@ -67,6 +66,7 @@ from apps.requisicoes.selectors import (
 from apps.requisicoes.services import (
     autorizar_requisicao,
     copiar_requisicao,
+    criar_e_enviar_requisicao,
     criar_requisicao,
     cancelar_ou_descartar_requisicao,
     editar_rascunho,
@@ -342,18 +342,20 @@ def nova_requisicao(request):
             acao = request.POST.get('acao', 'rascunho')
 
             try:
-                with transaction.atomic():
+                if acao == 'enviar':
+                    req = criar_e_enviar_requisicao(
+                        ator_id=request.user.pk,
+                        beneficiario_id=beneficiario_id,
+                        itens=itens,
+                        observacao_geral=form.cleaned_data.get('observacao_geral', ''),
+                    )
+                else:
                     req = criar_requisicao(
                         ator_id=request.user.pk,
                         beneficiario_id=beneficiario_id,
                         itens=itens,
                         observacao_geral=form.cleaned_data.get('observacao_geral', ''),
                     )
-                    if acao == 'enviar':
-                        req = enviar_para_autorizacao(
-                            ator_id=request.user.pk,
-                            requisicao_id=req.pk,
-                        )
             except (PermissaoNegada, DadosInvalidos) as exc:
                 messages.error(request, str(exc))
             except EstadoInvalido as exc:
