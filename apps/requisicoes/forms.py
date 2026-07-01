@@ -5,6 +5,8 @@ from decimal import Decimal
 from django import forms
 from django.forms import BaseFormSet, formset_factory
 
+from apps.requisicoes.types import LinhaAtendimento
+
 
 class RequisicaoForm(forms.Form):
     """Campos editáveis do cabeçalho de rascunho."""
@@ -315,6 +317,21 @@ class BaseItemAtendimentoFormSet(BaseFormSet):
                 form.add_error('item_id', 'Item duplicado no atendimento.')
                 raise forms.ValidationError('Item duplicado no atendimento.')
             vistos.add(item_id)
+
+    def linhas_atendimento(self) -> list[LinhaAtendimento]:
+        """Retorna VOs tipados com os dados de atendimento de cada item."""
+        resultado = []
+        for form in self.forms:
+            if not form.cleaned_data:
+                continue
+            resultado.append(
+                LinhaAtendimento(
+                    item_id=form.cleaned_data['item_id'],
+                    quantidade_entregue=form.cleaned_data['quantidade_entregue'],
+                    justificativa=form.cleaned_data.get('justificativa', ''),
+                )
+            )
+        return resultado
 
 
 class RegistrarDevolucaoForm(forms.Form):

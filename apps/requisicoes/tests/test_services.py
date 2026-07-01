@@ -35,6 +35,7 @@ from apps.estoque.services import (
     liberar_reservas_para_cancelamento,
     reservar_saldos_para_autorizacao,
 )
+from apps.requisicoes.types import LinhaAtendimento
 
 
 # ---------------------------------------------------------------------------
@@ -1621,11 +1622,11 @@ def requisicao_pronta_retirada_multi(
 
 def _payload_total(requisicao):
     return [
-        {
-            'item_id': item.id,
-            'quantidade_entregue': item.quantidade_autorizada,
-            'justificativa': '',
-        }
+        LinhaAtendimento(
+            item_id=item.id,
+            quantidade_entregue=item.quantidade_autorizada,
+            justificativa='',
+        )
         for item in requisicao.itens.filter(quantidade_autorizada__gt=0).order_by('id')
     ]
 
@@ -1678,11 +1679,11 @@ def test_registrar_atendimento_parcial_libera_reserva_e_registra_evento(
         ator_id=aux_almoxarifado.pk,
         requisicao_id=requisicao_pronta_retirada.pk,
         itens=[
-            {
-                'item_id': item_unico.id,
-                'quantidade_entregue': entregue,
-                'justificativa': 'Solicitante levou menos do que pediu.',
-            }
+            LinhaAtendimento(
+                item_id=item_unico.id,
+                quantidade_entregue=entregue,
+                justificativa='Solicitante levou menos do que pediu.',
+            )
         ],
         retirante_nome='Carlos',
         observacao='Retirada parcial.',
@@ -1715,11 +1716,11 @@ def test_registrar_atendimento_sem_entrega_bloqueia(
             ator_id=aux_almoxarifado.pk,
             requisicao_id=requisicao_pronta_retirada.pk,
             itens=[
-                {
-                    'item_id': item.id,
-                    'quantidade_entregue': Decimal('0'),
-                    'justificativa': 'Não compareceu',
-                }
+                LinhaAtendimento(
+                    item_id=item.id,
+                    quantidade_entregue=Decimal('0'),
+                    justificativa='Não compareceu',
+                )
             ],
             retirante_nome='X',
         )
@@ -1738,11 +1739,11 @@ def test_registrar_atendimento_parcial_sem_justificativa_falha(
             ator_id=aux_almoxarifado.pk,
             requisicao_id=requisicao_pronta_retirada.pk,
             itens=[
-                {
-                    'item_id': item.id,
-                    'quantidade_entregue': item.quantidade_autorizada - Decimal('1'),
-                    'justificativa': '',
-                }
+                LinhaAtendimento(
+                    item_id=item.id,
+                    quantidade_entregue=item.quantidade_autorizada - Decimal('1'),
+                    justificativa='',
+                )
             ],
             retirante_nome='X',
         )
@@ -1759,11 +1760,11 @@ def test_registrar_atendimento_entregue_acima_da_autorizada_falha(
             ator_id=aux_almoxarifado.pk,
             requisicao_id=requisicao_pronta_retirada.pk,
             itens=[
-                {
-                    'item_id': item.id,
-                    'quantidade_entregue': item.quantidade_autorizada + Decimal('1'),
-                    'justificativa': '',
-                }
+                LinhaAtendimento(
+                    item_id=item.id,
+                    quantidade_entregue=item.quantidade_autorizada + Decimal('1'),
+                    justificativa='',
+                )
             ],
             retirante_nome='X',
         )
@@ -1780,11 +1781,11 @@ def test_registrar_atendimento_estado_origem_invalido(
             ator_id=aux_almoxarifado.pk,
             requisicao_id=requisicao_autorizada.pk,
             itens=[
-                {
-                    'item_id': item.id,
-                    'quantidade_entregue': item.quantidade_autorizada,
-                    'justificativa': '',
-                }
+                LinhaAtendimento(
+                    item_id=item.id,
+                    quantidade_entregue=item.quantidade_autorizada,
+                    justificativa='',
+                )
             ],
             retirante_nome='X',
         )
@@ -1898,16 +1899,16 @@ def test_registrar_atendimento_item_zero_sem_justificativa_falha_no_parcial_mult
             ator_id=aux_almoxarifado.pk,
             requisicao_id=requisicao_pronta_retirada_multi.pk,
             itens=[
-                {
-                    'item_id': primeiro.id,
-                    'quantidade_entregue': primeiro.quantidade_autorizada,
-                    'justificativa': '',
-                },
-                {
-                    'item_id': segundo.id,
-                    'quantidade_entregue': Decimal('0'),
-                    'justificativa': '',
-                },
+                LinhaAtendimento(
+                    item_id=primeiro.id,
+                    quantidade_entregue=primeiro.quantidade_autorizada,
+                    justificativa='',
+                ),
+                LinhaAtendimento(
+                    item_id=segundo.id,
+                    quantidade_entregue=Decimal('0'),
+                    justificativa='',
+                ),
             ],
             retirante_nome='Carlos',
         )
@@ -1924,11 +1925,11 @@ def test_registrar_atendimento_rejeita_nan_em_quantidade_entregue(
             ator_id=aux_almoxarifado.pk,
             requisicao_id=requisicao_pronta_retirada.pk,
             itens=[
-                {
-                    'item_id': item.id,
-                    'quantidade_entregue': Decimal('NaN'),
-                    'justificativa': '',
-                }
+                LinhaAtendimento(
+                    item_id=item.id,
+                    quantidade_entregue=Decimal('NaN'),
+                    justificativa='',
+                )
             ],
             retirante_nome='X',
         )
@@ -1948,11 +1949,11 @@ def test_registrar_atendimento_total_zera_justificativa_existente(
         ator_id=aux_almoxarifado.pk,
         requisicao_id=requisicao_pronta_retirada.pk,
         itens=[
-            {
-                'item_id': item.id,
-                'quantidade_entregue': item.quantidade_autorizada,
-                'justificativa': 'ignorada por ser total',
-            }
+            LinhaAtendimento(
+                item_id=item.id,
+                quantidade_entregue=item.quantidade_autorizada,
+                justificativa='ignorada por ser total',
+            )
         ],
         retirante_nome='Carlos',
     )
@@ -2014,11 +2015,11 @@ def requisicao_atendida(requisicao_pronta_retirada, aux_almoxarifado):
         ator_id=aux_almoxarifado.pk,
         requisicao_id=requisicao_pronta_retirada.pk,
         itens=[
-            {
-                'item_id': item.pk,
-                'quantidade_entregue': item.quantidade_autorizada,
-                'justificativa': '',
-            }
+            LinhaAtendimento(
+                item_id=item.pk,
+                quantidade_entregue=item.quantidade_autorizada,
+                justificativa='',
+            )
         ],
         retirante_nome='Carlos',
     )
@@ -2182,11 +2183,11 @@ def requisicao_atendida_para_devolucao(requisicao_pronta_retirada, aux_almoxarif
         ator_id=aux_almoxarifado.pk,
         requisicao_id=requisicao_pronta_retirada.pk,
         itens=[
-            {
-                'item_id': item.pk,
-                'quantidade_entregue': item.quantidade_autorizada,
-                'justificativa': '',
-            }
+            LinhaAtendimento(
+                item_id=item.pk,
+                quantidade_entregue=item.quantidade_autorizada,
+                justificativa='',
+            )
         ],
         retirante_nome='Carlos',
     )
@@ -2483,11 +2484,11 @@ def requisicao_atendida_para_estorno(requisicao_pronta_retirada, aux_almoxarifad
         ator_id=aux_almoxarifado.pk,
         requisicao_id=requisicao_pronta_retirada.pk,
         itens=[
-            {
-                'item_id': item.pk,
-                'quantidade_entregue': item.quantidade_autorizada,
-                'justificativa': '',
-            }
+            LinhaAtendimento(
+                item_id=item.pk,
+                quantidade_entregue=item.quantidade_autorizada,
+                justificativa='',
+            )
         ],
         retirante_nome='Carlos',
     )

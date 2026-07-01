@@ -132,6 +132,7 @@ def test_registrar_atendimento_gera_notificacoes(
         registrar_atendimento,
         separar_para_retirada,
     )
+    from apps.requisicoes.types import LinhaAtendimento
 
     req = criar_requisicao(
         ator_id=chefe_obras.pk,
@@ -152,11 +153,11 @@ def test_registrar_atendimento_gera_notificacoes(
         ator_id=chefe_almoxarifado.pk,
         requisicao_id=req.pk,
         itens=[
-            {
-                'item_id': item.pk,
-                'quantidade_entregue': Decimal('1'),
-                'justificativa': '',
-            }
+            LinhaAtendimento(
+                item_id=item.pk,
+                quantidade_entregue=Decimal('1'),
+                justificativa='',
+            )
         ],
         retirante_nome='Fulano',
     )

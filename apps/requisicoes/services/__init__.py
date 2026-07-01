@@ -10,7 +10,6 @@
 """
 
 from apps.requisicoes.services.atendimento import (
-    ItemAtendimentoEntrada,
     registrar_atendimento,
     registrar_devolucao,
     separar_para_retirada,
@@ -46,7 +45,6 @@ __all__ = [
     'descartar_rascunho',
     'cancelar_ou_descartar_requisicao',
     'cancelar_requisicao',
-    'ItemAtendimentoEntrada',
     'separar_para_retirada',
     'registrar_atendimento',
     'registrar_devolucao',

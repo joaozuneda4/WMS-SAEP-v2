@@ -801,23 +801,11 @@ def registrar_atendimento_view(request, pk: int):
         messages.error(request, 'Corrija os campos destacados.')
         return _render(cabecalho, formset, status=400)
 
-    itens_payload = []
-    for form in formset.forms:
-        if not form.cleaned_data:
-            continue
-        itens_payload.append(
-            {
-                'item_id': form.cleaned_data['item_id'],
-                'quantidade_entregue': form.cleaned_data['quantidade_entregue'],
-                'justificativa': form.cleaned_data.get('justificativa', ''),
-            }
-        )
-
     try:
         requisicao = registrar_atendimento(
             ator_id=request.user.pk,
             requisicao_id=pk,
-            itens=itens_payload,
+            itens=formset.linhas_atendimento(),
             retirante_nome=cabecalho.cleaned_data['retirante_nome'],
             observacao=cabecalho.cleaned_data.get('observacao', ''),
         )

@@ -1,8 +1,11 @@
 """Testes de forms e formset de rascunho."""
 
+from decimal import Decimal
+
 import pytest
 
 from apps.requisicoes.forms import ItemAtendimentoFormSet, ItemRequisicaoFormSet
+from apps.requisicoes.types import LinhaAtendimento
 
 
 def _build_formset_data(itens: list[dict], deletados: list[int] = None) -> dict:
@@ -124,6 +127,47 @@ def test_formset_linhas_validas_retorna_itens(
     itens = fs.linhas_validas()
     assert len(itens) == 2
     assert all('material_id' in i and 'quantidade_solicitada' in i for i in itens)
+
+
+def test_formset_atendimento_linhas_atendimento_retorna_vos_tipados():
+    data = {
+        'itens-TOTAL_FORMS': '2',
+        'itens-INITIAL_FORMS': '0',
+        'itens-MIN_NUM_FORMS': '0',
+        'itens-MAX_NUM_FORMS': '1000',
+        'itens-0-item_id': '1',
+        'itens-0-quantidade_entregue': '5',
+        'itens-0-justificativa': '',
+        'itens-1-item_id': '2',
+        'itens-1-quantidade_entregue': '1.5',
+        'itens-1-justificativa': 'Entrega menor que autorizada',
+    }
+    fs = ItemAtendimentoFormSet(data, prefix='itens', item_ids_permitidos=[1, 2])
+    assert fs.is_valid(), fs.errors
+
+    linhas = fs.linhas_atendimento()
+
+    assert linhas == [
+        LinhaAtendimento(item_id=1, quantidade_entregue=Decimal('5'), justificativa=''),
+        LinhaAtendimento(
+            item_id=2,
+            quantidade_entregue=Decimal('1.5'),
+            justificativa='Entrega menor que autorizada',
+        ),
+    ]
+    assert all(isinstance(linha, LinhaAtendimento) for linha in linhas)
+
+
+def test_formset_atendimento_linhas_atendimento_ignora_formset_vazio():
+    data = {
+        'itens-TOTAL_FORMS': '0',
+        'itens-INITIAL_FORMS': '0',
+        'itens-MIN_NUM_FORMS': '0',
+        'itens-MAX_NUM_FORMS': '1000',
+    }
+    fs = ItemAtendimentoFormSet(data, prefix='itens', item_ids_permitidos=[])
+    assert fs.is_valid(), fs.errors
+    assert fs.linhas_atendimento() == []
 
 
 @pytest.mark.django_db

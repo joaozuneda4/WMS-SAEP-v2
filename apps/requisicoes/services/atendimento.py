@@ -8,7 +8,6 @@ from __future__ import annotations
 import logging
 
 from decimal import Decimal, InvalidOperation
-from typing import TypedDict
 
 from django.db import transaction
 
@@ -38,6 +37,7 @@ from apps.requisicoes.policies import (
     exigir_pode_separar_para_retirada,
 )
 from apps.requisicoes.transitions import verificar_transicao_valida
+from apps.requisicoes.types import LinhaAtendimento
 
 logger = logging.getLogger(__name__)
 
@@ -63,17 +63,6 @@ def _notificar_pos_commit(
             tipo,
             req_id,
         )
-
-
-# ---------------------------------------------------------------------------
-# Tipos auxiliares
-# ---------------------------------------------------------------------------
-
-
-class ItemAtendimentoEntrada(TypedDict):
-    item_id: int
-    quantidade_entregue: Decimal
-    justificativa: str
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +176,7 @@ def registrar_atendimento(
     *,
     ator_id: int,
     requisicao_id: int,
-    itens: list[ItemAtendimentoEntrada],
+    itens: list[LinhaAtendimento],
     retirante_nome: str,
     observacao: str = '',
 ) -> Requisicao:
@@ -238,12 +227,12 @@ def registrar_atendimento(
             code='itens_autorizados_insuficientes',
         )
 
-    payload_por_item: dict[int, ItemAtendimentoEntrada] = {}
+    payload_por_item: dict[int, LinhaAtendimento] = {}
     for entrada in itens:
         try:
-            item_id = int(entrada['item_id'])
-            entregue = Decimal(str(entrada['quantidade_entregue']))
-        except (KeyError, TypeError, InvalidOperation, ValueError) as exc:
+            item_id = int(entrada.item_id)
+            entregue = Decimal(str(entrada.quantidade_entregue))
+        except (AttributeError, TypeError, InvalidOperation, ValueError) as exc:
             raise DadosInvalidos(
                 'Item de atendimento inválido.',
                 code='item_invalido',
@@ -258,11 +247,11 @@ def registrar_atendimento(
                 'Item duplicado no atendimento.',
                 code='item_duplicado',
             )
-        payload_por_item[item_id] = {
-            'item_id': item_id,
-            'quantidade_entregue': entregue,
-            'justificativa': str(entrada.get('justificativa') or '').strip(),
-        }
+        payload_por_item[item_id] = LinhaAtendimento(
+            item_id=item_id,
+            quantidade_entregue=entregue,
+            justificativa=str(entrada.justificativa or '').strip(),
+        )
 
     ids_autorizados = {item.id for item in itens_autorizados}
     if set(payload_por_item.keys()) != ids_autorizados:
@@ -276,7 +265,7 @@ def registrar_atendimento(
     eh_total = True
     for item in itens_autorizados:
         entrada = payload_por_item[item.id]
-        entregue = entrada['quantidade_entregue']
+        entregue = entrada.quantidade_entregue
         autorizada = item.quantidade_autorizada
         assert autorizada is not None  # filtrado por quantidade_autorizada__gt=0
         if entregue < 0 or entregue > autorizada:
@@ -287,7 +276,7 @@ def registrar_atendimento(
         if entregue < autorizada:
             eh_total = False
             houve_liberacao = True
-            if not entrada['justificativa']:
+            if not entrada.justificativa:
                 raise DadosInvalidos(
                     'Justificativa obrigatória para entrega menor que autorizada.',
                     code='justificativa_obrigatoria',
@@ -308,7 +297,7 @@ def registrar_atendimento(
             {
                 'material_id': item.material_id,
                 'quantidade_autorizada': autorizada,
-                'quantidade_entregue': payload_por_item[item.id]['quantidade_entregue'],
+                'quantidade_entregue': payload_por_item[item.id].quantidade_entregue,
             }
         )
     consumir_e_liberar_reservas_para_atendimento(
@@ -321,11 +310,9 @@ def registrar_atendimento(
         entrada = payload_por_item[item.id]
         autorizada = item.quantidade_autorizada
         assert autorizada is not None  # filtrado por quantidade_autorizada__gt=0
-        item.quantidade_entregue = entrada['quantidade_entregue']
+        item.quantidade_entregue = entrada.quantidade_entregue
         item.justificativa_entrega = (
-            entrada['justificativa']
-            if entrada['quantidade_entregue'] < autorizada
-            else ''
+            entrada.justificativa if entrada.quantidade_entregue < autorizada else ''
         )
         item.save(update_fields=['quantidade_entregue', 'justificativa_entrega'])
 

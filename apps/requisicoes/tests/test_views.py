@@ -2465,6 +2465,7 @@ def req_atendida_view(
 ):
     from apps.estoque.models import SaldoEstoque
     from apps.requisicoes.services import registrar_atendimento
+    from apps.requisicoes.types import LinhaAtendimento
 
     req = Requisicao.objects.create(
         estado=EstadoRequisicao.PRONTA_PARA_RETIRADA,
@@ -2486,11 +2487,11 @@ def req_atendida_view(
         ator_id=aux_almoxarifado.pk,
         requisicao_id=req.pk,
         itens=[
-            {
-                'item_id': item.pk,
-                'quantidade_entregue': Decimal('5'),
-                'justificativa': '',
-            }
+            LinhaAtendimento(
+                item_id=item.pk,
+                quantidade_entregue=Decimal('5'),
+                justificativa='',
+            )
         ],
         retirante_nome='Carlos',
     )
