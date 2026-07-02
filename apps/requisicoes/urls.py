@@ -6,6 +6,7 @@ app_name = 'requisicoes'
 
 urlpatterns = [
     path('minhas/', views.minhas_requisicoes_view, name='minhas'),
+    path('historico/', views.historico_requisicoes_view, name='historico'),
     path('autorizacoes/', views.fila_autorizacao_view, name='autorizacoes'),
     path('atendimentos/', views.fila_atendimento_view, name='atendimentos'),
     path('nova/', views.nova_requisicao, name='nova_requisicao'),

@@ -1,0 +1,153 @@
+{% extends "requisicoes/base.html" %}
+
+{% block title %}Histórico de requisições — WMS-SAEP{% endblock %}
+
+{% block topbar_leading %}
+  <h1 class="app-bar__title">Histórico de requisições</h1>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-screen-xl mx-auto">
+
+  <p class="mb-6 max-w-3xl text-sm text-slate-600">
+    Histórico de requisições visíveis ao seu papel. Filtre por solicitante/beneficiário,
+    estado, período{% if mostrar_filtro_setor %} ou setor{% endif %}; o recorte fica na
+    URL e pode ser compartilhado.
+  </p>
+
+  {% url 'requisicoes:historico' as url_historico %}
+
+  {% comment %}
+  Barra de filtros: disclosure nativo details/summary no mobile.
+  sm:block! força visibilidade no desktop (Tailwind v4: importante como sufixo).
+  {% endcomment %}
+  <details class="mb-6" open>
+    <summary
+      class="sm:hidden mb-4 flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+    >
+      Filtros
+      <span aria-hidden="true" class="ml-2 text-slate-400">▼</span>
+    </summary>
+    <div class="sm:block!">
+  <form
+    method="get"
+    action="{{ url_historico }}"
+    hx-get="{{ url_historico }}"
+    hx-target="#resultados-historico-requisicoes"
+    hx-push-url="true"
+    class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+  >
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <label for="filtro-texto" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+          Solicitante ou beneficiário
+        </label>
+        <input
+          type="search"
+          id="filtro-texto"
+          name="texto"
+          value="{{ filtros.texto }}"
+          placeholder="Nome ou matrícula"
+          class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+      </div>
+
+      <div>
+        <label for="filtro-data-ini" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+          De
+        </label>
+        <input
+          type="date"
+          id="filtro-data-ini"
+          name="data_ini"
+          value="{{ filtros.data_ini }}"
+          class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+      </div>
+
+      <div>
+        <label for="filtro-data-fim" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+          Até
+        </label>
+        <input
+          type="date"
+          id="filtro-data-fim"
+          name="data_fim"
+          value="{{ filtros.data_fim }}"
+          class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+      </div>
+
+      {% if mostrar_filtro_setor %}
+        <div>
+          <label for="filtro-setor" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+            Setor
+          </label>
+          <select
+            id="filtro-setor"
+            name="setor"
+            class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <option value="">Todos os setores</option>
+            {% for setor_opcao in setores_disponiveis %}
+              <option value="{{ setor_opcao.pk }}" {% if filtros.setor == setor_opcao.pk %}selected{% endif %}>
+                {{ setor_opcao.nome }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endif %}
+    </div>
+
+    {# Multi-seleção de estado #}
+    <fieldset class="mt-4">
+      <legend class="text-xs font-medium uppercase tracking-wide text-slate-500">Estado</legend>
+      <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+        {% for valor, rotulo in estados_opcoes %}
+          <label class="inline-flex min-h-11 items-center gap-2 py-1 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              name="estados"
+              value="{{ valor }}"
+              {% if valor in filtros.estados %}checked{% endif %}
+              class="h-5 w-5 rounded border-slate-300 text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+            {{ rotulo }}
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    {# Preserva ordenação corrente ao submeter os filtros #}
+    {% if ordem == 'asc' %}<input type="hidden" name="ordem" value="asc">{% endif %}
+
+    <div class="mt-4 flex flex-wrap items-center gap-2">
+      <button
+        type="submit"
+        class="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      >
+        Aplicar filtros
+      </button>
+      {% if tem_filtro_ativo %}
+        <a
+          href="{{ url_historico }}"
+          hx-get="{{ url_historico }}"
+          hx-target="#resultados-historico-requisicoes"
+          hx-push-url="true"
+          class="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+        >
+          Limpar filtros
+        </a>
+      {% endif %}
+    </div>
+  </form>
+    </div>
+  </details>
+
+  {# Wrapper estável do swap HTMX: alvo persistente (id + aria-live único). O partial entrega só o conteúdo interno. #}
+  <div id="resultados-historico-requisicoes" aria-live="polite" aria-atomic="true">
+    {% include 'requisicoes/partials/_tabela_historico_requisicoes.html' %}
+  </div>
+
+</div>
+{% endblock %}

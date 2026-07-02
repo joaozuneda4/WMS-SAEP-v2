@@ -12,9 +12,12 @@ from apps.accounts.papeis import PapelEfetivo, papel_efetivo
 from apps.core.exceptions import PermissaoNegada
 from apps.requisicoes.models import EstadoRequisicao
 from apps.requisicoes.policies import (
+    exigir_pode_consultar_historico_requisicoes,
+    exigir_pode_estornar_requisicao,
     pode_atender_retirada,
     pode_autorizar_requisicao,
     pode_cancelar_requisicao,
+    pode_consultar_historico_requisicoes,
     pode_copiar_requisicao,
     pode_criar_para_beneficiario,
     pode_editar_rascunho,
@@ -28,7 +31,6 @@ from apps.requisicoes.policies import (
     pode_ver_fila_atendimento,
     pode_ver_fila_autorizacao,
     resolver_escopo_criacao_requisicao,
-    exigir_pode_estornar_requisicao,
 )
 
 
@@ -720,3 +722,37 @@ def test_exigir_pode_estornar_levanta_permissao_negada():
     with pytest.raises(PermissaoNegada) as excinfo:
         exigir_pode_estornar_requisicao(AUX_ALMOX, req)
     assert excinfo.value.code == 'estornar_requisicao_negada'
+
+
+# ---------------------------------------------------------------------------
+# pode_consultar_historico_requisicoes / exigir_
+# ---------------------------------------------------------------------------
+
+
+class TestPodeConsultarHistoricoRequisicoes:
+    def test_superuser_pode(self):
+        assert pode_consultar_historico_requisicoes(SUPERUSER) is True
+
+    def test_chefe_almoxarifado_pode(self):
+        assert pode_consultar_historico_requisicoes(CHEFE_ALMOX) is True
+
+    def test_aux_almoxarifado_pode(self):
+        assert pode_consultar_historico_requisicoes(AUX_ALMOX) is True
+
+    def test_chefe_setor_nao_almox_pode(self):
+        assert pode_consultar_historico_requisicoes(CHEFE_OBRAS) is True
+
+    def test_solicitante_puro_nao_pode(self):
+        assert pode_consultar_historico_requisicoes(SOLICITANTE) is False
+
+    def test_inativo_nao_pode(self):
+        assert pode_consultar_historico_requisicoes(INATIVO) is False
+
+
+class TestExigirPodeConsultarHistoricoRequisicoes:
+    def test_superuser_nao_lanca(self):
+        exigir_pode_consultar_historico_requisicoes(SUPERUSER)
+
+    def test_solicitante_lanca(self):
+        with pytest.raises(PermissaoNegada):
+            exigir_pode_consultar_historico_requisicoes(SOLICITANTE)

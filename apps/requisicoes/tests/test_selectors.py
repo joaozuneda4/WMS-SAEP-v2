@@ -1,5 +1,6 @@
 """Testes unitários para seletores de requisições."""
 
+from datetime import date
 from types import SimpleNamespace
 
 import pytest
@@ -11,9 +12,12 @@ from apps.requisicoes.selectors import (
     acoes_disponiveis,
     fila_atendimento,
     fila_autorizacao,
+    filtrar_historico_requisicoes,
+    historico_requisicoes_visiveis_para,
     material_eh_elegivel,
     materiais_para_requisicao,
     minhas_requisicoes,
+    pode_filtrar_historico_por_setor,
     requisicoes_visiveis_para,
 )
 
@@ -632,3 +636,186 @@ def test_acoes_disponiveis_retorna_frozenset():
 )
 def test_acoes_disponiveis_conjunto_completo_por_papel_e_estado(papel, req, esperado):
     assert acoes_disponiveis(papel, req) == esperado
+
+
+# ---------------------------------------------------------------------------
+# historico_requisicoes_visiveis_para
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_historico_superuser_ve_tudo(superuser, req_historico_obras, req_historico_ti):
+    visiveis = historico_requisicoes_visiveis_para(superuser.pk)
+    assert set(visiveis.values_list('pk', flat=True)) == {
+        req_historico_obras.pk,
+        req_historico_ti.pk,
+    }
+
+
+@pytest.mark.django_db
+def test_historico_chefe_almox_ve_tudo(
+    chefe_almoxarifado, req_historico_obras, req_historico_ti
+):
+    visiveis = historico_requisicoes_visiveis_para(chefe_almoxarifado.pk)
+    assert set(visiveis.values_list('pk', flat=True)) == {
+        req_historico_obras.pk,
+        req_historico_ti.pk,
+    }
+
+
+@pytest.mark.django_db
+def test_historico_aux_almox_ve_tudo(
+    aux_almoxarifado, req_historico_obras, req_historico_ti
+):
+    visiveis = historico_requisicoes_visiveis_para(aux_almoxarifado.pk)
+    assert set(visiveis.values_list('pk', flat=True)) == {
+        req_historico_obras.pk,
+        req_historico_ti.pk,
+    }
+
+
+@pytest.mark.django_db
+def test_historico_chefe_setor_ve_so_proprio_setor(
+    chefe_obras, req_historico_obras, req_historico_ti
+):
+    visiveis = historico_requisicoes_visiveis_para(chefe_obras.pk)
+    pks = set(visiveis.values_list('pk', flat=True))
+    assert req_historico_obras.pk in pks
+    assert req_historico_ti.pk not in pks
+
+
+@pytest.mark.django_db
+def test_historico_solicitante_puro_vazio(solicitante, req_historico_obras):
+    visiveis = historico_requisicoes_visiveis_para(solicitante.pk)
+    assert visiveis.count() == 0
+
+
+@pytest.mark.django_db
+def test_historico_inativo_vazio(usuario_inativo, req_historico_obras):
+    visiveis = historico_requisicoes_visiveis_para(usuario_inativo.pk)
+    assert visiveis.count() == 0
+
+
+@pytest.mark.django_db
+def test_historico_ator_inexistente_vazio(req_historico_obras):
+    visiveis = historico_requisicoes_visiveis_para(999999)
+    assert visiveis.count() == 0
+
+
+# ---------------------------------------------------------------------------
+# filtrar_historico_requisicoes / pode_filtrar_historico_por_setor
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_filtrar_historico_por_texto_no_criador(
+    superuser, req_historico_obras, req_historico_ti
+):
+    visiveis = historico_requisicoes_visiveis_para(superuser.pk)
+    filtrado = filtrar_historico_requisicoes(
+        visiveis,
+        texto='solicitante',
+        estados=[],
+        data_ini=None,
+        data_fim=None,
+        setor=None,
+    )
+    assert set(filtrado.values_list('pk', flat=True)) == {req_historico_obras.pk}
+
+
+@pytest.mark.django_db
+def test_filtrar_historico_por_texto_no_beneficiario(
+    superuser, req_historico_obras, req_historico_ti
+):
+    # req_historico_ti tem criador (usuario_ti) e beneficiário (outro_usuario_obras)
+    # distintos — o texto só bate no beneficiário, não no criador.
+    visiveis = historico_requisicoes_visiveis_para(superuser.pk)
+    filtrado = filtrar_historico_requisicoes(
+        visiveis,
+        texto='Maria Obras',
+        estados=[],
+        data_ini=None,
+        data_fim=None,
+        setor=None,
+    )
+    assert set(filtrado.values_list('pk', flat=True)) == {req_historico_ti.pk}
+
+
+@pytest.mark.django_db
+def test_filtrar_historico_por_estado(superuser, req_historico_obras, req_historico_ti):
+    visiveis = historico_requisicoes_visiveis_para(superuser.pk)
+    filtrado = filtrar_historico_requisicoes(
+        visiveis,
+        texto='',
+        estados=[EstadoRequisicao.AUTORIZADA],
+        data_ini=None,
+        data_fim=None,
+        setor=None,
+    )
+    assert set(filtrado.values_list('pk', flat=True)) == {req_historico_ti.pk}
+
+
+@pytest.mark.django_db
+def test_filtrar_historico_estado_invalido_e_no_op(
+    superuser, req_historico_obras, req_historico_ti
+):
+    visiveis = historico_requisicoes_visiveis_para(superuser.pk)
+    filtrado = filtrar_historico_requisicoes(
+        visiveis,
+        texto='',
+        estados=['nao_existe'],
+        data_ini=None,
+        data_fim=None,
+        setor=None,
+    )
+    assert filtrado.count() == 2
+
+
+@pytest.mark.django_db
+def test_filtrar_historico_por_periodo(superuser, req_historico_obras):
+    hoje = req_historico_obras.criado_em.date()
+    visiveis = historico_requisicoes_visiveis_para(superuser.pk)
+
+    dentro = filtrar_historico_requisicoes(
+        visiveis, texto='', estados=[], data_ini=hoje, data_fim=hoje, setor=None
+    )
+    assert req_historico_obras.pk in dentro.values_list('pk', flat=True)
+
+    fora = filtrar_historico_requisicoes(
+        visiveis,
+        texto='',
+        estados=[],
+        data_ini=date(1999, 1, 1),
+        data_fim=date(1999, 1, 2),
+        setor=None,
+    )
+    assert fora.count() == 0
+
+
+@pytest.mark.django_db
+def test_filtrar_historico_por_setor_nao_vaza_outro_setor(
+    chefe_almoxarifado, req_historico_obras, req_historico_ti, setor_ti
+):
+    visiveis = historico_requisicoes_visiveis_para(chefe_almoxarifado.pk)
+    filtrado = filtrar_historico_requisicoes(
+        visiveis,
+        texto='',
+        estados=[],
+        data_ini=None,
+        data_fim=None,
+        setor=setor_ti.pk,
+    )
+    assert set(filtrado.values_list('pk', flat=True)) == {req_historico_ti.pk}
+
+
+@pytest.mark.django_db
+def test_pode_filtrar_historico_por_setor_almox_sim_chefe_setor_nao(
+    chefe_almoxarifado, chefe_obras
+):
+    assert pode_filtrar_historico_por_setor(chefe_almoxarifado.pk) is True
+    assert pode_filtrar_historico_por_setor(chefe_obras.pk) is False
+
+
+@pytest.mark.django_db
+def test_pode_filtrar_historico_por_setor_solicitante_nao(solicitante):
+    assert pode_filtrar_historico_por_setor(solicitante.pk) is False

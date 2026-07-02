@@ -89,6 +89,16 @@ class Requisicao(models.Model):
         verbose_name = 'requisição'
         verbose_name_plural = 'requisições'
         ordering = ('-criado_em',)
+        indexes = [
+            models.Index(
+                fields=['estado', 'criado_em'],
+                name='idx_requisicao_estado_data',
+            ),
+            models.Index(
+                fields=['setor_beneficiario', 'criado_em'],
+                name='idx_requisicao_setor_data',
+            ),
+        ]
 
     def __str__(self):
         return self.numero_publico or f'Rascunho #{self.pk}'

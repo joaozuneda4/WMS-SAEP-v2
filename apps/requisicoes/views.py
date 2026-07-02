@@ -4,11 +4,14 @@ Fluxo: ler input → chamar service com IDs → traduzir exceção → renderiza
 Nenhuma regra de domínio, query de escopo ou decisão de autorização própria.
 """
 
+from datetime import date
+
 from apps.accounts.papeis import papel_efetivo
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import DecimalField, ExpressionWrapper, F, Sum
+from django.core.paginator import Paginator
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
 from django.forms import BooleanField
 from django.forms.formsets import DELETION_FIELD_NAME
 from django.http import HttpResponse, JsonResponse
@@ -38,6 +41,7 @@ from apps.requisicoes.forms import (
 )
 from apps.requisicoes.models import EstadoRequisicao, Operacao, Requisicao
 from apps.requisicoes.policies import (
+    exigir_pode_consultar_historico_requisicoes,
     exigir_pode_editar_rascunho,
     exigir_pode_ver_fila_atendimento,
     exigir_pode_ver_fila_autorizacao,
@@ -50,8 +54,11 @@ from apps.requisicoes.selectors import (
     acoes_disponiveis,
     fila_atendimento,
     fila_autorizacao,
+    filtrar_historico_requisicoes,
+    historico_requisicoes_visiveis_para,
     materiais_para_requisicao,
     minhas_requisicoes,
+    pode_filtrar_historico_por_setor,
     requisicoes_visiveis_para,
     saldos_por_materiais,
 )
@@ -1130,3 +1137,116 @@ def confirmar_importacao_scpi_view(request):
     return HttpResponseRedirect(
         _reverse('estoque:sucesso_importacao_scpi', kwargs={'pk': importacao.pk})
     )
+
+
+PAGINA_HISTORICO_REQUISICOES_TAMANHO = 25
+
+
+def _parse_data_iso_historico(valor: str | None) -> date | None:
+    """Converte 'YYYY-MM-DD' em date; entrada inválida/vazia → None (no-op)."""
+    if not valor:
+        return None
+    try:
+        return date.fromisoformat(valor)
+    except ValueError:
+        return None
+
+
+def _querystring_sem_page_historico(get_params) -> str:
+    """Querystring atual sem o parâmetro `page`, para preservar filtros na
+    paginação (links e swap HTMX)."""
+    params = get_params.copy()
+    params.pop('page', None)
+    return params.urlencode()
+
+
+@login_required
+@require_GET
+def historico_requisicoes_view(request):
+    """Histórico system-wide de requisições visível ao ator (RBAC no selector),
+    filtrável e paginado. Espelha ``estoque.historico_movimentacoes_view``.
+
+    Filtros vivem na querystring (recorte compartilhável). Em requisições HTMX
+    devolve apenas o partial da tabela+paginação; caso contrário, a página
+    completa. A view chama os selectors por ID (`request.user.pk`) e traduz a
+    exceção de domínio em resposta HTTP, conforme ADR-0011/CONVENTIONS.md.
+    """
+    papel = papel_efetivo(request.user)
+    try:
+        exigir_pode_consultar_historico_requisicoes(papel)
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+
+    texto = request.GET.get('texto', '').strip()
+    estados_brutos = request.GET.getlist('estados')
+    estados = [e for e in estados_brutos if e in EstadoRequisicao.values]
+    data_ini = _parse_data_iso_historico(request.GET.get('data_ini'))
+    data_fim = _parse_data_iso_historico(request.GET.get('data_fim'))
+    ordem = 'asc' if request.GET.get('ordem') == 'asc' else 'desc'
+
+    mostrar_filtro_setor = pode_filtrar_historico_por_setor(request.user.pk)
+    setor = None
+    if mostrar_filtro_setor:
+        setor_bruto = request.GET.get('setor', '')
+        if setor_bruto.isdigit():
+            setor = int(setor_bruto)
+
+    visiveis = historico_requisicoes_visiveis_para(request.user.pk)
+    requisicoes = filtrar_historico_requisicoes(
+        visiveis,
+        texto=texto or None,
+        estados=estados,
+        data_ini=data_ini,
+        data_fim=data_fim,
+        setor=setor,
+    )
+    requisicoes = requisicoes.annotate(
+        quantidade_itens=Count('itens')
+    ).prefetch_related('itens__material')
+    requisicoes = requisicoes.order_by('criado_em' if ordem == 'asc' else '-criado_em')
+
+    paginator = Paginator(requisicoes, PAGINA_HISTORICO_REQUISICOES_TAMANHO)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    setores_disponiveis = []
+    if mostrar_filtro_setor:
+        from apps.requisicoes.selectors import _setores_do_historico
+
+        setores_disponiveis = _setores_do_historico(visiveis)
+
+    tem_filtro_ativo = bool(
+        texto or estados or data_ini or data_fim or setor is not None
+    )
+
+    ordem_inversa = 'asc' if ordem == 'desc' else 'desc'
+    params_ordenacao = request.GET.copy()
+    params_ordenacao.pop('page', None)
+    params_ordenacao['ordem'] = ordem_inversa
+    url_ordenacao = '?' + params_ordenacao.urlencode()
+
+    is_htmx = request.headers.get('HX-Request') == 'true'
+    contexto = {
+        'page_obj': page_obj,
+        'is_htmx': is_htmx,
+        'mostrar_filtro_setor': mostrar_filtro_setor,
+        'setores_disponiveis': setores_disponiveis,
+        'estados_opcoes': EstadoRequisicao.choices,
+        'filtros': {
+            'texto': texto,
+            'estados': estados,
+            'data_ini': request.GET.get('data_ini', ''),
+            'data_fim': request.GET.get('data_fim', ''),
+            'setor': setor,
+        },
+        'ordem': ordem,
+        'aria_sort': 'ascending' if ordem == 'asc' else 'descending',
+        'url_ordenacao': url_ordenacao,
+        'tem_filtro_ativo': tem_filtro_ativo,
+        'querystring_filtros': _querystring_sem_page_historico(request.GET),
+    }
+
+    if is_htmx:
+        template = 'requisicoes/partials/_tabela_historico_requisicoes.html'
+    else:
+        template = 'requisicoes/historico_requisicoes.html'
+    return render(request, template, contexto)

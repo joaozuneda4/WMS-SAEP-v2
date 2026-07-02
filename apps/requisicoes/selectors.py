@@ -261,3 +261,114 @@ def saldos_por_materiais(material_ids: list[int]) -> dict[int, dict]:
             'motivo': motivo,
         }
     return resultado
+
+
+def historico_requisicoes_visiveis_para(ator_id: int) -> QuerySet[Requisicao]:
+    """Queryset system-wide de requisições visíveis ao ator (histórico).
+
+    Mais restrito que ``requisicoes_visiveis_para`` (que inclui a visão
+    "minhas requisições" de qualquer solicitante): aqui, só quem tem
+    visibilidade de papel sobre requisições de outras pessoas enxerga algo.
+
+    RBAC (fronteira de segurança — nunca na view/template):
+    - superuser → tudo.
+    - almoxarifado (chefe ou auxiliar) → tudo.
+    - chefe/aux de setor não-almox → só requisições com ``setor_beneficiario``
+      nos setores do ator.
+    - qualquer outro papel (solicitante puro, sem chefia) ou usuário
+      inativo/inexistente → vazio.
+    """
+    base_qs = Requisicao.objects.select_related(
+        'criador', 'beneficiario', 'setor_beneficiario'
+    ).order_by('-criado_em')
+
+    try:
+        ator = User.objects.get(pk=ator_id)
+    except User.DoesNotExist:
+        return base_qs.none()
+
+    if not ator.is_active:
+        return base_qs.none()
+
+    if ator.is_superuser:
+        return base_qs
+
+    papel = papel_efetivo(ator)
+    if papel.eh_almoxarifado:
+        return base_qs
+
+    setores = list(papel.setores_em_escopo)
+    if setores:
+        return base_qs.filter(setor_beneficiario_id__in=setores)
+
+    return base_qs.none()
+
+
+def filtrar_historico_requisicoes(
+    qs: QuerySet[Requisicao],
+    *,
+    texto: str | None,
+    estados: list[str],
+    data_ini,
+    data_fim,
+    setor: int | None,
+) -> QuerySet[Requisicao]:
+    """Estreita o queryset de histórico já escopado por RBAC.
+
+    Aplica filtros **sobre** o ``qs`` recebido (resultado de
+    ``historico_requisicoes_visiveis_para``): nunca amplia o universo visível.
+
+    - ``texto``: busca por ``nome`` OU ``matricula`` do criador OU do
+      beneficiário (icontains); vazio/``None`` → no-op.
+    - ``estados``: lista de ``EstadoRequisicao``; valores fora do enum são
+      descartados; lista vazia → no-op.
+    - ``data_ini`` / ``data_fim``: período **inclusivo** sobre o dia de
+      ``criado_em``; ``None`` → no-op.
+    - ``setor``: ``setor_beneficiario_id``; ``None`` → no-op.
+    """
+    if texto:
+        qs = qs.filter(
+            Q(criador__nome__icontains=texto)
+            | Q(criador__matricula__icontains=texto)
+            | Q(beneficiario__nome__icontains=texto)
+            | Q(beneficiario__matricula__icontains=texto)
+        )
+
+    estados_validos = [e for e in estados if e in EstadoRequisicao.values]
+    if estados_validos:
+        qs = qs.filter(estado__in=estados_validos)
+
+    if data_ini is not None:
+        qs = qs.filter(criado_em__date__gte=data_ini)
+    if data_fim is not None:
+        qs = qs.filter(criado_em__date__lte=data_fim)
+
+    if setor is not None:
+        qs = qs.filter(setor_beneficiario_id=setor)
+
+    return qs.distinct()
+
+
+def pode_filtrar_historico_por_setor(ator_id: int) -> bool:
+    """True se o ator pode filtrar o histórico por setor (só almoxarifado).
+
+    Chefe/auxiliar de setor já está escopado ao(s) próprio(s) setor(es) pelo
+    RBAC, então o filtro de setor não se aplica a ele. Superuser e
+    almoxarifado veem todos os setores e podem recortar por setor.
+    """
+    try:
+        ator = User.objects.get(pk=ator_id)
+    except User.DoesNotExist:
+        return False
+    if not ator.is_active:
+        return False
+    return ator.is_superuser or _eh_almoxarifado(ator)
+
+
+def _setores_do_historico(qs: QuerySet[Requisicao]):
+    """Setores beneficiários distintos presentes no histórico visível
+    (opções do filtro de setor, exibido apenas para almoxarifado)."""
+    from apps.accounts.models import Setor
+
+    ids = qs.values_list('setor_beneficiario_id', flat=True).distinct()
+    return Setor.objects.filter(pk__in=ids).order_by('nome')

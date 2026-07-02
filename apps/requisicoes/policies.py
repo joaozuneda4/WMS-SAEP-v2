@@ -447,3 +447,26 @@ def exigir_pode_estornar_requisicao(
             'Apenas chefe de almoxarifado pode estornar uma requisição atendida.',
             code='estornar_requisicao_negada',
         )
+
+
+def pode_consultar_historico_requisicoes(papel: 'PapelEfetivo') -> bool:
+    """Pode navegar o histórico system-wide de requisições.
+
+    Espelha o universo de ``historico_requisicoes_visiveis_para``: superuser,
+    almoxarifado (chefe/aux) ou chefe/aux de setor não-almox (setores_em_escopo
+    não vazio). Solicitante puro e inativo: não — continuam usando
+    ``requisicoes:minhas``.
+    """
+    if not papel.ativo:
+        return False
+    if papel.eh_superusuario:
+        return True
+    return papel.eh_almoxarifado or bool(papel.setores_em_escopo)
+
+
+def exigir_pode_consultar_historico_requisicoes(papel: 'PapelEfetivo') -> None:
+    if not pode_consultar_historico_requisicoes(papel):
+        raise PermissaoNegada(
+            'Você não tem permissão para consultar o histórico de requisições.',
+            code='permissao_negada',
+        )

@@ -1,0 +1,139 @@
+{% comment %}
+Conteúdo do bloco tabela+paginação do histórico de requisições — resposta do
+swap HTMX. O wrapper #resultados-historico-requisicoes (id + aria-live) vive
+na página completa e é o alvo persistente do swap; este partial entrega
+apenas o conteúdo interno para evitar id duplicado / aria-live aninhado.
+Contexto: page_obj, tem_filtro_ativo, ordem, aria_sort, url_ordenacao,
+querystring_filtros.
+{% endcomment %}
+{% if page_obj.object_list %}
+
+  {# Mobile: cards empilhados #}
+  <div class="space-y-3 sm:hidden">
+    {% for req in page_obj.object_list %}
+      <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h2 class="text-sm font-semibold text-slate-900">
+              {% if req.numero_publico %}{{ req.numero_publico }}{% else %}Rascunho #{{ req.pk }}{% endif %}
+            </h2>
+            <p class="mt-1 text-xs text-slate-500">{{ req.criado_em|date:"d/m/Y H:i" }}</p>
+          </div>
+          <div class="shrink-0">
+            {% include "requisicoes/partials/_estado_badge.html" with requisicao=req %}
+          </div>
+        </div>
+
+        <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Solicitante</dt>
+            <dd class="mt-0.5 text-slate-800">{{ req.criador.nome }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Beneficiário</dt>
+            <dd class="mt-0.5 text-slate-800">{{ req.beneficiario.nome }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Setor</dt>
+            <dd class="mt-0.5 text-slate-800">{{ req.setor_beneficiario.nome }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Material</dt>
+            <dd class="mt-0.5 text-slate-800">
+              {% if req.quantidade_itens == 1 %}{{ req.itens.all.0.material.nome }}{% else %}{{ req.quantidade_itens }} itens{% endif %}
+            </dd>
+          </div>
+        </dl>
+
+        <a
+          href="{% url 'requisicoes:detalhe' pk=req.pk %}?next={{ request.path|urlencode }}"
+          class="mt-4 inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+        >
+          Ver detalhes
+        </a>
+      </article>
+    {% endfor %}
+  </div>
+
+  {# Desktop: tabela densa #}
+  <div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:block">
+    <table class="min-w-full divide-y divide-slate-200">
+      <caption class="sr-only">
+        Histórico de requisições, ordenado por data/hora em ordem
+        {% if ordem == 'asc' %}crescente (mais antiga primeiro){% else %}decrescente (mais recente primeiro){% endif %}.
+      </caption>
+      <thead class="bg-slate-50">
+        <tr>
+          <th scope="col" aria-sort="{{ aria_sort }}" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <a
+              href="{{ url_ordenacao }}"
+              hx-get="{{ url_ordenacao }}"
+              hx-target="#resultados-historico-requisicoes"
+              hx-push-url="true"
+              class="-my-1 inline-flex items-center gap-1 rounded py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label="Ordenar por data/hora, {% if ordem == 'asc' %}atualmente crescente{% else %}atualmente decrescente{% endif %}"
+            >
+              Data/hora
+              <span aria-hidden="true">{% if ordem == 'asc' %}↑{% else %}↓{% endif %}</span>
+            </a>
+          </th>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Número</th>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Solicitante</th>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Beneficiário</th>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Setor</th>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Material</th>
+          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+          <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <span class="sr-only">Ações</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 bg-white">
+        {% for req in page_obj.object_list %}
+          <tr class="hover:bg-slate-50">
+            <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{{ req.criado_em|date:"d/m/Y H:i" }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900">
+              {% if req.numero_publico %}{{ req.numero_publico }}{% else %}<span class="text-slate-500">Rascunho #{{ req.pk }}</span>{% endif %}
+            </td>
+            <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">{{ req.criador.nome }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">{{ req.beneficiario.nome }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">{{ req.setor_beneficiario.nome }}</td>
+            <td class="max-w-xs truncate px-4 py-3 text-sm text-slate-700">
+              {% if req.quantidade_itens == 1 %}{{ req.itens.all.0.material.nome }}{% else %}{{ req.quantidade_itens }} itens{% endif %}
+            </td>
+            <td class="whitespace-nowrap px-4 py-3 text-sm">
+              {% include "requisicoes/partials/_estado_badge.html" with requisicao=req %}
+            </td>
+            <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
+              <a
+                href="{% url 'requisicoes:detalhe' pk=req.pk %}?next={{ request.path|urlencode }}"
+                class="inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+              >
+                Ver
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include 'requisicoes/partials/_paginacao_historico.html' with page_obj=page_obj querystring_filtros=querystring_filtros %}
+
+{% else %}
+
+  {# Empty state contextual: filtro sem resultado vs histórico visível vazio #}
+  <div class="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+    <svg class="mx-auto mb-4 h-10 w-10 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v4l5-5-5-5v4z"/>
+    </svg>
+    {% if tem_filtro_ativo %}
+      <h2 class="text-base font-medium text-slate-700">Nenhum resultado para este filtro</h2>
+      <p class="mt-1 text-sm text-slate-500">Ajuste ou limpe os filtros para ver mais requisições.</p>
+    {% else %}
+      <h2 class="text-base font-medium text-slate-700">Nenhuma requisição encontrada</h2>
+      <p class="mt-1 text-sm text-slate-500">Ainda não há requisições visíveis para o seu papel.</p>
+    {% endif %}
+  </div>
+
+{% endif %}

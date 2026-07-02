@@ -13,6 +13,7 @@ from apps.estoque.policies import (
     pode_visualizar_preview_scpi,
 )
 from apps.requisicoes.policies import (
+    pode_consultar_historico_requisicoes,
     pode_ver_fila_atendimento,
     pode_ver_fila_autorizacao,
 )
@@ -30,6 +31,7 @@ def flags_de_papel(request):
             'pode_consultar_historico_scpi': False,
             'pode_consultar_catalogo_estoque': False,
             'pode_consultar_movimentacoes_estoque': False,
+            'pode_consultar_historico_requisicoes': False,
         }
     papel = papel_efetivo(usuario)
     return {
@@ -40,6 +42,9 @@ def flags_de_papel(request):
         'pode_consultar_historico_scpi': pode_consultar_historico_scpi(papel),
         'pode_consultar_catalogo_estoque': pode_consultar_catalogo_estoque(papel),
         'pode_consultar_movimentacoes_estoque': pode_consultar_movimentacoes_estoque(
+            papel
+        ),
+        'pode_consultar_historico_requisicoes': pode_consultar_historico_requisicoes(
             papel
         ),
     }

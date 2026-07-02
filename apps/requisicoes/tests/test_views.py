@@ -2707,3 +2707,235 @@ def test_estornar_view_get_nao_permitido(client, chefe_almoxarifado, req_atendid
     url = reverse('requisicoes:estornar', kwargs={'pk': req_atendida_view.pk})
     response = client.get(url)
     assert response.status_code == 405
+
+
+# ---------------------------------------------------------------------------
+# historico_requisicoes_view
+# ---------------------------------------------------------------------------
+
+URL_HISTORICO_REQUISICOES = reverse('requisicoes:historico')
+
+
+class TestHistoricoRequisicoesView:
+    def test_chefe_almox_acessa(self, client, chefe_almoxarifado):
+        _login(client, chefe_almoxarifado)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        assert response.status_code == 200
+
+    def test_superuser_acessa(self, client, superuser):
+        _login(client, superuser)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        assert response.status_code == 200
+
+    def test_chefe_setor_acessa(self, client, chefe_obras):
+        _login(client, chefe_obras)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        assert response.status_code == 200
+
+    def test_solicitante_recebe_403(self, client, solicitante):
+        _login(client, solicitante)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        assert response.status_code == 403
+
+    def test_anonimo_redirecionado_para_login(self, client):
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        assert response.status_code == 302
+        assert 'login' in response['Location']
+
+    def test_contexto_tem_page_obj(self, client, superuser):
+        _login(client, superuser)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        assert 'page_obj' in response.context
+
+    def test_view_alimenta_page_obj_com_selector_escopado(
+        self, client, chefe_obras, req_historico_obras, req_historico_ti
+    ):
+        from apps.requisicoes.selectors import historico_requisicoes_visiveis_para
+
+        _login(client, chefe_obras)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        assert response.status_code == 200
+        assert 'requisicoes/historico_requisicoes.html' in {
+            t.name for t in response.templates
+        }
+        esperado = historico_requisicoes_visiveis_para(chefe_obras.pk).count()
+        assert response.context['page_obj'].paginator.count == esperado
+
+    def test_paginacao_server_side(self, client, superuser, setor_obras, solicitante):
+        for i in range(30):
+            Requisicao.objects.create(
+                estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+                numero_publico=f'REQ-2026-1{i:03d}',
+                criador=solicitante,
+                beneficiario=solicitante,
+                setor_beneficiario=setor_obras,
+            )
+        _login(client, superuser)
+        page1 = client.get(URL_HISTORICO_REQUISICOES)
+        assert len(page1.context['page_obj'].object_list) == 25
+        assert page1.context['page_obj'].has_next() is True
+        page2 = client.get(URL_HISTORICO_REQUISICOES, {'page': 2})
+        assert page2.status_code == 200
+        assert len(page2.context['page_obj'].object_list) >= 1
+
+    def test_empty_state_quando_historico_vazio(self, client, chefe_almoxarifado):
+        _login(client, chefe_almoxarifado)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        assert response.context['page_obj'].paginator.count == 0
+        assert b'Nenhuma requisi' in response.content
+
+    def test_requisicao_htmx_devolve_so_partial(self, client, superuser):
+        _login(client, superuser)
+        response = client.get(URL_HISTORICO_REQUISICOES, HTTP_HX_REQUEST='true')
+        assert response.status_code == 200
+        nomes = {t.name for t in response.templates}
+        assert 'requisicoes/partials/_tabela_historico_requisicoes.html' in nomes
+        assert 'requisicoes/historico_requisicoes.html' not in nomes
+
+    def test_requisicao_normal_devolve_template_completo(self, client, superuser):
+        _login(client, superuser)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        nomes = {t.name for t in response.templates}
+        assert 'requisicoes/historico_requisicoes.html' in nomes
+
+    def test_coluna_material_resume_item_unico(
+        self, client, superuser, req_historico_obras, material_disponivel
+    ):
+        ItemRequisicao.objects.create(
+            requisicao=req_historico_obras,
+            material=material_disponivel,
+            quantidade_solicitada=3,
+        )
+        _login(client, superuser)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        assert material_disponivel.nome.encode() in response.content
+
+    def test_coluna_material_resume_multiplos_itens(
+        self,
+        client,
+        superuser,
+        req_historico_obras,
+        material_disponivel,
+        material_disponivel_2,
+    ):
+        ItemRequisicao.objects.create(
+            requisicao=req_historico_obras,
+            material=material_disponivel,
+            quantidade_solicitada=3,
+        )
+        ItemRequisicao.objects.create(
+            requisicao=req_historico_obras,
+            material=material_disponivel_2,
+            quantidade_solicitada=1,
+        )
+        _login(client, superuser)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        assert b'2 itens' in response.content
+
+
+class TestHistoricoRequisicoesFiltros:
+    def test_filtro_texto_reduz_resultado(
+        self, client, superuser, req_historico_obras, req_historico_ti
+    ):
+        _login(client, superuser)
+        com = client.get(URL_HISTORICO_REQUISICOES, {'texto': 'Solicitante'})
+        sem = client.get(URL_HISTORICO_REQUISICOES, {'texto': 'inexistente'})
+        assert com.context['page_obj'].paginator.count == 1
+        assert sem.context['page_obj'].paginator.count == 0
+
+    def test_filtro_estado_reduz_resultado(
+        self, client, superuser, req_historico_obras, req_historico_ti
+    ):
+        _login(client, superuser)
+        response = client.get(URL_HISTORICO_REQUISICOES, {'estados': ['autorizada']})
+        pks = {r.pk for r in response.context['page_obj'].object_list}
+        assert pks == {req_historico_ti.pk}
+
+    def test_ordenacao_asc_inverte_cronologia(
+        self, client, superuser, setor_obras, solicitante
+    ):
+        for i in range(2):
+            Requisicao.objects.create(
+                estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+                numero_publico=f'REQ-2026-2{i:03d}',
+                criador=solicitante,
+                beneficiario=solicitante,
+                setor_beneficiario=setor_obras,
+            )
+        _login(client, superuser)
+        desc = client.get(URL_HISTORICO_REQUISICOES).context['page_obj'].object_list
+        asc = (
+            client.get(URL_HISTORICO_REQUISICOES, {'ordem': 'asc'})
+            .context['page_obj']
+            .object_list
+        )
+        assert [r.pk for r in asc] == [r.pk for r in reversed(list(desc))]
+
+    def test_filtro_setor_visivel_so_para_almox(
+        self, client, chefe_almoxarifado, chefe_obras
+    ):
+        _login(client, chefe_almoxarifado)
+        assert (
+            client.get(URL_HISTORICO_REQUISICOES).context['mostrar_filtro_setor']
+            is True
+        )
+        _login(client, chefe_obras)
+        assert (
+            client.get(URL_HISTORICO_REQUISICOES).context['mostrar_filtro_setor']
+            is False
+        )
+
+    def test_chefe_setor_nao_filtra_por_setor_via_querystring(
+        self, client, chefe_obras, req_historico_obras, req_historico_ti, setor_ti
+    ):
+        _login(client, chefe_obras)
+        response = client.get(URL_HISTORICO_REQUISICOES, {'setor': setor_ti.pk})
+        assert response.status_code == 200
+        pks = {r.pk for r in response.context['page_obj'].object_list}
+        assert req_historico_ti.pk not in pks
+
+    def test_querystring_invalida_nao_quebra(self, client, superuser):
+        _login(client, superuser)
+        response = client.get(
+            URL_HISTORICO_REQUISICOES,
+            {
+                'data_ini': 'abc',
+                'data_fim': '2026-13-99',
+                'setor': 'xyz',
+                'ordem': 'lixo',
+                'estados': 'nao_existe',
+                'page': 'foo',
+            },
+        )
+        assert response.status_code == 200
+
+    def test_flag_tem_filtro_ativo(self, client, superuser):
+        _login(client, superuser)
+        com = client.get(URL_HISTORICO_REQUISICOES, {'texto': 'x'})
+        sem = client.get(URL_HISTORICO_REQUISICOES)
+        assert com.context['tem_filtro_ativo'] is True
+        assert sem.context['tem_filtro_ativo'] is False
+
+    def test_empty_state_contextual_distingue_filtro_de_historico_vazio(
+        self, client, superuser, req_historico_obras
+    ):
+        _login(client, superuser)
+        filtrado = client.get(
+            URL_HISTORICO_REQUISICOES, {'texto': 'inexistente'}
+        ).content
+        assert 'Nenhum resultado para este filtro'.encode() in filtrado
+        assert 'Nenhuma requisição encontrada'.encode() not in filtrado
+
+
+class TestNavHistoricoRequisicoes:
+    def test_menu_mostra_link_para_almox(self, client, chefe_almoxarifado):
+        # Página 'minhas' (não a própria tela de histórico, que já contém sua
+        # URL nos atributos hx-get do form de filtros) para isolar o link de nav.
+        _login(client, chefe_almoxarifado)
+        response = client.get(reverse('requisicoes:minhas'))
+        assert 'Histórico de requisições'.encode() in response.content
+
+    def test_menu_esconde_link_para_solicitante(self, client, solicitante):
+        _login(client, solicitante)
+        response = client.get(reverse('requisicoes:minhas'))
+        assert 'Histórico de requisições'.encode() not in response.content
