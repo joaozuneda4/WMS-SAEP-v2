@@ -2,9 +2,66 @@ from decimal import Decimal, InvalidOperation
 
 from django import template
 
+from apps.requisicoes.models import CancelamentoVariant, EstadoRequisicao
+
 register = template.Library()
 
 _UMA_DECIMAL = ('kg', 'l', 'm')
+
+_CANCELAMENTO_COPY = {
+    (CancelamentoVariant.DESCARTE, EstadoRequisicao.RASCUNHO): {
+        'titulo': 'Descartar rascunho',
+        'descricao': (
+            'Este rascunho ainda não foi enviado. O descarte remove o registro '
+            'definitivamente e não consome número público nem reserva de estoque.'
+        ),
+        'trigger': 'Descartar rascunho',
+        'confirmar': 'Descartar',
+    },
+    (CancelamentoVariant.CANCELAMENTO, EstadoRequisicao.RASCUNHO): {
+        'titulo': 'Cancelar rascunho',
+        'descricao': (
+            'Este rascunho já foi enviado alguma vez. O cancelamento encerra '
+            'a requisição sem nova reserva e preserva o número público.'
+        ),
+        'trigger': 'Cancelar rascunho',
+        'confirmar': 'Confirmar cancelamento',
+    },
+    (CancelamentoVariant.CANCELAMENTO, EstadoRequisicao.AGUARDANDO_AUTORIZACAO): {
+        'titulo': 'Cancelar requisição',
+        'descricao': (
+            'A requisição será encerrada antes da autorização. Não há reserva '
+            'de estoque a liberar e a justificativa é opcional.'
+        ),
+        'trigger': 'Cancelar requisição',
+        'confirmar': 'Confirmar cancelamento',
+    },
+    (CancelamentoVariant.CANCELAMENTO, EstadoRequisicao.AUTORIZADA): {
+        'titulo': 'Cancelar requisição',
+        'descricao': (
+            'A requisição será encerrada e as reservas voltam ao saldo '
+            'disponível. O saldo físico permanece inalterado.'
+        ),
+        'trigger': 'Cancelar requisição',
+        'confirmar': 'Confirmar cancelamento',
+    },
+}
+_CANCELAMENTO_COPY[
+    (CancelamentoVariant.CANCELAMENTO, EstadoRequisicao.PRONTA_PARA_RETIRADA)
+] = _CANCELAMENTO_COPY[(CancelamentoVariant.CANCELAMENTO, EstadoRequisicao.AUTORIZADA)]
+
+
+@register.simple_tag
+def cancelamento_copy(info, estado):
+    """Lookup de copy do modal de cancelamento por (variante, estado) — presentation-only.
+
+    `info` é `CancelamentoInfo | None`; `estado` é `requisicao.estado`. Não
+    reimplementa regra de domínio — só projeta a classificação já feita por
+    `apps.requisicoes.transitions.cancelamento_info` em texto de UI.
+    """
+    if info is None:
+        return {}
+    return _CANCELAMENTO_COPY[(info.variante, estado)]
 
 
 @register.filter

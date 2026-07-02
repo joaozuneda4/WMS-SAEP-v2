@@ -222,6 +222,20 @@ class Operacao(models.TextChoices):
     ESTORNAR = 'estornar', 'Estornar'
 
 
+class CancelamentoVariant(models.TextChoices):
+    """Classificação do cancelamento de uma Requisicao (CONTEXT.md, "Variante de cancelamento").
+
+    Descarte é uma variante do cancelamento, não uma operação à parte — a
+    variante apenas classifica o caso. Os atributos de execução
+    (requer_justificativa, libera_reserva) vivem em CancelamentoInfo
+    (apps.requisicoes.transitions), derivados do TransitionSpec de
+    Operacao.CANCELAR, não desta enumeração.
+    """
+
+    DESCARTE = 'descarte', 'Descarte'
+    CANCELAMENTO = 'cancelamento', 'Cancelamento'
+
+
 class TimelineRequisicao(models.Model):
     """Evento de histórico de domínio de uma requisição (ADR-0002).
 

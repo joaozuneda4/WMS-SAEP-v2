@@ -70,6 +70,7 @@ from apps.requisicoes.services import (
     retornar_para_rascunho,
     separar_para_retirada,
 )
+from apps.requisicoes.transitions import cancelamento_info
 
 
 def _htmx_redirect(request, url: str) -> HttpResponse:
@@ -122,57 +123,7 @@ def _detalhe_context(
             None,
         )
     cancelavel = Operacao.CANCELAR in acoes
-    if cancelavel:
-        if (
-            requisicao.estado == EstadoRequisicao.RASCUNHO
-            and requisicao.numero_publico is None
-        ):
-            cancelamento_titulo = 'Descartar rascunho'
-            cancelamento_descricao = (
-                'Este rascunho ainda não foi enviado. O descarte remove o registro '
-                'definitivamente e não consome número público nem reserva de estoque.'
-            )
-            cancelamento_trigger = 'Descartar rascunho'
-            cancelamento_confirmar = 'Descartar'
-            cancelamento_requer_justificativa = False
-            cancelamento_variacao = 'danger'
-        elif requisicao.estado == EstadoRequisicao.RASCUNHO:
-            cancelamento_titulo = 'Cancelar rascunho'
-            cancelamento_descricao = (
-                'Este rascunho já foi enviado alguma vez. O cancelamento encerra '
-                'a requisição sem nova reserva e preserva o número público.'
-            )
-            cancelamento_trigger = 'Cancelar rascunho'
-            cancelamento_confirmar = 'Confirmar cancelamento'
-            cancelamento_requer_justificativa = False
-            cancelamento_variacao = 'danger'
-        elif requisicao.estado == EstadoRequisicao.AGUARDANDO_AUTORIZACAO:
-            cancelamento_titulo = 'Cancelar requisição'
-            cancelamento_descricao = (
-                'A requisição será encerrada antes da autorização. Não há reserva '
-                'de estoque a liberar e a justificativa é opcional.'
-            )
-            cancelamento_trigger = 'Cancelar requisição'
-            cancelamento_confirmar = 'Confirmar cancelamento'
-            cancelamento_requer_justificativa = False
-            cancelamento_variacao = 'danger'
-        else:
-            cancelamento_titulo = 'Cancelar requisição'
-            cancelamento_descricao = (
-                'A requisição será encerrada e as reservas voltam ao saldo '
-                'disponível. O saldo físico permanece inalterado.'
-            )
-            cancelamento_trigger = 'Cancelar requisição'
-            cancelamento_confirmar = 'Confirmar cancelamento'
-            cancelamento_requer_justificativa = True
-            cancelamento_variacao = 'danger'
-    else:
-        cancelamento_titulo = ''
-        cancelamento_descricao = ''
-        cancelamento_trigger = ''
-        cancelamento_confirmar = ''
-        cancelamento_requer_justificativa = False
-        cancelamento_variacao = ''
+    info_cancelamento = cancelamento_info(requisicao) if cancelavel else None
 
     estados_copiavel = {EstadoRequisicao.ATENDIDA, EstadoRequisicao.RECUSADA}
     pode_copiar = requisicao.estado in estados_copiavel and pode_copiar_requisicao(
@@ -193,12 +144,10 @@ def _detalhe_context(
         'pode_atender_retirada': Operacao.REGISTRAR_ATENDIMENTO in acoes,
         'pode_cancelar': cancelavel,
         'pode_copiar': pode_copiar,
-        'cancelamento_titulo': cancelamento_titulo,
-        'cancelamento_descricao': cancelamento_descricao,
-        'cancelamento_trigger': cancelamento_trigger,
-        'cancelamento_confirmar': cancelamento_confirmar,
-        'cancelamento_requer_justificativa': cancelamento_requer_justificativa,
-        'cancelamento_variacao': cancelamento_variacao,
+        'cancelamento_info': info_cancelamento,
+        'cancelamento_requer_justificativa': (
+            info_cancelamento.requer_justificativa if info_cancelamento else False
+        ),
         'cancelamento_erro': cancelacao_erro,
         'justificativa_cancelamento': justificativa_cancelamento,
         'cancelamento_modal_aberto': cancelamento_modal_aberto or bool(cancelacao_erro),

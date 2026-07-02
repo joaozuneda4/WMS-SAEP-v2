@@ -10,6 +10,7 @@ import pytest
 from django.urls import reverse
 
 from apps.requisicoes.models import (
+    CancelamentoVariant,
     EstadoRequisicao,
     EventoTimeline,
     ItemRequisicao,
@@ -1407,7 +1408,9 @@ def test_detalhe_exibe_descartar_rascunho_para_criador_em_rascunho(
 
     assert response.status_code == 200
     assert response.context['pode_cancelar'] is True
-    assert response.context['cancelamento_titulo'] == 'Descartar rascunho'
+    assert (
+        response.context['cancelamento_info'].variante == CancelamentoVariant.DESCARTE
+    )
     assert response.context['cancelamento_requer_justificativa'] is False
     assert 'role="dialog"' in html
     assert 'Descartar rascunho' in html
@@ -1425,7 +1428,10 @@ def test_detalhe_exibe_cancelar_com_justificativa_para_autorizada(
 
     assert response.status_code == 200
     assert response.context['pode_cancelar'] is True
-    assert response.context['cancelamento_titulo'] == 'Cancelar requisição'
+    assert (
+        response.context['cancelamento_info'].variante
+        == CancelamentoVariant.CANCELAMENTO
+    )
     assert response.context['cancelamento_requer_justificativa'] is True
     assert 'Justificativa do cancelamento' in html
     assert 'role="dialog"' in html
