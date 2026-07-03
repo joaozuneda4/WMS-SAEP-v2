@@ -263,6 +263,7 @@ class ItemAtendimentoForm(forms.Form):
         min_value=Decimal('0'),
         max_digits=12,
         decimal_places=3,
+        localize=False,
         widget=forms.NumberInput(
             attrs={
                 'class': (

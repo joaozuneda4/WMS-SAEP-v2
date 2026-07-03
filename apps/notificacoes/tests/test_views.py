@@ -1,8 +1,10 @@
 """Testes de views de notificações (ADR-0010)."""
 
 import pytest
+from django.urls import reverse
 
 from apps.notificacoes.models import Notificacao, TipoNotificacao
+from apps.requisicoes.models import EstadoRequisicao, Requisicao
 
 
 @pytest.fixture
@@ -44,6 +46,65 @@ def test_lista_notificacoes_exibe_proprias(
     pks = [n.pk for n in notifs]
     assert n_propria.pk in pks
     assert all(n.destinatario_id == solicitante.pk for n in notifs)
+
+
+@pytest.mark.django_db
+def test_lista_notificacoes_exibe_numero_publico_e_link(
+    client_logado, solicitante, setor_obras
+):
+    requisicao = Requisicao.objects.create(
+        estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+        numero_publico='REQ-2026-000042',
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    Notificacao.objects.create(
+        destinatario=solicitante,
+        tipo=TipoNotificacao.AUTORIZACAO,
+        requisicao_id=requisicao.pk,
+    )
+    resp = client_logado.get('/notificacoes/')
+    html = resp.content.decode('utf-8')
+    assert 'REQ-2026-000042' in html
+    assert f'Requisição #{requisicao.pk}' not in html
+    assert reverse('requisicoes:detalhe', kwargs={'pk': requisicao.pk}) in html
+
+
+@pytest.mark.django_db
+def test_lista_notificacoes_requisicao_inexistente_mostra_fallback(
+    client_logado, solicitante
+):
+    Notificacao.objects.create(
+        destinatario=solicitante,
+        tipo=TipoNotificacao.ATENDIMENTO,
+        requisicao_id=999999,
+    )
+    resp = client_logado.get('/notificacoes/')
+    assert resp.status_code == 200
+    html = resp.content.decode('utf-8')
+    assert 'Rascunho' in html
+
+
+@pytest.mark.django_db
+def test_lista_notificacoes_rascunho_real_mostra_fallback(
+    client_logado, solicitante, setor_obras
+):
+    requisicao = Requisicao.objects.create(
+        estado=EstadoRequisicao.RASCUNHO,
+        criador=solicitante,
+        beneficiario=solicitante,
+        setor_beneficiario=setor_obras,
+    )
+    Notificacao.objects.create(
+        destinatario=solicitante,
+        tipo=TipoNotificacao.ATENDIMENTO,
+        requisicao_id=requisicao.pk,
+    )
+    resp = client_logado.get('/notificacoes/')
+    assert resp.status_code == 200
+    html = resp.content.decode('utf-8')
+    assert 'Rascunho' in html
 
 
 @pytest.mark.django_db

@@ -23,7 +23,12 @@
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-slate-800">{{ notificacao.get_tipo_display }}</p>
             {% if notificacao.requisicao_id %}
-              <p class="text-xs text-slate-500">Requisição #{{ notificacao.requisicao_id }}</p>
+              <a
+                href="{% url 'requisicoes:detalhe' pk=notificacao.requisicao_id %}"
+                class="text-xs text-slate-500 hover:underline"
+              >
+                Requisição {{ notificacao.numero_publico_exibicao }}
+              </a>
             {% endif %}
             <p class="text-xs text-slate-400 mt-1">{{ notificacao.criado_em|date:"d/m/Y H:i" }}</p>
           </div>

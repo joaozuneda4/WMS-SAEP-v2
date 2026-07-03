@@ -15,7 +15,7 @@ querystring_filtros.
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <h2 class="text-sm font-semibold text-slate-900">
-              {% if req.numero_publico %}{{ req.numero_publico }}{% else %}Rascunho #{{ req.pk }}{% endif %}
+              {% if req.numero_publico %}{{ req.numero_publico }}{% else %}<span class="text-slate-500">Rascunho</span>{% endif %}
             </h2>
             <p class="mt-1 text-xs text-slate-500">{{ req.criado_em|date:"d/m/Y H:i" }}</p>
           </div>
@@ -93,7 +93,7 @@ querystring_filtros.
           <tr class="hover:bg-slate-50">
             <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{{ req.criado_em|date:"d/m/Y H:i" }}</td>
             <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900">
-              {% if req.numero_publico %}{{ req.numero_publico }}{% else %}<span class="text-slate-500">Rascunho #{{ req.pk }}</span>{% endif %}
+              {% if req.numero_publico %}{{ req.numero_publico }}{% else %}<span class="text-slate-500">Rascunho</span>{% endif %}
             </td>
             <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">{{ req.criador.nome }}</td>
             <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">{{ req.beneficiario.nome }}</td>

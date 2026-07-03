@@ -1,5 +1,6 @@
 {% extends "requisicoes/base.html" %}
 {% load static %}
+{% load l10n %}
 {% load requisicoes_tags %}
 
 {% block title %}
@@ -92,8 +93,8 @@
                 <tr
                   class="align-top"
                   x-data="{
-                    autorizada: {{ item.quantidade_autorizada|stringformat:'s' }},
-                    entregue: '{{ form.quantidade_entregue.value|default_if_none:'' }}',
+                    autorizada: {{ item.quantidade_autorizada|unlocalize }},
+                    entregue: '{{ form.quantidade_entregue.value|default_if_none:''|unlocalize }}',
                     get parcial() {
                       const a = parseFloat(this.autorizada);
                       const e = parseFloat(this.entregue);
@@ -116,11 +117,11 @@
                       type="number"
                       step="0.001"
                       min="0"
-                      max="{{ item.quantidade_autorizada }}"
+                      max="{{ item.quantidade_autorizada|unlocalize }}"
                       inputmode="decimal"
                       name="{{ form.quantidade_entregue.html_name }}"
                       id="{{ form.quantidade_entregue.id_for_label }}"
-                      value="{{ form.quantidade_entregue.value|default_if_none:'' }}"
+                      value="{{ form.quantidade_entregue.value|default_if_none:''|unlocalize }}"
                       x-model="entregue"
                       class="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm tabular-nums focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       aria-describedby="hint-{{ form.quantidade_entregue.id_for_label }}"
