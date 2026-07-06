@@ -157,7 +157,9 @@ reviews:
         HTMX e Alpine.js. Componentes globais ficam em apps/core/templates/components/
         e não conhecem semântica de negócio; partials de domínio ficam no app dono.
         Verifique acessibilidade, foco, contraste, ARIA, mensagens com role
-        correto, ausência de texto técnico ao usuário e URLs PT-BR.
+        correto, ausência de texto técnico ao usuário e URLs PT-BR. Anglicismos
+        técnicos (templates, server-rendered) são aceitáveis; revise texto de UX
+        exposto ao usuário (labels, placeholders, mensagens) para PT-BR.
 
     - path: "apps/**/migrations/*.py"
       instructions: >
@@ -196,6 +198,9 @@ reviews:
         com CONTEXT.md, ADRs aceitas, docs/CONVENTIONS.md, matriz de permissões,
         matriz de invariantes, transições de requisição e design-system. Se docs
         e código divergem, sinalize explicitamente em vez de normalizar silêncio.
+        Anglicismos técnicos pontuais (templates, server-rendered, etc) são
+        aceitáveis quando não há equivalente idiomático PT-BR consolidado na
+        documentação do projeto. Não sinalize como "erro de vocábulo" de PT-BR.
 
     - path: ".design/**/*.md"
       instructions: >

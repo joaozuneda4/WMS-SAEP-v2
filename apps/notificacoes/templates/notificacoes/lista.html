@@ -29,6 +29,8 @@
               >
                 Requisição {{ notificacao.numero_publico_exibicao }}
               </a>
+            {% else %}
+              <span class="text-xs text-slate-500" aria-hidden="true">&nbsp;</span>
             {% endif %}
             <p class="text-xs text-slate-400 mt-1">{{ notificacao.criado_em|date:"d/m/Y H:i" }}</p>
           </div>

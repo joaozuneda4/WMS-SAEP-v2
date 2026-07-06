@@ -1397,6 +1397,24 @@ def test_detalhe_exibe_retorno_para_criador_e_nao_exibe_recusa(
 
 
 @pytest.mark.django_db
+def test_detalhe_autorizar_card_e_modal_tem_copy_diferenciada(
+    client, chefe_obras, req_enviada_solicitante
+):
+    _login(client, chefe_obras)
+    response = client.get(
+        reverse('requisicoes:detalhe', kwargs={'pk': req_enviada_solicitante.pk})
+    )
+    html = response.content.decode('utf-8')
+
+    modal_copy = (
+        'Reserva o saldo necessário para todos os itens sem alterar o saldo físico.'
+    )
+
+    assert response.context['pode_autorizar'] is True
+    assert html.count(modal_copy) == 1
+
+
+@pytest.mark.django_db
 def test_detalhe_exibe_descartar_rascunho_para_criador_em_rascunho(
     client, solicitante, rascunho_solicitante
 ):

@@ -108,6 +108,23 @@ def test_lista_notificacoes_rascunho_real_mostra_fallback(
 
 
 @pytest.mark.django_db
+def test_lista_notificacoes_sem_requisicao_preserva_altura_da_linha(
+    client_logado, solicitante
+):
+    Notificacao.objects.create(
+        destinatario=solicitante,
+        tipo=TipoNotificacao.ATENDIMENTO,
+        requisicao_id=None,
+    )
+    resp = client_logado.get('/notificacoes/')
+    html = resp.content.decode('utf-8')
+    assert 'Requisição' not in html
+    assert (
+        '<span class="text-xs text-slate-500" aria-hidden="true">&nbsp;</span>' in html
+    )
+
+
+@pytest.mark.django_db
 def test_marcar_lida_marca_notificacao(client_logado, notificacao_nao_lida):
     resp = client_logado.post(f'/notificacoes/{notificacao_nao_lida.pk}/lida/')
     assert resp.status_code in (200, 302, 204)
