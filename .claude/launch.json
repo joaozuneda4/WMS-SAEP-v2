@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "run",
+      "name": "Django Dev Server",
       "runtimeExecutable": "make",
       "runtimeArgs": ["run"],
       "port": 8000
