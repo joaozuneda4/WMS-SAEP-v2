@@ -1,18 +1,20 @@
 {% comment %}
-Paginação server-side reutilizável. Recebe `page_obj` (Paginator page) e,
-opcionalmente, `querystring_filtros` (querystring atual sem `page`) para
-preservar os filtros ativos ao navegar. Alvos de toque min-h-11, focáveis.
+Paginação server-side reutilizável. Recebe `page_obj` (Paginator page),
+`rotulo_itens` (substantivo plural do contador, ex. "requisições") e
+`aria_label` (texto do aria-label do nav). Opcionalmente recebe
+`querystring_filtros` (querystring atual sem `page`) para preservar os
+filtros ativos ao navegar. Alvos de toque min-h-11, focáveis.
 {% endcomment %}
 {% if page_obj.paginator.num_pages > 1 %}
   <nav
     class="mt-6 flex items-center justify-between gap-3"
-    aria-label="Paginação das movimentações"
+    aria-label="{{ aria_label|default:'Paginação' }}"
   >
     <p class="text-sm text-slate-600">
       Página <span class="font-medium tabular-nums">{{ page_obj.number }}</span>
       de <span class="font-medium tabular-nums">{{ page_obj.paginator.num_pages }}</span>
       <span class="text-slate-400">·</span>
-      <span class="tabular-nums">{{ page_obj.paginator.count }}</span> movimentações
+      <span class="tabular-nums">{{ page_obj.paginator.count }}</span> {{ rotulo_itens|default:'itens' }}
     </p>
 
     <div class="flex items-center gap-2">

@@ -2834,6 +2834,27 @@ class TestHistoricoRequisicoesView:
         assert response.context['page_obj'].paginator.count == 0
         assert b'Nenhuma requisi' in response.content
 
+    def test_paginacao_usa_componente_com_rotulo_e_aria_label_proprios(
+        self, client, superuser, setor_obras, solicitante
+    ):
+        for i in range(30):
+            Requisicao.objects.create(
+                estado=EstadoRequisicao.AGUARDANDO_AUTORIZACAO,
+                numero_publico=f'REQ-2026-2{i:03d}',
+                criador=solicitante,
+                beneficiario=solicitante,
+                setor_beneficiario=setor_obras,
+            )
+        _login(client, superuser)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        total = response.context['page_obj'].paginator.count
+        assert (
+            'aria-label="Paginação do histórico de requisições"'.encode()
+            in response.content
+        )
+        esperado = f'<span class="tabular-nums">{total}</span> requisições'
+        assert esperado.encode() in response.content
+
     def test_rascunho_de_terceiro_nao_expoe_pk_para_superuser(
         self, client, superuser, solicitante, setor_obras
     ):

@@ -868,6 +868,36 @@ class TestHistoricoMovimentacoesView:
         assert response.context['page_obj'].paginator.count == 0
         assert b'Nenhuma movimenta' in response.content
 
+    def test_paginacao_usa_componente_com_rotulo_e_aria_label_proprios(
+        self,
+        client,
+        superuser,
+        requisicao_autorizada,
+        material_disponivel,
+        estoque_principal,
+    ):
+        from decimal import Decimal
+
+        from apps.estoque.models import MovimentacaoEstoque, TipoMovimentacaoEstoque
+
+        req, _ = requisicao_autorizada
+        for _ in range(30):
+            MovimentacaoEstoque.objects.create(
+                tipo=TipoMovimentacaoEstoque.CONSUMO,
+                material=material_disponivel,
+                estoque=estoque_principal,
+                delta_fisico=Decimal('-1'),
+                delta_reservado=Decimal('-1'),
+                requisicao=req,
+                ator=superuser,
+            )
+        client.force_login(superuser)
+        response = client.get(URL_MOVIMENTACOES)
+        total = response.context['page_obj'].paginator.count
+        assert 'aria-label="Paginação das movimentações"'.encode() in response.content
+        esperado = f'<span class="tabular-nums">{total}</span> movimentações'
+        assert esperado.encode() in response.content
+
     def test_menu_mostra_link_para_almox(self, client, chefe_almoxarifado):
         client.force_login(chefe_almoxarifado)
         response = client.get(URL_MOVIMENTACOES)

@@ -94,7 +94,7 @@ Contexto: page_obj, tem_filtro_ativo, ordem, aria_sort, url_ordenacao, querystri
     </table>
   </div>
 
-  {% include 'estoque/partials/_paginacao.html' with page_obj=page_obj querystring_filtros=querystring_filtros %}
+  {% include 'components/pagination.html' with page_obj=page_obj querystring_filtros=querystring_filtros rotulo_itens='movimentações' aria_label='Paginação das movimentações' %}
 
 {% else %}
 

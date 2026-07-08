@@ -118,7 +118,7 @@ querystring_filtros.
     </table>
   </div>
 
-  {% include 'requisicoes/partials/_paginacao_historico.html' with page_obj=page_obj querystring_filtros=querystring_filtros %}
+  {% include 'components/pagination.html' with page_obj=page_obj querystring_filtros=querystring_filtros rotulo_itens='requisições' aria_label='Paginação do histórico de requisições' %}
 
 {% else %}
 
