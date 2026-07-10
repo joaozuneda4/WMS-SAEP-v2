@@ -610,6 +610,36 @@ def test_minhas_renderiza_numero_publico_e_fallback_rascunho(
 
 
 @pytest.mark.django_db
+def test_minhas_botao_ver_detalhes_corrige_drift_a11y(
+    client, solicitante, req_enviada_solicitante
+):
+    _login(client, solicitante)
+    response = client.get(reverse('requisicoes:minhas'))
+    html = response.content.decode()
+    aria_label = 'Ver detalhes da requisição REQ-2026-0010'
+    marker = f'aria-label="{aria_label}"'
+    first_idx = html.index(marker)
+    second_idx = html.index(marker, first_idx + 1)
+    for idx in (first_idx, second_idx):
+        tag = html[html.rindex('<a', 0, idx) : html.index('>', idx) + 1]
+        assert 'min-h-11' in tag
+        assert 'focus-visible:ring-2' in tag
+        assert 'focus-visible:ring-blue-500' in tag
+        assert 'py-1.5' not in tag
+
+
+@pytest.mark.django_db
+def test_minhas_botao_ver_detalhes_rascunho_preserva_aria_label(
+    client, solicitante, req_rascunho_solicitante
+):
+    _login(client, solicitante)
+    response = client.get(reverse('requisicoes:minhas'))
+    html = response.content.decode()
+    aria_label = f'Ver detalhes do rascunho #{req_rascunho_solicitante.pk}'
+    assert html.count(f'aria-label="{aria_label}"') == 2
+
+
+@pytest.mark.django_db
 def test_minhas_vazia_exibe_empty_state_com_cta_canonico(client, solicitante):
     _login(client, solicitante)
     response = client.get(reverse('requisicoes:minhas'))
@@ -622,6 +652,9 @@ def test_minhas_vazia_exibe_empty_state_com_cta_canonico(client, solicitante):
     assert re.search(r'href="[^"]*"', tag)
     assert 'min-h-11' in tag
     assert 'focus-visible:ring-blue-500' in tag
+    assert 'justify-center' in tag
+    assert 'focus-visible:ring-offset-1' in tag
+    assert 'ring-offset-2' not in tag
 
 
 # ---------------------------------------------------------------------------
@@ -994,6 +1027,10 @@ def test_fila_autorizacao_chefe_renderiza_apenas_setor(
     assert 'Fila de autorização' in html
     assert 'Analisar' in html
     assert 'Enviada em' in html
+    assert (
+        f'aria-label="Analisar requisição {req_enviada_solicitante.numero_publico}"'
+        in html
+    )
 
 
 @pytest.mark.django_db
@@ -1675,6 +1712,18 @@ def test_fila_atendimento_aux_almox_renderiza_autorizada_e_pronta(
     html = response.content.decode('utf-8')
     assert 'Fila de atendimento' in html
     assert 'Atender' in html
+
+
+@pytest.mark.django_db
+def test_fila_atendimento_botao_atender_preserva_aria_label(
+    client, aux_almoxarifado, req_autorizada_view
+):
+    _login(client, aux_almoxarifado)
+    response = client.get(reverse('requisicoes:atendimentos'))
+    html = response.content.decode('utf-8')
+    assert (
+        f'aria-label="Atender requisição {req_autorizada_view.numero_publico}"' in html
+    )
 
 
 @pytest.mark.django_db
@@ -2843,6 +2892,27 @@ class TestHistoricoRequisicoesView:
         page2 = client.get(URL_HISTORICO_REQUISICOES, {'page': 2})
         assert page2.status_code == 200
         assert len(page2.context['page_obj'].object_list) >= 1
+
+    def test_botao_ver_detalhes_com_href_e_classes_esperadas(
+        self, client, chefe_obras, req_historico_obras
+    ):
+        from django.template.defaultfilters import urlencode as tpl_urlencode
+
+        _login(client, chefe_obras)
+        response = client.get(URL_HISTORICO_REQUISICOES)
+        html = response.content.decode('utf-8')
+        href_esperado = (
+            reverse('requisicoes:detalhe', kwargs={'pk': req_historico_obras.pk})
+            + '?next='
+            + tpl_urlencode(URL_HISTORICO_REQUISICOES)
+        )
+        marker = f'href="{href_esperado}"'
+        assert marker in html
+        idx = html.index(marker)
+        tag = html[html.rindex('<a', 0, idx) : html.index('>', idx) + 1]
+        assert 'min-h-11' in tag
+        assert 'focus-visible:ring-2' in tag
+        assert 'focus-visible:ring-blue-500' in tag
 
     def test_empty_state_quando_historico_vazio(self, client, chefe_almoxarifado):
         _login(client, chefe_almoxarifado)

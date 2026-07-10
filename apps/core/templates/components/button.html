@@ -1,0 +1,48 @@
+{% comment %}
+Componente global de botão. Não conhece semântica de domínio — só variante
+visual e passthrough de atributos. Partials de domínio compõem `label`,
+`aria_label` e `href` antes do include.
+
+Parâmetros:
+  variant            (opcional, default=primary) primary, secondary, danger,
+                     danger-outline, ghost, link
+  size               (opcional, default=md) sm, md
+  type               (opcional, default=button) button, submit — só se href ausente
+  label              (obrigatório) texto visível do botão
+  href               (opcional) presente renderiza <a>, ausente renderiza <button>
+  disabled           (opcional, boolean) — só <button>
+  icon_template      (opcional) caminho de partial incluído antes do label
+  full_width_mobile  (opcional, boolean) aplica w-full sm:w-auto
+  aria_label         (opcional) sobrescreve o nome acessível
+  class              (opcional) passthrough para ajuste de layout do chamador
+  hx_get/hx_post/hx_target/hx_swap  (opcionais) passthrough HTMX literal,
+                     renderizados como hx-get/hx-post/hx-target/hx-swap
+  data_modal_trigger (opcional) passthrough para abertura de modal via Alpine
+
+Uso:
+  {% include "components/button.html" with variant="secondary" size="sm" label="Ver" href=url aria_label="Ver detalhes de X" %}
+{% endcomment %}
+{% if href %}
+<a
+  href="{{ href }}"
+  class="{% if variant == 'link' %}inline-flex items-center rounded{% else %}inline-flex items-center justify-center min-h-11 rounded-md{% endif %} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 {% if variant == 'secondary' %}bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-blue-500{% elif variant == 'danger' %}bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-500{% elif variant == 'danger-outline' %}bg-white text-red-700 border border-red-300 hover:bg-red-50 focus-visible:ring-red-500{% elif variant == 'ghost' %}bg-transparent text-slate-700 hover:bg-slate-100 focus-visible:ring-blue-500{% elif variant == 'link' %}bg-transparent text-blue-700 hover:underline focus-visible:ring-blue-500{% else %}bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-blue-500{% endif %} {% if size == 'sm' %}px-3 py-2 text-xs{% else %}px-3 py-2 text-sm{% endif %}{% if full_width_mobile %} w-full sm:w-auto{% endif %}{% if class %} {{ class }}{% endif %}"
+  {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+  {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
+  {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
+  {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
+  {% if hx_swap %}hx-swap="{{ hx_swap }}"{% endif %}
+  {% if data_modal_trigger %}data-modal-trigger="{{ data_modal_trigger }}"{% endif %}
+>{% if icon_template %}<span class="mr-2 inline-flex" aria-hidden="true">{% include icon_template %}</span>{% endif %}{{ label }}</a>
+{% else %}
+<button
+  type="{{ type|default:'button' }}"
+  {% if disabled %}disabled{% endif %}
+  class="{% if variant == 'link' %}inline-flex items-center rounded{% else %}inline-flex items-center justify-center min-h-11 rounded-md{% endif %} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 {% if variant == 'secondary' %}bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-blue-500{% elif variant == 'danger' %}bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-500{% elif variant == 'danger-outline' %}bg-white text-red-700 border border-red-300 hover:bg-red-50 focus-visible:ring-red-500{% elif variant == 'ghost' %}bg-transparent text-slate-700 hover:bg-slate-100 focus-visible:ring-blue-500{% elif variant == 'link' %}bg-transparent text-blue-700 hover:underline focus-visible:ring-blue-500{% else %}bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-blue-500{% endif %} {% if size == 'sm' %}px-3 py-2 text-xs{% else %}px-3 py-2 text-sm{% endif %}{% if full_width_mobile %} w-full sm:w-auto{% endif %}{% if class %} {{ class }}{% endif %}"
+  {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+  {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
+  {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
+  {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
+  {% if hx_swap %}hx-swap="{{ hx_swap }}"{% endif %}
+  {% if data_modal_trigger %}data-modal-trigger="{{ data_modal_trigger }}"{% endif %}
+>{% if icon_template %}<span class="mr-2 inline-flex" aria-hidden="true">{% include icon_template %}</span>{% endif %}{{ label }}</button>
+{% endif %}

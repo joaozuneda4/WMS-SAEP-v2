@@ -26,12 +26,7 @@ títulos/descrições/flags antes do include.
       </a>
     {% else %}
       <div class="mt-6">
-        <a
-          href="{{ cta_url }}"
-          class="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-        >
-          {{ cta_label }}
-        </a>
+        {% include "components/button.html" with variant="primary" href=cta_url label=cta_label %}
       </div>
     {% endif %}
   {% endif %}

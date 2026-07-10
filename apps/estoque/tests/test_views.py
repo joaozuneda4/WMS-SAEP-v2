@@ -49,6 +49,42 @@ class TestListarSaidasExcepcionaisView:
         response = client.get(URL)
         assert 'saidas' in response.context
 
+    def test_botao_ver_detalhe_preserva_aria_label(
+        self, client, chefe_almoxarifado, saida_registrada
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL)
+        html = response.content.decode('utf-8')
+        assert (
+            f'aria-label="Ver detalhe da saída {saida_registrada.numero_publico}"'
+            in html
+        )
+
+    def test_botao_ver_detalhe_fallback_pk_sem_numero_publico(
+        self, client, chefe_almoxarifado, saida_registrada
+    ):
+        saida_registrada.numero_publico = ''
+        saida_registrada.save(update_fields=['numero_publico'])
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL)
+        html = response.content.decode('utf-8')
+        assert f'aria-label="Ver detalhe da saída {saida_registrada.pk}"' in html
+
+    def test_empty_state_cta_delega_para_componente_button(
+        self, client, chefe_almoxarifado
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL)
+        html = response.content.decode('utf-8')
+        titulo_idx = html.index('Nenhuma saída excepcional registrada')
+        match = re.search(r'<a\b[^>]*>', html[titulo_idx:])
+        assert match is not None
+        tag = match.group()
+        assert 'min-h-11' in tag
+        assert 'justify-center' in tag
+        assert 'focus-visible:ring-offset-1' in tag
+        assert 'ring-offset-2' not in tag
+
     def test_pode_registrar_verdadeiro_para_chefe(self, client, chefe_almoxarifado):
         client.force_login(chefe_almoxarifado)
         response = client.get(URL)

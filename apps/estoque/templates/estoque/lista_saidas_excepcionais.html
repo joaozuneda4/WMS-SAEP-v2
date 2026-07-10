@@ -46,13 +46,14 @@
             </div>
           </dl>
 
-          <a
-            href="{% url 'estoque:detalhe_saida_excepcional' saida.pk %}"
-            class="mt-4 inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-            aria-label="Ver detalhe da saída {{ saida.numero_publico|default:saida.pk }}"
-          >
-            Ver detalhe
-          </a>
+          {% url 'estoque:detalhe_saida_excepcional' saida.pk as url_detalhe_saida %}
+          {% with pk_texto=saida.pk|stringformat:"s" %}
+            {% if saida.numero_publico %}
+              {% include "components/button.html" with variant="secondary" size="md" href=url_detalhe_saida label="Ver detalhe" aria_label="Ver detalhe da saída "|add:saida.numero_publico class="mt-4" %}
+            {% else %}
+              {% include "components/button.html" with variant="secondary" size="md" href=url_detalhe_saida label="Ver detalhe" aria_label="Ver detalhe da saída "|add:pk_texto class="mt-4" %}
+            {% endif %}
+          {% endwith %}
         </article>
       {% endfor %}
     </div>
@@ -96,13 +97,14 @@
                 {{ saida.quantidade_itens }}
               </td>
               <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
-                <a
-                  href="{% url 'estoque:detalhe_saida_excepcional' saida.pk %}"
-                  class="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-                  aria-label="Ver detalhe da saída {{ saida.numero_publico|default:saida.pk }}"
-                >
-                  Ver detalhe
-                </a>
+                {% url 'estoque:detalhe_saida_excepcional' saida.pk as url_detalhe_saida_row %}
+                {% with pk_texto=saida.pk|stringformat:"s" %}
+                  {% if saida.numero_publico %}
+                    {% include "components/button.html" with variant="secondary" size="sm" href=url_detalhe_saida_row label="Ver detalhe" aria_label="Ver detalhe da saída "|add:saida.numero_publico %}
+                  {% else %}
+                    {% include "components/button.html" with variant="secondary" size="sm" href=url_detalhe_saida_row label="Ver detalhe" aria_label="Ver detalhe da saída "|add:pk_texto %}
+                  {% endif %}
+                {% endwith %}
               </td>
             </tr>
           {% endfor %}

@@ -45,12 +45,10 @@ querystring_filtros.
           </div>
         </dl>
 
-        <a
-          href="{% url 'requisicoes:detalhe' pk=req.pk %}?next={{ request.get_full_path|urlencode }}"
-          class="mt-4 inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-        >
-          Ver detalhes
-        </a>
+        {% url 'requisicoes:detalhe' pk=req.pk as url_detalhe_req %}
+        {% with next_encoded=request.get_full_path|urlencode %}
+          {% include "components/button.html" with variant="secondary" size="md" href=url_detalhe_req|add:"?next="|add:next_encoded label="Ver detalhes" class="mt-4" %}
+        {% endwith %}
       </article>
     {% endfor %}
   </div>
@@ -105,12 +103,10 @@ querystring_filtros.
               {% include "requisicoes/partials/_estado_badge.html" with requisicao=req %}
             </td>
             <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
-              <a
-                href="{% url 'requisicoes:detalhe' pk=req.pk %}?next={{ request.get_full_path|urlencode }}"
-                class="inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-              >
-                Ver
-              </a>
+              {% url 'requisicoes:detalhe' pk=req.pk as url_detalhe_req_row %}
+              {% with next_encoded=request.get_full_path|urlencode %}
+                {% include "components/button.html" with variant="secondary" size="sm" href=url_detalhe_req_row|add:"?next="|add:next_encoded label="Ver" %}
+              {% endwith %}
             </td>
           </tr>
         {% endfor %}

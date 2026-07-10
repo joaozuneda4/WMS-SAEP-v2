@@ -53,13 +53,10 @@
             </div>
           </dl>
 
-          <a
-            href="{% url 'requisicoes:detalhe' pk=req.pk %}?next={{ request.path|urlencode }}"
-            class="mt-4 inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-            aria-label="Atender requisição {{ req.numero_publico }}"
-          >
-            Atender
-          </a>
+          {% url 'requisicoes:detalhe' pk=req.pk as url_detalhe_req %}
+          {% with next_encoded=request.path|urlencode %}
+            {% include "components/button.html" with variant="secondary" size="md" href=url_detalhe_req|add:"?next="|add:next_encoded label="Atender" aria_label="Atender requisição "|add:req.numero_publico class="mt-4" %}
+          {% endwith %}
         </article>
       {% endfor %}
     </div>
@@ -99,13 +96,10 @@
               <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{% if req.autorizada_em %}{{ req.autorizada_em|date:"d/m/Y H:i" }}{% else %}—{% endif %}</td>
               <td class="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-slate-700">{{ req.quantidade_itens }}</td>
               <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
-                <a
-                  href="{% url 'requisicoes:detalhe' pk=req.pk %}?next={{ request.path|urlencode }}"
-                  class="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-                  aria-label="Atender requisição {{ req.numero_publico }}"
-                >
-                  Atender
-                </a>
+                {% url 'requisicoes:detalhe' pk=req.pk as url_detalhe_req_row %}
+                {% with next_encoded=request.path|urlencode %}
+                  {% include "components/button.html" with variant="secondary" size="sm" href=url_detalhe_req_row|add:"?next="|add:next_encoded label="Atender" aria_label="Atender requisição "|add:req.numero_publico %}
+                {% endwith %}
               </td>
             </tr>
           {% endfor %}
