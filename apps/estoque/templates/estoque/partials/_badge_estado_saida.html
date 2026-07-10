@@ -1,0 +1,11 @@
+{% comment %}
+Badge de estado da saída excepcional. Mapeia estado -> variant/label do componente global.
+Parâmetro: saida (instância com .estado e .get_estado_display).
+{% endcomment %}
+{% with estado=saida.estado label=saida.get_estado_display %}
+  {% if estado == 'registrada' %}
+    {% include "components/badge.html" with variant="blue-strong" label=label role="status" aria_label="Estado: "|add:label %}
+  {% else %}
+    {% include "components/badge.html" with variant="teal" label=label role="status" aria_label="Estado: "|add:label %}
+  {% endif %}
+{% endwith %}

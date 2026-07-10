@@ -322,20 +322,11 @@
                 </td>
                 <td class="whitespace-nowrap px-4 py-3 text-sm">
                   {% if linha.status == 'ok' %}
-                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 ring-1 ring-inset ring-green-200">
-                      <svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M10.28 1.28L3.989 7.575 1.695 5.28A1 1 0 00.28 6.695l3 3a1 1 0 001.414 0l7-7A1 1 0 0010.28 1.28z"/></svg>
-                      OK
-                    </span>
+                    {% include "components/badge.html" with variant="green" label="OK" %}
                   {% elif linha.status == 'divergente' %}
-                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200" aria-label="Divergência: saldo SCPI difere do WMS">
-                      <svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6 1.5a.5.5 0 01.447.276l4.5 9A.5.5 0 0110.5 11h-9a.5.5 0 01-.447-.724l4.5-9A.5.5 0 016 1.5zM5.5 6v2a.5.5 0 001 0V6a.5.5 0 00-1 0zm.5 4a.5.5 0 100-1 .5.5 0 000 1z" clip-rule="evenodd"/></svg>
-                      Divergência
-                    </span>
+                    {% include "components/badge.html" with variant="amber" label="Divergência" aria_label="Divergência: saldo SCPI difere do WMS" %}
                   {% else %}
-                    <span class="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-200" aria-label="Material novo: não existe no WMS">
-                      <svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M6 1a.5.5 0 01.5.5v4h4a.5.5 0 010 1h-4v4a.5.5 0 01-1 0v-4h-4a.5.5 0 010-1h4v-4A.5.5 0 016 1z" clip-rule="evenodd"/></svg>
-                      Novo
-                    </span>
+                    {% include "components/badge.html" with variant="teal" label="Novo" aria_label="Material novo: não existe no WMS" %}
                   {% endif %}
                 </td>
               </tr>
@@ -355,13 +346,15 @@
           >
             <div class="flex items-start justify-between gap-3">
               <code class="font-mono text-sm font-semibold text-slate-900">{{ linha.cadpro }}</code>
-              {% if linha.status == 'ok' %}
-                <span class="shrink-0 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800 ring-1 ring-inset ring-green-200">OK</span>
-              {% elif linha.status == 'divergente' %}
-                <span class="shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">Divergência</span>
-              {% else %}
-                <span class="shrink-0 rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-inset ring-teal-200">Novo</span>
-              {% endif %}
+              <span class="shrink-0">
+                {% if linha.status == 'ok' %}
+                  {% include "components/badge.html" with variant="green" label="OK" %}
+                {% elif linha.status == 'divergente' %}
+                  {% include "components/badge.html" with variant="amber" label="Divergência" aria_label="Divergência: saldo SCPI difere do WMS" %}
+                {% else %}
+                  {% include "components/badge.html" with variant="teal" label="Novo" aria_label="Material novo: não existe no WMS" %}
+                {% endif %}
+              </span>
             </div>
             <p class="mt-1 text-sm text-slate-600">
               {% if linha.nome_material %}{{ linha.nome_material }}{% else %}<em class="not-italic text-teal-700">Novo material</em>{% endif %}

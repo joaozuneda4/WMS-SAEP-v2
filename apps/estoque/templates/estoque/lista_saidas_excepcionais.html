@@ -28,21 +28,7 @@
                 {{ saida.criado_em|date:"d/m/Y H:i" }}
               </p>
             </div>
-            {% if saida.estado == 'registrada' %}
-              <span
-                class="shrink-0 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-900 ring-1 ring-inset ring-blue-200"
-                aria-label="Estado: Registrada"
-              >
-                Registrada
-              </span>
-            {% else %}
-              <span
-                class="shrink-0 rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-900 ring-1 ring-inset ring-teal-200"
-                aria-label="Estado: Estornada"
-              >
-                Estornada
-              </span>
-            {% endif %}
+            <span class="shrink-0">{% include "estoque/partials/_badge_estado_saida.html" with saida=saida %}</span>
           </div>
 
           <dl class="mt-4 space-y-3 text-sm">
@@ -101,15 +87,7 @@
                 {{ saida.motivo }}
               </td>
               <td class="whitespace-nowrap px-4 py-3 text-sm">
-                {% if saida.estado == 'registrada' %}
-                  <span class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-900 ring-1 ring-inset ring-blue-200">
-                    Registrada
-                  </span>
-                {% else %}
-                  <span class="rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-900 ring-1 ring-inset ring-teal-200">
-                    Estornada
-                  </span>
-                {% endif %}
+                {% include "estoque/partials/_badge_estado_saida.html" with saida=saida %}
               </td>
               <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">
                 {{ saida.registrado_por.nome }}

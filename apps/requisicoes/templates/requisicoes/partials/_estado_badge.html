@@ -1,26 +1,26 @@
 {% comment %}
-Badge de estado da requisição. Mapeia EstadoRequisicao -> cor + label.
+Badge de estado da requisição. Mapeia EstadoRequisicao -> variant/label do componente global.
 Parâmetro: requisicao (instância com .estado e .get_estado_display).
+role="status" + aria-label dá leitura completa para AT.
 {% endcomment %}
 {% with estado=requisicao.estado label=requisicao.get_estado_display %}
-{% comment %}role=status + aria-label dá leitura completa para AT.{% endcomment %}
   {% if estado == 'rascunho' %}
-    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{{ label }}</span>
+    {% include "components/badge.html" with variant="slate" label=label role="status" aria_label="Estado: "|add:label %}
   {% elif estado == 'aguardando_autorizacao' %}
-    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-300">{{ label }}</span>
+    {% include "components/badge.html" with variant="amber-strong" label=label role="status" aria_label="Estado: "|add:label %}
   {% elif estado == 'autorizada' %}
-    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 ring-1 ring-inset ring-blue-200">{{ label }}</span>
+    {% include "components/badge.html" with variant="blue" label=label role="status" aria_label="Estado: "|add:label %}
   {% elif estado == 'pronta_para_retirada' %}
-    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-900 ring-1 ring-inset ring-blue-300">{{ label }}</span>
+    {% include "components/badge.html" with variant="blue-strong" label=label role="status" aria_label="Estado: "|add:label %}
   {% elif estado == 'atendida' %}
-    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 ring-1 ring-inset ring-green-200">{{ label }}</span>
+    {% include "components/badge.html" with variant="green" label=label role="status" aria_label="Estado: "|add:label %}
   {% elif estado == 'recusada' %}
-    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-red-200 px-2.5 py-0.5 text-xs font-semibold text-red-900 ring-1 ring-inset ring-red-300">{{ label }}</span>
+    {% include "components/badge.html" with variant="red-strong" label=label role="status" aria_label="Estado: "|add:label %}
   {% elif estado == 'cancelada' %}
-    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-800 ring-1 ring-inset ring-orange-200">{{ label }}</span>
+    {% include "components/badge.html" with variant="orange" label=label role="status" aria_label="Estado: "|add:label %}
   {% elif estado == 'estornada' %}
-    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-medium text-teal-800">{{ label }}</span>
+    {% include "components/badge.html" with variant="teal" label=label role="status" aria_label="Estado: "|add:label %}
   {% else %}
-    <span role="status" aria-label="Estado: {{ label }}" class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{{ label }}</span>
+    {% include "components/badge.html" with variant="slate" label=label role="status" aria_label="Estado: "|add:label %}
   {% endif %}
 {% endwith %}

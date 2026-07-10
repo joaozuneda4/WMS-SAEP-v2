@@ -26,8 +26,10 @@
                 Enviada em {% if req.enviada_em %}{{ req.enviada_em|date:"d/m/Y H:i" }}{% else %}—{% endif %}
               </p>
             </div>
-            <span class="shrink-0 rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-300">
-              {{ req.quantidade_itens }} {{ req.quantidade_itens|pluralize:"item,itens" }}
+            <span class="shrink-0">
+              {% with itens_label=req.quantidade_itens|pluralize:"item,itens" %}
+                {% include "components/badge.html" with variant="amber-strong" label=req.quantidade_itens|stringformat:"s"|add:" "|add:itens_label %}
+              {% endwith %}
             </span>
           </div>
 

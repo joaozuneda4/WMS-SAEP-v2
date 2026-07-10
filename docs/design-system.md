@@ -284,7 +284,7 @@ Vive em `apps/core/templates/components/`
 ```
 button.html         (variant, size, state)
 form_field.html     (label, error, required)
-status_badge.html   (variant color, label)
+badge.html           (variant color, label)
 alert.html          (role, message)
 card.html           (header, body, footer)
 ```
@@ -328,7 +328,7 @@ components/
   form_errors.html
   card.html
   alert.html
-  status_badge.html
+  badge.html
   page_header.html
   modal.html
   table.html
@@ -343,7 +343,7 @@ components/
 form_field.html
 form_errors.html
 table_empty.html
-status_badge.html
+badge.html
 ```
 
 **Hierarquia só se ultrapassar 30–40 componentes** ou surgirem famílias grandes (ex: forms/* com 10+ subcomponentes).
@@ -430,20 +430,23 @@ Comportamento:
 - Cores baseadas em paleta semântica
 - aria-live="polite" se dinâmico
 
-### 5. status_badge.html
+### 5. badge.html
 
 Render: `<span>` compacto com cor e label
 
 Parâmetros:
 ```
-variant   (slate, blue, amber, green, red, teal)
-label     (obrigatório)
+variant     (slate, blue, blue-strong, amber, amber-strong, green, red,
+             red-strong, orange, teal, indigo, violet, yellow)
+label       (obrigatório)
+role        (opcional — propagado literalmente como role="{{ role }}")
+aria_label  (opcional — propagado literalmente como aria-label="{{ aria_label }}")
 ```
 
 Comportamento:
 - Não conhece estados de requisição
 - Baseado apenas em variante visual
-- Partial de domínio mapeia estado → variant
+- Partial de domínio mapeia estado → variant, e decide `role`/`aria_label` (ex. `role="status"` para estados de listagem)
 
 ### 6. page_header.html
 
@@ -530,9 +533,9 @@ Ao revisar componente novo ou tela que usa componentes:
 ```django
 {# Em requisicoes/partials/_estado_badge.html #}
 {% if requisicao.estado == "rascunho" %}
-  {% include "components/status_badge.html" with variant="slate" label="Rascunho" %}
+  {% include "components/badge.html" with variant="slate" label="Rascunho" %}
 {% elif requisicao.estado == "autorizada" %}
-  {% include "components/status_badge.html" with variant="blue" label="Autorizada" %}
+  {% include "components/badge.html" with variant="blue" label="Autorizada" %}
 {% endif %}
 ```
 

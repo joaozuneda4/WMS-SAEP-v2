@@ -53,11 +53,11 @@
             <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ imp.importado_em|date:"d/m/Y H:i" }}</td>
             <td class="px-4 py-3">
               {% if imp.status == 'concluida' %}
-                <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Concluída</span>
+                {% include "components/badge.html" with variant="green" label="Concluída" %}
               {% elif imp.status == 'com_alertas' %}
-                <span class="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">Com alertas</span>
+                {% include "components/badge.html" with variant="yellow" label="Com alertas" %}
               {% else %}
-                <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{{ imp.get_status_display }}</span>
+                {% include "components/badge.html" with variant="slate" label=imp.get_status_display %}
               {% endif %}
             </td>
             <td class="px-4 py-3 text-right tabular-nums text-slate-700">{{ imp.total_linhas }}</td>

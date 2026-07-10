@@ -59,11 +59,8 @@
               <p class="mt-0.5 text-xs text-slate-600">{{ saldo.material.nome }}</p>
             </div>
             {% if saldo.divergente_calculado %}
-              <span
-                class="shrink-0 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800 ring-1 ring-inset ring-red-300"
-                aria-label="Divergência crítica"
-              >
-                Divergente
+              <span class="shrink-0">
+                {% include "components/badge.html" with variant="red-strong" label="Divergente" aria_label="Divergência crítica" %}
               </span>
             {% endif %}
           </div>
@@ -115,12 +112,7 @@
               <td class="px-4 py-3 text-slate-600">{{ saldo.material.unidade }}</td>
               <td class="px-4 py-3 text-center">
                 {% if saldo.divergente_calculado %}
-                  <span
-                    class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800 ring-1 ring-inset ring-red-300"
-                    aria-label="Divergência crítica: físico menor que reservado"
-                  >
-                    Divergente
-                  </span>
+                  {% include "components/badge.html" with variant="red-strong" label="Divergente" aria_label="Divergência crítica: físico menor que reservado" %}
                 {% else %}
                   <span class="text-slate-400 text-xs">—</span>
                 {% endif %}

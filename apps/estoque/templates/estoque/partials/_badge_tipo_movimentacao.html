@@ -2,23 +2,22 @@
 Badge semântico por TipoMovimentacaoEstoque. Recebe `tipo` (value) e `rotulo`
 (get_tipo_display). A cor comunica a identidade do tipo (não alarme); o rótulo
 textual é sempre o portador primário do significado (acessibilidade: cor nunca
-é o único portador). Classes literais por ramo para o JIT do Tailwind compilar.
-Par fundo-100/texto-900 garante contraste WCAG AA.
+é o único portador). Mapeia para variant do componente global badge.html.
 {% endcomment %}
 {% if tipo == 'reserva' %}
-  <span class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-900 ring-1 ring-inset ring-blue-200">{{ rotulo }}</span>
+  {% include "components/badge.html" with variant="blue" label=rotulo %}
 {% elif tipo == 'liberacao' %}
-  <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-900 ring-1 ring-inset ring-slate-200">{{ rotulo }}</span>
+  {% include "components/badge.html" with variant="slate" label=rotulo %}
 {% elif tipo == 'consumo' %}
-  <span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-900 ring-1 ring-inset ring-indigo-200">{{ rotulo }}</span>
+  {% include "components/badge.html" with variant="indigo" label=rotulo %}
 {% elif tipo == 'saida_excepcional' %}
-  <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-900 ring-1 ring-inset ring-red-200">{{ rotulo }}</span>
+  {% include "components/badge.html" with variant="red" label=rotulo %}
 {% elif tipo == 'estorno_saida' %}
-  <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-200">{{ rotulo }}</span>
+  {% include "components/badge.html" with variant="amber" label=rotulo %}
 {% elif tipo == 'devolucao' %}
-  <span class="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-900 ring-1 ring-inset ring-teal-200">{{ rotulo }}</span>
+  {% include "components/badge.html" with variant="teal" label=rotulo %}
 {% elif tipo == 'estorno_requisicao' %}
-  <span class="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-900 ring-1 ring-inset ring-violet-200">{{ rotulo }}</span>
+  {% include "components/badge.html" with variant="violet" label=rotulo %}
 {% else %}
-  <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-900 ring-1 ring-inset ring-slate-200">{{ rotulo }}</span>
+  {% include "components/badge.html" with variant="slate" label=rotulo %}
 {% endif %}
