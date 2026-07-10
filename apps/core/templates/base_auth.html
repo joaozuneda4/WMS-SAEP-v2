@@ -74,7 +74,9 @@
 
               </section>
 
-              {% block topbar_domain %}{% endblock %}
+              {% block topbar_domain %}
+                {% include "core/_topbar_nav.html" %}
+              {% endblock %}
             {% endwith %}
 
             <div class="app-bar__menu-divider" role="separator"></div>
@@ -170,7 +172,9 @@
             </svg>
             Início
           </a>
-          {% block sidebar_nav %}{% endblock %}
+          {% block sidebar_nav %}
+            {% include "core/partials/_side_nav.html" %}
+          {% endblock %}
         {% endwith %}
       </nav>
       <div class="shrink-0 border-t border-slate-200 p-4">

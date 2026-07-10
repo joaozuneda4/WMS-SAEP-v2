@@ -1,7 +1,7 @@
 {% comment %}
 Side nav (desktop) — Requisições + Almoxarifado.
-Único partial compartilhado por requisicoes/base.html e estoque/base.html
-via {% block sidebar_nav %}, evitando duplicação/drift entre apps.
+Único partial incluído por padrão em base_auth.html via {% block sidebar_nav %},
+disponível para qualquer app autenticado sem duplicação/drift.
 Variável `current` deve estar disponível no contexto (setada em base_auth.html).
 {% endcomment %}
 <div class="mt-4">

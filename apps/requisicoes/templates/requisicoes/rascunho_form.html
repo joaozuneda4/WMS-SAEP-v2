@@ -1,14 +1,8 @@
-{% extends "requisicoes/base.html" %}
+{% extends "base_auth.html" %}
 {% load static %}
 {% load requisicoes_tags %}
 
 {% block title %}{% if modo == 'criar' %}Nova Requisição{% else %}Editar Rascunho{% endif %} — WMS-SAEP{% endblock %}
-
-{% block extra_head %}
-<style>
-  [x-cloak] { display: none !important; }
-</style>
-{% endblock %}
 
 {% block topbar_menu %}{% endblock %}
 
