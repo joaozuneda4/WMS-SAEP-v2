@@ -25,16 +25,25 @@
    - não renderiza `<form method="post" action="...">` envolvente (sem `action_url` nesse modo);
    - o botão de confirmar vira `type="button"` com `@click="fechar(); document.getElementById('{{ submit_form_id }}').requestSubmit()"`
      em vez de `type="submit"` dentro do form do próprio modal;
-   - mantém `data-modal-confirm` no botão (usado pelo `form-submit.js` para achar o botão que
-     recebeu o clique, mesmo fora do form alvo).
+   - mantém `data-modal-confirm` no botão como metadado do modal (identifica o botão de
+     confirmação para estilo/acessibilidade) — **não** é o que aciona a proteção de
+     double-submit nesse modo; a proteção real acontece no evento `submit` do form alvo
+     (ver seção abaixo), disparado depois do `requestSubmit()`, não pela detecção de clique
+     no botão.
    `action_url` e `submit_form_id` são mutuamente exclusivos e **o componente valida isso
    explicitamente** (não é só docstring): renderiza vazio/erro de configuração se ambos ou
-   nenhum forem passados, e falha de forma auditável (Django `ImproperlyConfigured` ou
-   equivalente em tempo de render) se `submit_form_id` apontar para um id que não existe no
-   momento do render — como o valor vem sempre de um literal no template chamador (não é input
-   de usuário), a validação é uma checagem de contrato entre templates, não uma validação de
-   runtime no browser. Testes cobrem: `action_url` sozinho (caminho já existente, não regride),
-   `submit_form_id` sozinho, os dois juntos (deve falhar) e nenhum dos dois (deve falhar).
+   nenhum forem passados. **Correção de review:** a existência do elemento DOM referenciado
+   por `submit_form_id` não pode ser validada durante o render Django (server-side) — o
+   `<form>` alvo é HTML que existe no browser, não algo que o Django enxerga no momento do
+   render do componente. Essa validação fica para: (a) testes que verificam o HTML
+   renderizado do template chamador (confirmam que o `id` referenciado em `submit_form_id`
+   de fato aparece em algum `<form>` da página, via assertion de string/BeautifulSoup no
+   teste de view), e (b) uma guarda client-side simples no `@click` do botão
+   (`document.getElementById('{{ submit_form_id }}')?.requestSubmit()` — no-op silencioso se
+   não existir, já que isso só aconteceria por engano de configuração do template chamador,
+   nunca por input de usuário). Testes cobrem: `action_url` sozinho (caminho já existente,
+   não regride), `submit_form_id` sozinho, os dois juntos (deve falhar na validação de
+   exclusividade) e nenhum dos dois (deve falhar na validação de exclusividade).
    `form_body_template` fica vazio (só header/footer, sem `erro`, sem HTMX).
    Trigger e modal continuam no mesmo `x-data="modalController({ id: 'confirmar-atender-retirada' })"`
    já existente no wrapper (`atender_retirada.html:196-219` vira o `x-data` do `modalController`,
