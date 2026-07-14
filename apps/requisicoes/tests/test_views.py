@@ -1995,6 +1995,28 @@ def test_atender_get_aux_almox_renderiza_form(
 
 
 @pytest.mark.django_db
+def test_atender_get_dialog_confirmar_usa_modal_componente(
+    client, aux_almoxarifado, req_pronta_view_com_itens
+):
+    """Dialog de confirmação migrado para components/modal.html (issue #78)."""
+    _login(client, aux_almoxarifado)
+    response = client.get(
+        reverse(
+            'requisicoes:registrar_atendimento',
+            kwargs={'pk': req_pronta_view_com_itens.pk},
+        )
+    )
+    html = response.content.decode('utf-8')
+    assert 'data-modal-trigger="confirmar-atender-retirada"' in html
+    assert 'data-modal-confirm' in html
+    assert "getElementById('form-atender-retirada')" in html
+    dialog_inicio = html.index('id="confirmar-atender-retirada"')
+    dialog_fim = html.index('</dialog>', dialog_inicio)
+    dialog_html = html[dialog_inicio:dialog_fim]
+    assert 'hx-post' not in dialog_html
+
+
+@pytest.mark.django_db
 def test_atender_get_prepreenche_quantidade_decimal_com_ponto(
     client, aux_almoxarifado, solicitante, setor_obras, material_disponivel
 ):
