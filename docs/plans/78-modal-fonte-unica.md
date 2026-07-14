@@ -23,8 +23,10 @@
    para `components/modal.html`. Esse fluxo não tem form próprio — precisa de um modo "confirmação
    de form externo": novo param `submit_form_id` em `modal.html`. Quando presente, o componente:
    - não renderiza `<form method="post" action="...">` envolvente (sem `action_url` nesse modo);
-   - o botão de confirmar vira `type="button"` com `@click="fechar(); document.getElementById('{{ submit_form_id }}').requestSubmit()"`
-     em vez de `type="submit"` dentro do form do próprio modal;
+   - o botão de confirmar vira `type="button"` com
+     `@click="fechar(); document.getElementById('{{ submit_form_id }}')?.requestSubmit()"`
+     (optional chaining — contrato único em todo o plano, ver validação abaixo) em vez de
+     `type="submit"` dentro do form do próprio modal;
    - mantém `data-modal-confirm` no botão como metadado do modal (identifica o botão de
      confirmação para estilo/acessibilidade) — **não** é o que aciona a proteção de
      double-submit nesse modo; a proteção real acontece no evento `submit` do form alvo
@@ -38,11 +40,14 @@
    render do componente. Essa validação fica para: (a) testes que verificam o HTML
    renderizado do template chamador (confirmam que o `id` referenciado em `submit_form_id`
    de fato aparece em algum `<form>` da página, via assertion de string/BeautifulSoup no
-   teste de view), e (b) uma guarda client-side simples no `@click` do botão
-   (`document.getElementById('{{ submit_form_id }}')?.requestSubmit()` — no-op silencioso se
-   não existir, já que isso só aconteceria por engano de configuração do template chamador,
-   nunca por input de usuário). Testes cobrem: `action_url` sozinho (caminho já existente,
-   não regride), `submit_form_id` sozinho, os dois juntos (deve falhar na validação de
+   teste de view), e (b) a mesma guarda client-side `?.requestSubmit()` do `@click` acima.
+   **Correção de review (contrato único):** o `?.` não deve mascarar erro de configuração em
+   silêncio — se `getElementById` retornar `null`, o clique não deve falhar silenciosamente:
+   o `modalController` loga `console.error` identificando o `id` de `submit_form_id` que não
+   foi encontrado (sinal auditável em dev/CI de template quebrado, sem expor nada ao usuário
+   final, já que esse erro só pode vir de engano de configuração do template chamador, nunca
+   de input de usuário). Testes cobrem: `action_url` sozinho (caminho já existente, não
+   regride), `submit_form_id` sozinho, os dois juntos (deve falhar na validação de
    exclusividade) e nenhum dos dois (deve falhar na validação de exclusividade).
    `form_body_template` fica vazio (só header/footer, sem `erro`, sem HTMX).
    Trigger e modal continuam no mesmo `x-data="modalController({ id: 'confirmar-atender-retirada' })"`
@@ -129,9 +134,14 @@
   promoção do parcial. **Nota (correção de review):** `test_atender_post_form_invalido_renderiza_400`
   é um contrato diferente — validação do formset de quantidades entregues, sem HTMX, sem modal,
   resposta 400 — não é evidência do fluxo de modal/422 e não deve ser citado como tal.
-- **Caso extremo — duplicação:** grep de regressão via teste ou verificação manual: nenhuma ocorrência
-  de `data-modal-body` fora de `components/` (critério de aceite da issue). Não é um teste automatizado
-  novo — é uma checagem manual antes de finalizar (não há test runner de grep neste projeto).
+- **Caso extremo — duplicação:** verificação manual antes de finalizar, restrita a arquivos de
+  template/markup (`apps/**/templates/**/*.html`) — não a todo o repositório. Objetivo: nenhum
+  `data-modal-body="..."` **renderizado** (atributo real de markup, não string em docs, testes ou
+  comentários) fora de `apps/core/templates/components/`. Um grep literal por `data-modal-body`
+  vai naturalmente encontrar ocorrências legítimas em `apps/core/templates/components/modal.html`
+  e `_modal_body.html` (fonte) e em `apps/requisicoes/tests/test_views.py` (asserções de HTML
+  renderizado) — essas não contam como duplicação; o critério é sobre onde o *atributo é definido
+  em markup*, não onde a string aparece.
 - **`atender_retirada`:** teste de view que renderiza a tela e verifica presença de
   `data-modal-trigger="confirmar-atender-retirada"`, `data-modal-confirm` e ausência de
   `hx-post` no dialog (modo form externo não usa HTMX). Teste funcional de submit já coberto por
@@ -163,8 +173,15 @@
 
 ## Riscos
 
-- **Concorrência/estado:** nenhum — mudança é puramente de apresentação/template, sem tocar
-  services/policies/selectors.
+- **Integridade de dados/idempotência (achado de review):** o modo `submit_form_id` remove o
+  form próprio do modal, então a proteção padrão de double-submit (`data-prevent-double-submit`
+  aplicado ao form do modal) não se aplica diretamente — dois cliques rápidos podem, em teoria,
+  disparar dois `requestSubmit()` no form alvo antes do primeiro POST completar. Mitigação: o
+  bloqueio central de `form-submit.js` (`form.dataset.submitting`) já está no form alvo
+  (`#form-atender-retirada` tem `data-prevent-double-submit`) e continua funcionando
+  independente de quem chamou `requestSubmit()`; teste de view garante que dois POSTs
+  consecutivos ao endpoint de atendimento não causam dupla baixa de estoque (idempotência via
+  validação de estado do domínio, não apenas via JS). Sem mudança em services/policies/selectors.
 - **Contrato HTMX/422:** maior risco — se `_modal_body_fragment.html` virar wrapper incorretamente,
   quebra o único mecanismo de exibição de erro inline em modal do projeto. Mitigar testando os 4
   fluxos que usam esse fragment (recusar, cancelar, retornar, devolver) antes de considerar a fase 1
