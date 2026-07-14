@@ -1,55 +1,7 @@
 {% comment %}
   Fragment HTMX retornado em resposta 422 — substitui o conteúdo do modal mantendo-o aberto.
+  Wrapper fino sobre components/_modal_body.html (fonte única — ver issue #78).
   Params: id, titulo, descricao, erro, form_body_template, icon_variant
 {% endcomment %}
 
-<div data-modal-body="{{ id }}" class="flex min-h-0 flex-1 flex-col">
-  <header class="border-b border-slate-200 px-6 py-5">
-    <div class="flex items-start gap-4">
-      {% if icon_variant %}
-        {% include "components/_modal_icon.html" with variant=icon_variant %}
-      {% endif %}
-      <div class="min-w-0 flex-1">
-        <h2 id="{{ id }}-titulo" class="text-lg font-semibold leading-tight text-slate-900">
-          {{ titulo }}
-        </h2>
-        {% if descricao %}
-          <p id="{{ id }}-descricao" class="mt-1.5 text-sm leading-relaxed text-slate-600">
-            {{ descricao }}
-          </p>
-        {% endif %}
-      </div>
-    </div>
-  </header>
-
-  <div class="flex-1 overflow-y-auto px-6 py-5">
-    {% if erro %}
-      <div data-modal-erro aria-live="polite" class="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-900">
-        <svg aria-hidden="true" class="mt-0.5 h-4 w-4 shrink-0 text-red-700" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M18 10A8 8 0 1 1 2 10a8 8 0 0 1 16 0Zm-7-4a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0V6Zm-1 8a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Z" clip-rule="evenodd"/>
-        </svg>
-        <span id="{{ id }}-erro">{{ erro }}</span>
-      </div>
-    {% endif %}
-    {% if form_body_template %}
-      {% include form_body_template %}
-    {% endif %}
-  </div>
-
-  <footer class="flex flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50/60 px-6 py-4 sm:flex-row sm:justify-end">
-    <button
-      type="button"
-      @click="fechar()"
-      class="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-    >
-      {{ cancel_label|default:"Voltar" }}
-    </button>
-    <button
-      type="submit"
-      data-modal-confirm
-      class="inline-flex min-h-11 items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 {% if confirm_variant == 'danger' %}bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500{% elif confirm_variant == 'secondary' %}bg-slate-700 text-white hover:bg-slate-800 focus-visible:ring-slate-500{% else %}bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-500{% endif %}"
-    >
-      {{ confirm_label|default:"Confirmar" }}
-    </button>
-  </footer>
-</div>
+{% include "components/_modal_body.html" %}
