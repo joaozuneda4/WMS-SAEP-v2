@@ -69,7 +69,7 @@ Não há testes automatizados de JS/Alpine no projeto (suíte é `pytest`/Django
 - **Verificação manual no browser** dos 3 fluxos (exigida explicitamente pela issue), com evidência anexada ao PR:
   1. Criar requisição para outro beneficiário (digitar, setas, Enter, Esc, blur, foco em campo vazio lista todos, editar rascunho existente mostra label inicial).
   2. Adicionar/editar itens do rascunho, incluindo linha nova via HTMX (`hx-swap beforeend`) — Alpine deve inicializar no swap.
-  3. Registrar nova saída excepcional com 2 materiais, incluindo tentativa de duplicidade (mensagem de erro deve aparecer e seleção deve ser revertida).
+  3. Registrar nova saída excepcional com 2 materiais, incluindo tentativa de duplicidade (mensagem de erro deve aparecer e o veto deve deixar `query`, hidden input e dropdown inalterados — sem revert destrutivo, conforme decisão 5).
 - Zero mudança de classe Tailwind nova — não deveria haver diff em `app.css`/necessidade de `npm run css:build`, mas isso será conferido no fim (critério de aceite).
 
 ## Invariantes relevantes
