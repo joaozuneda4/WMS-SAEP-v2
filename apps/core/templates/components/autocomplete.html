@@ -15,9 +15,16 @@
                            domínio, vive no app dono da entidade exibida (ex.
                            `requisicoes/partials/...`, `estoque/partials/...`)
     sem_resultados_label -> texto exibido quando a busca não retorna nada
-    aria_label          -> sobrescreve o aria-label do input (default=label)
+    aria_label          -> sobrescreve o aria-label do input (default=label);
+                           deve corresponder ao texto visível do label, nunca
+                           divergir dele (nome acessível != rótulo confunde
+                           usuários de comando de voz)
     tipo_input          -> "text" (default) | "search"
-    com_erro            -> (boolean) aplica borda vermelha (paridade com form_field.html)
+    com_erro            -> (boolean) aplica borda vermelha e aria-invalid
+                           (paridade com form_field.html)
+    erro_id             -> id do elemento que exibe a mensagem de erro
+                           (obrigatório junto com com_erro para expor o erro
+                           ao leitor de tela via aria-describedby)
 
   Uso típico (no template chamador, dentro do x-data que também declara o
   hidden input):
@@ -54,6 +61,7 @@
     role="combobox"
     aria-autocomplete="list"
     aria-haspopup="listbox"
+    {% if com_erro %}aria-invalid="true"{% if erro_id %} aria-describedby="{{ erro_id }}"{% endif %}{% endif %}
     :aria-controls="idBase + '-listbox'"
     :aria-expanded="aberto"
     :aria-activedescendant="ativo >= 0 ? (idBase + '-opt-' + ativo) : null"
@@ -86,13 +94,14 @@
         {% include item_template %}
       </li>
     </template>
-    <li
-      x-show="mensagemVaziaVisivel()"
-      class="px-3 py-2 text-sm italic text-slate-500"
-      role="option"
-      aria-disabled="true"
-    >
-      {{ sem_resultados_label }}
-    </li>
   </ul>
+  <p
+    x-show="aberto && mensagemVaziaVisivel()"
+    x-cloak
+    class="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm italic text-slate-500 shadow-lg"
+    role="status"
+    aria-live="polite"
+  >
+    {{ sem_resultados_label }}
+  </p>
 </div>

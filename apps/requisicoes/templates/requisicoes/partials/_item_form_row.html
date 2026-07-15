@@ -30,9 +30,9 @@ Parâmetros de contexto:
       id="{{ form.material_id.id_for_label }}"
       value="{{ form.material_id.value|default:'' }}"
     >
-    {% include "components/autocomplete.html" with label="Material" placeholder="Buscar por código ou descrição…" item_template="estoque/partials/_autocomplete_item_material.html" sem_resultados_label="Nenhum material elegível encontrado." tipo_input="search" com_erro=form.material_label.errors %}
+    {% include "components/autocomplete.html" with label="Material" placeholder="Buscar por código ou descrição…" item_template="estoque/partials/_autocomplete_item_material.html" sem_resultados_label="Nenhum material elegível encontrado." tipo_input="search" com_erro=form.material_label.errors erro_id=form.material_label.id_for_label|add:"-erro" %}
     {% if form.material_label.errors %}
-      <p class="mt-1 text-xs text-red-600" role="alert">{{ form.material_label.errors|join:", " }}</p>
+      <p id="{{ form.material_label.id_for_label }}-erro" class="mt-1 text-xs text-red-600" role="alert">{{ form.material_label.errors|join:", " }}</p>
     {% endif %}
     {% if form.material_id.errors %}
       <p class="mt-1 text-xs text-red-600" role="alert">{{ form.material_id.errors|join:", " }}</p>
