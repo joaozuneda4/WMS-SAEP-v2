@@ -9,7 +9,11 @@
     label               -> texto do <label> visível (obrigatório)
     placeholder         -> placeholder do input de busca (obrigatório)
     item_template       -> caminho do partial incluído dentro de cada <li> de
-                           resultado (recebe `item`/`idx` do escopo Alpine)
+                           resultado (recebe `item`/`idx` do escopo Alpine).
+                           Este componente é genérico e não conhece semântica
+                           de domínio — o item_template é sempre um partial de
+                           domínio, vive no app dono da entidade exibida (ex.
+                           `requisicoes/partials/...`, `estoque/partials/...`)
     sem_resultados_label -> texto exibido quando a busca não retorna nada
     aria_label          -> sobrescreve o aria-label do input (default=label)
     tipo_input          -> "text" (default) | "search"
@@ -20,7 +24,7 @@
     {% include "components/autocomplete.html" with
        label="Selecione o beneficiário"
        placeholder="Buscar por nome ou matrícula…"
-       item_template="components/_autocomplete_item_beneficiario.html"
+       item_template="requisicoes/partials/_autocomplete_item_beneficiario.html"
        sem_resultados_label="Nenhum beneficiário encontrado."
     %}
 {% endcomment %}

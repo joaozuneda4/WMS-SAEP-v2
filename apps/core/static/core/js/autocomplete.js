@@ -18,6 +18,9 @@
  *   initialLabel   (opcional) texto inicial exibido (edição)
  *   onSelect(item) (opcional) callback; retornar `false` veta a seleção —
  *                  nesse caso o componente não altera query/hidden/dropdown
+ *   onInvalidate() (opcional) callback chamado quando a edição invalida a
+ *                  seleção anterior (hidden zerado) — usar para sincronizar
+ *                  estado externo (ex. guarda de duplicidade por linha)
  *
  * Uso no template chamador:
  *   <div x-data="autocomplete({ endpoint: '{% url ... %}', minChars: 2 })">
@@ -34,6 +37,7 @@
       minChars: config.minChars ?? 2,
       campoDisplay: config.campoDisplay || 'label',
       onSelect: typeof config.onSelect === 'function' ? config.onSelect : null,
+      onInvalidate: typeof config.onInvalidate === 'function' ? config.onInvalidate : null,
 
       idBase: '',
       query: '',
@@ -42,6 +46,7 @@
       buscando: false,
       ativo: -1,
       _debounceTimer: null,
+      _abortController: null,
 
       init() {
         this.idBase = 'autocomplete-' + proximoId();
@@ -56,6 +61,9 @@
       buscarComDebounce() {
         if (this.$refs.hiddenInput) {
           this.$refs.hiddenInput.value = '';
+        }
+        if (this.onInvalidate) {
+          this.onInvalidate();
         }
         clearTimeout(this._debounceTimer);
         this._debounceTimer = setTimeout(() => this._buscarComGate(this.query), 300);
@@ -81,16 +89,23 @@
       },
 
       async buscar(q) {
+        if (this._abortController) {
+          this._abortController.abort();
+        }
+        this._abortController = new AbortController();
+
         this.buscando = true;
         try {
           const res = await fetch(`${this.endpoint}?q=${encodeURIComponent(q ?? '')}`, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            signal: this._abortController.signal,
           });
           const data = await res.json();
           this.resultados = data.resultados || [];
           this.aberto = true;
           this.ativo = -1;
-        } catch (_e) {
+        } catch (e) {
+          if (e.name === 'AbortError') return;
           this.resultados = [];
         } finally {
           this.buscando = false;
@@ -126,11 +141,24 @@
       },
 
       selecionarProximo() {
-        if (this.ativo < this.resultados.length - 1) this.ativo++;
+        if (this.ativo < this.resultados.length - 1) {
+          this.ativo++;
+          this._rolarParaAtivo();
+        }
       },
 
       selecionarAnterior() {
-        if (this.ativo > 0) this.ativo--;
+        if (this.ativo > 0) {
+          this.ativo--;
+          this._rolarParaAtivo();
+        }
+      },
+
+      _rolarParaAtivo() {
+        this.$nextTick(() => {
+          const el = document.getElementById(this.idBase + '-opt-' + this.ativo);
+          if (el) el.scrollIntoView({ block: 'nearest' });
+        });
       },
 
       confirmarSelecao() {

@@ -114,7 +114,7 @@
               id="{{ form.beneficiario_id.id_for_label }}"
               x-ref="hiddenInput"
             />
-            {% include "components/autocomplete.html" with label="Selecione o beneficiário" aria_label="Buscar beneficiário" placeholder="Buscar por nome ou matrícula…" item_template="components/_autocomplete_item_beneficiario.html" sem_resultados_label="Nenhum beneficiário encontrado." com_erro=form.beneficiario_id.errors %}
+            {% include "components/autocomplete.html" with label="Selecione o beneficiário" aria_label="Buscar beneficiário" placeholder="Buscar por nome ou matrícula…" item_template="requisicoes/partials/_autocomplete_item_beneficiario.html" sem_resultados_label="Nenhum beneficiário encontrado." com_erro=form.beneficiario_id.errors %}
             {% if form.beneficiario_id.errors %}
               <p class="mt-1 text-xs text-red-600" role="alert">{{ form.beneficiario_id.errors|join:", " }}</p>
             {% endif %}

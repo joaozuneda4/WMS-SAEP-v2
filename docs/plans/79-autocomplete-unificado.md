@@ -7,8 +7,8 @@ Parent: #68 (Épico — extração de componentes do design system)
 **Entra:**
 - `apps/core/static/core/js/autocomplete.js` — `Alpine.data('autocomplete', (config) => ...)`, registrado via `document.addEventListener('alpine:init', ...)`, carregado em `base.html` antes de `alpine.min.js`.
 - `apps/core/templates/components/autocomplete.html` — markup do combobox (input de busca + spinner + listbox + opção "nenhum resultado"). Não renderiza o hidden input do valor selecionado — isso continua em cada chamador (ver "Decisão" abaixo).
-- `apps/core/templates/components/_autocomplete_item_beneficiario.html` — item de resultado: nome + matrícula + setor.
-- `apps/core/templates/components/_autocomplete_item_material.html` — item de resultado: código + nome + saldo (compartilhado pelas 2 buscas de material).
+- `apps/requisicoes/templates/requisicoes/partials/_autocomplete_item_beneficiario.html` — item de resultado: nome + matrícula + setor. Partial de domínio, não vive em `core/templates/components/` (componente genérico não conhece semântica de domínio — ajustado após revisão do CodeRabbit na implementação).
+- `apps/estoque/templates/estoque/partials/_autocomplete_item_material.html` — item de resultado: código + nome + saldo (compartilhado pelas 2 buscas de material). Mesmo motivo acima.
 - Migração das 3 implementações inline:
   1. `beneficiarioAutocomplete()` em `rascunho_form.html`
   2. `materialAutocomplete(index)` em `rascunho_form.html` + `_item_form_row.html`
@@ -36,13 +36,14 @@ Config aceito por `autocomplete(config)`:
 - `campoDisplay` (default `'label'`) — campo do item usado para preencher `query` após seleção.
 - `initialId` / `initialLabel` (opcionais) — pré-preenchimento em edição.
 - `onSelect(item)` (opcional) — callback; retornar `false` veta a seleção.
+- `onInvalidate()` (opcional) — callback chamado quando a edição zera o hidden (nova busca), para sincronizar estado externo por linha (ex. `nova_saida_excepcional` limpa `itens[idx].material_id` para não bloquear indevidamente a guarda de duplicidade com um valor obsoleto). Adicionado após revisão do CodeRabbit na implementação.
 
 Estado exposto: `query`, `resultados`, `aberto`, `buscando`, `ativo`, `idBase`.
-Métodos usados pelo partial: `buscarComDebounce(valor)`, `buscarTodos()`, `selecionar(item)`, `fecharDropdown()`, `selecionarProximo()`, `selecionarAnterior()`, `confirmarSelecao()`, `mensagemVaziaVisivel()`, `limpar()`.
+Métodos usados pelo partial: `buscarComDebounce()`, `buscarTodos()`, `selecionar(item)`, `fecharDropdown()`, `selecionarProximo()`, `selecionarAnterior()`, `confirmarSelecao()`, `mensagemVaziaVisivel()`, `limpar()`.
 
 **Sincronização do hidden input (convenção fixa, `x-ref="hiddenInput"` no template chamador):**
 - `init()`: se `config.initialId` estiver presente, grava `initialId` em `this.$refs.hiddenInput.value` e `initialLabel` em `this.query` — hidrata o campo oculto e o texto exibido a partir do mesmo par id/label, nunca só um dos dois.
-- `buscarComDebounce(valor)`: qualquer edição zera `this.$refs.hiddenInput.value = ''` antes de disparar a busca (invalida seleção anterior até nova escolha explícita).
+- `buscarComDebounce()`: qualquer edição zera `this.$refs.hiddenInput.value = ''` antes de disparar a busca (invalida seleção anterior até nova escolha explícita).
 - `selecionar(item)` (caminho aceito, `onSelect(item) !== false`): grava `item.id` em `this.$refs.hiddenInput.value` e `item[campoDisplay]` em `this.query` — sempre os dois juntos, nunca um sem o outro.
 - `selecionar(item)` (caminho vetado, `onSelect(item) === false`): não toca em `query` nem em `$refs.hiddenInput` — ver decisão 5 abaixo (veto é no-op, não reset).
 - `limpar()` (chamado só pelo próprio chamador quando fizer sentido, ex. reset explícito de linha) zera `query`, `resultados` e `$refs.hiddenInput.value`.
@@ -55,8 +56,8 @@ Mensagem "nenhum resultado" visível quando `!buscando && query.length >= max(mi
 |---|---|
 | `apps/core/static/core/js/autocomplete.js` | novo |
 | `apps/core/templates/components/autocomplete.html` | novo |
-| `apps/core/templates/components/_autocomplete_item_beneficiario.html` | novo |
-| `apps/core/templates/components/_autocomplete_item_material.html` | novo |
+| `apps/requisicoes/templates/requisicoes/partials/_autocomplete_item_beneficiario.html` | novo |
+| `apps/estoque/templates/estoque/partials/_autocomplete_item_material.html` | novo |
 | `apps/core/templates/base.html` | +1 linha (script tag) |
 | `apps/requisicoes/templates/requisicoes/rascunho_form.html` | remove `beneficiarioAutocomplete()`/`materialAutocomplete()` inline; migra seção 1 (beneficiário) para o componente |
 | `apps/requisicoes/templates/requisicoes/partials/_item_form_row.html` | migra autocomplete de material para o componente |
@@ -69,7 +70,7 @@ Não há testes automatizados de JS/Alpine no projeto (suíte é `pytest`/Django
 - **Verificação manual no browser** dos 3 fluxos (exigida explicitamente pela issue), com evidência anexada ao PR:
   1. Criar requisição para outro beneficiário (digitar, setas, Enter, Esc, blur, foco em campo vazio lista todos, editar rascunho existente mostra label inicial).
   2. Adicionar/editar itens do rascunho, incluindo linha nova via HTMX (`hx-swap beforeend`) — Alpine deve inicializar no swap.
-  3. Registrar nova saída excepcional com 2 materiais, incluindo tentativa de duplicidade (mensagem de erro deve aparecer e o veto deve deixar `query`, hidden input e dropdown inalterados — sem revert destrutivo, conforme decisão 5).
+  3. Registrar nova saída excepcional com 2 materiais, incluindo tentativa de duplicidade (mensagem de erro deve aparecer e o veto deve deixar `query`, hidden input e dropdown inalterados — sem limpeza destrutiva, conforme decisão 5).
 - Zero mudança de classe Tailwind nova — não deveria haver diff em `app.css`/necessidade de `npm run css:build`, mas isso será conferido no fim (critério de aceite).
 
 ## Invariantes relevantes
@@ -78,7 +79,7 @@ Não há entrada específica de autocomplete/combobox na matriz de invariantes (
 
 ## Riscos
 
-- **Maior risco: UX crítica de formulário.** Cada keyboard-path (setas, Enter, Esc, Tab, blur) precisa ser testado manualmente nas 3 telas antes do PR — screenshots/descrição anexados.
+- **Maior risco: UX crítica de formulário.** Cada fluxo de teclado (setas, Enter, Esc, Tab, blur) precisa ser testado manualmente nas 3 telas antes do PR — capturas de tela/descrição anexadas.
 - **Compatibilidade HTMX**: nova linha de item via `hx-swap beforeend` precisa inicializar Alpine corretamente (já validado como comportamento existente; só precisa continuar funcionando com o novo `x-data`).
 - **Regressão de contrato ARIA**: `idBase` gerado internamente precisa produzir os mesmos atributos (`aria-controls`, `aria-activedescendant`, `id` do listbox/opções) de forma estável entre re-renders — testar sequência buscar → navegar com setas → selecionar.
 - **Zero dependência nova**; branch já criada como `refactor/autocomplete-unificado`; PT-BR nos identificadores de domínio (JS interno pode usar nomes em PT-BR como já é convenção nas 3 implementações atuais — `buscar`, `selecionar`, `fecharDropdown`, etc.).

@@ -139,11 +139,12 @@
                 minChars: 2,
                 campoDisplay: 'label',
                 onSelect: (item) => selecionarMaterial(idx, item),
+                onInvalidate: () => { itens[idx].material_id = ''; },
               })"
               @click.outside="fecharDropdown()"
             >
               <input type="hidden" x-ref="hiddenInput" :name="'itens-' + idx + '-material_id'">
-              {% include "components/autocomplete.html" with label="Material" placeholder="Buscar por código ou descrição…" item_template="components/_autocomplete_item_material.html" sem_resultados_label="Nenhum material elegível encontrado." tipo_input="search" %}
+              {% include "components/autocomplete.html" with label="Material" placeholder="Buscar por código ou descrição…" item_template="estoque/partials/_autocomplete_item_material.html" sem_resultados_label="Nenhum material elegível encontrado." tipo_input="search" %}
             </div>
 
             {# Quantidade #}
