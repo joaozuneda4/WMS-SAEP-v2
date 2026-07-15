@@ -100,85 +100,21 @@
           <div
             x-show="modoCriacao === 'outro'"
             x-cloak
-            x-data="beneficiarioAutocomplete()"
-            data-initial-id="{{ benef_id }}"
-            data-initial-label="{{ benef_label }}"
+            x-data="autocomplete({
+              endpoint: '{% url 'requisicoes:buscar_beneficiarios' %}',
+              minChars: 0,
+              campoDisplay: 'nome',
+              initialId: '{{ benef_id }}',
+              initialLabel: '{{ benef_label|escapejs }}',
+            })"
           >
-            <label class="block text-xs font-medium text-slate-600 mb-1" for="{{ form.beneficiario_id.id_for_label }}-busca">
-              Selecione o beneficiário
-            </label>
-            <div class="relative">
-              <input
-                type="hidden"
-                name="{{ form.beneficiario_id.html_name }}"
-                id="{{ form.beneficiario_id.id_for_label }}"
-                x-ref="hiddenInput"
-              />
-              <div class="relative">
-                <input
-                  type="text"
-                  id="{{ form.beneficiario_id.id_for_label }}-busca"
-                  x-ref="displayInput"
-                  x-model="query"
-                  @input="buscarComDebounce()"
-                  @keydown.arrow-down.prevent="selecionarProximo()"
-                  @keydown.arrow-up.prevent="selecionarAnterior()"
-                  @keydown.enter.prevent="confirmarSelecao()"
-                  @keydown.escape="fecharDropdown()"
-                  @blur="fecharDropdown()"
-                  @focus="buscarTodos()"
-                  autocomplete="off"
-                  placeholder="Buscar por nome ou matrícula…"
-                  class="w-full rounded-lg border {% if form.beneficiario_id.errors %}border-red-400{% else %}border-slate-300{% endif %} px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  aria-label="Buscar beneficiário"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-haspopup="listbox"
-                  aria-controls="{{ form.beneficiario_id.id_for_label }}-listbox"
-                  :aria-expanded="aberto"
-                  :aria-activedescendant="ativo >= 0 ? 'benef-opt-' + ativo : null"
-                />
-                <span x-show="buscando" x-cloak class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" aria-hidden="true">
-                  <svg class="h-4 w-4 animate-spin motion-reduce:animate-none text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                  </svg>
-                </span>
-              </div>
-              <ul
-                x-show="aberto"
-                x-cloak
-                id="{{ form.beneficiario_id.id_for_label }}-listbox"
-                role="listbox"
-                aria-label="Resultados de beneficiários"
-                class="absolute z-20 mt-1 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg"
-                style="max-height: 14rem"
-              >
-                <template x-for="(item, idx) in resultados" :key="item.id">
-                  <li
-                    :id="'benef-opt-' + idx"
-                    role="option"
-                    :aria-selected="ativo === idx"
-                    @mousedown.prevent="selecionar(item)"
-                    @mouseover="ativo = idx"
-                    :class="ativo === idx ? 'bg-blue-50' : 'hover:bg-slate-50'"
-                    class="cursor-pointer px-3 py-2"
-                  >
-                    <span class="font-medium text-slate-900" x-text="item.nome"></span>
-                    <span class="ml-1 text-xs text-slate-500" x-text="'(' + item.matricula + ')'"></span>
-                    <span x-show="item.setor" class="ml-1 text-xs text-slate-400" x-text="'· ' + item.setor"></span>
-                  </li>
-                </template>
-                <li
-                  x-show="!buscando && query.length >= 1 && resultados.length === 0"
-                  class="px-3 py-2 text-sm italic text-slate-500"
-                  role="option"
-                  aria-disabled="true"
-                >
-                  Nenhum beneficiário encontrado.
-                </li>
-              </ul>
-            </div>
+            <input
+              type="hidden"
+              name="{{ form.beneficiario_id.html_name }}"
+              id="{{ form.beneficiario_id.id_for_label }}"
+              x-ref="hiddenInput"
+            />
+            {% include "components/autocomplete.html" with label="Selecione o beneficiário" aria_label="Buscar beneficiário" placeholder="Buscar por nome ou matrícula…" item_template="requisicoes/partials/_autocomplete_item_beneficiario.html" sem_resultados_label="Nenhum beneficiário encontrado." com_erro=form.beneficiario_id.errors %}
             {% if form.beneficiario_id.errors %}
               <p class="mt-1 text-xs text-red-600" role="alert">{{ form.beneficiario_id.errors|join:", " }}</p>
             {% endif %}
@@ -333,169 +269,6 @@
     if (input) {
       input.value = parseInt(input.value, 10) + 1;
     }
-  }
-
-  // Alpine component: autocomplete de beneficiário
-  function beneficiarioAutocomplete() {
-    return {
-      query: '',
-      resultados: [],
-      aberto: false,
-      buscando: false,
-      ativo: -1,
-      _debounceTimer: null,
-
-      init() {
-        const el = this.$el;
-        const initialId = el.dataset.initialId || '';
-        const initialLabel = (el.dataset.initialLabel || '').trim();
-        if (initialId) {
-          this.$refs.hiddenInput.value = initialId;
-          this.query = initialLabel;
-        }
-      },
-
-      buscarComDebounce() {
-        // Qualquer edição invalida a seleção anterior até nova escolha explícita.
-        this.$refs.hiddenInput.value = '';
-        clearTimeout(this._debounceTimer);
-        this._debounceTimer = setTimeout(() => this.buscar(this.query), 300);
-      },
-
-      async buscarTodos() {
-        if (!this.query) {
-          await this.buscar('');
-        } else if (this.resultados.length > 0) {
-          this.aberto = true;
-        }
-      },
-
-      async buscar(q) {
-        this.buscando = true;
-        try {
-          const res = await fetch(
-            `{% url 'requisicoes:buscar_beneficiarios' %}?q=${encodeURIComponent(q ?? '')}`,
-            { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
-          );
-          const data = await res.json();
-          this.resultados = data.resultados || [];
-          this.aberto = true;
-          this.ativo = -1;
-        } catch (_e) {
-          this.resultados = [];
-        } finally {
-          this.buscando = false;
-        }
-      },
-
-      selecionar(item) {
-        this.query = item.nome;
-        this.$refs.hiddenInput.value = item.id;
-        this.fecharDropdown();
-        this.$nextTick(() => this.$refs.displayInput.blur());
-      },
-
-      fecharDropdown() {
-        this.aberto = false;
-        this.ativo = -1;
-      },
-
-      selecionarProximo() {
-        if (this.ativo < this.resultados.length - 1) this.ativo++;
-      },
-
-      selecionarAnterior() {
-        if (this.ativo > 0) this.ativo--;
-      },
-
-      confirmarSelecao() {
-        if (this.ativo >= 0 && this.resultados[this.ativo]) {
-          this.selecionar(this.resultados[this.ativo]);
-        }
-      },
-    };
-  }
-
-  // Alpine component: autocomplete de material por linha
-  function materialAutocomplete(index) {
-    return {
-      query: '',
-      resultados: [],
-      aberto: false,
-      buscando: false,
-      ativo: -1,
-
-      init() {
-        this.query = this.$refs.labelInput?.value || '';
-      },
-
-      async buscarTodos() {
-        if (!this.query) {
-          await this.buscar('', { limparSelecao: false });
-        } else if (this.resultados.length > 0) {
-          this.aberto = true;
-        } else {
-          await this.buscar(this.query, { limparSelecao: false });
-        }
-      },
-
-      async buscar(q, { limparSelecao = true } = {}) {
-        this.query = q;
-        if (this.query.length > 0 && this.query.length < 2) {
-          // Qualquer edição invalida a seleção anterior até nova escolha explícita.
-          if (limparSelecao) this.$refs.materialIdInput.value = '';
-          this.resultados = [];
-          this.fecharDropdown();
-          return;
-        }
-        // Limpa seleção anterior ao buscar nova query (só quando usuário digita).
-        if (limparSelecao) this.$refs.materialIdInput.value = '';
-        this.buscando = true;
-        try {
-          const res = await fetch(`{% url 'requisicoes:buscar_materiais' %}?q=${encodeURIComponent(this.query)}`, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-          });
-          const data = await res.json();
-          this.resultados = data.resultados || [];
-          this.aberto = this.resultados.length > 0;
-          this.ativo = -1;
-        } catch (e) {
-          this.resultados = [];
-        } finally {
-          this.buscando = false;
-        }
-      },
-
-      selecionar(item) {
-        this.$refs.labelInput.value = item.label;
-        this.query = item.label;
-        this.$refs.materialIdInput.value = item.id;
-        this.fecharDropdown();
-      },
-
-      abrirDropdown() {
-        if (this.resultados.length > 0) this.aberto = true;
-      },
-
-      fecharDropdown() {
-        this.aberto = false;
-        this.ativo = -1;
-      },
-
-      selecionarProximo() {
-        if (this.ativo < this.resultados.length - 1) this.ativo++;
-      },
-
-      selecionarAnterior() {
-        if (this.ativo > 0) this.ativo--;
-      },
-
-      confirmarSelecao() {
-        if (this.ativo >= 0 && this.resultados[this.ativo]) {
-          this.selecionar(this.resultados[this.ativo]);
-        }
-      },
-    };
   }
 
 </script>
