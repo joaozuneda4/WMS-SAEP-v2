@@ -2,8 +2,39 @@ from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
 from django import template
+from django.template.loader import render_to_string
+from django.utils.safestring import mark_safe
 
 register = template.Library()
+
+ICONES_CATALOGO = frozenset(
+    {
+        'voltar',
+        'lixeira',
+        'remover',
+        'spinner',
+        'adicionar',
+        'enviar',
+        'copiar',
+    }
+)
+
+
+@register.simple_tag
+def icon(name: str, size: int = 20, **kwargs: str) -> str:
+    """Renderiza um ícone do catálogo vendorizado (aria-hidden sempre)."""
+    if name not in ICONES_CATALOGO:
+        raise ImproperlyConfigured(
+            f'Ícone "{name}" não está no catálogo (components/icons/). '
+            f'Nomes válidos: {sorted(ICONES_CATALOGO)}.'
+        )
+    css_class = kwargs.get('class', '')
+    return mark_safe(
+        render_to_string(
+            f'components/icons/{name}.svg',
+            {'size': size, 'class': css_class},
+        )
+    )
 
 
 @register.simple_tag
