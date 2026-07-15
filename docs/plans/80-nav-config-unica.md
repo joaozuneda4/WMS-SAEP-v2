@@ -81,7 +81,7 @@ NAVEGACAO = [
    - Todas as flags ligadas → todas as seções/itens presentes, na ordem original.
    - **Validação de configuração**: para todo item em `NAVEGACAO`, `item["icone"]` existe em `ICONES` e o valor é uma string de path SVG não vazia (typo em `icone` não pode passar silenciosamente).
    - **URLs resolvíveis**: com todas as flags habilitadas, `render_to_string` do resultado completo não lança `NoReverseMatch` — cobre todo `url_name` e todo `url_names_ativos` da estrutura contra as URLs reais do projeto.
-   - **Não mutação**: chamar `secoes_navegacao` com dois contextos consecutivos (ex.: flags diferentes) e confirmar que os itens/`icone_path`/`url_names_ativos` retornados no primeiro contexto não são afetados pela segunda chamada nem apontam para os mesmos objetos de `NAVEGACAO`/`ICONES` (sem vazamento de estado entre requisições).
+   - **Não mutação**: chamar `secoes_navegacao` com dois contextos consecutivos (ex.: flags diferentes) e confirmar que os containers mutáveis retornados no primeiro contexto (lista de seções, lista de itens, lista `url_names_ativos`) mantêm identidade distinta da segunda chamada e não apontam para os mesmos objetos de `NAVEGACAO`/`ICONES` — sem vazamento de estado entre requisições. `icone_path` é `str` (imutável); validar só por igualdade de valor, não de identidade.
 2. **Paridade via view (com DB)**, reaproveitando fixtures existentes (`solicitante`, `chefe_obras`, `chefe_almoxarifado`, `superuser`) em `apps/requisicoes/tests/test_views.py` ou teste novo dedicado:
    - Mesmo conjunto de rótulos visíveis simultaneamente no HTML da sidebar e do drawer, para cada papel.
    - `aria-current="page"` presente exatamente no item ativo (incluindo as 3 rotas do trio SCPI) em ambos os renderers.
