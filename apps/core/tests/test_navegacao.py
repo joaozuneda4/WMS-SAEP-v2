@@ -17,6 +17,15 @@ def _topbar_nav(**ctx):
     return render_to_string('core/_topbar_nav.html', ctx)
 
 
+def _link_com_rotulo(html, rotulo):
+    """Isola o `<a>...</a>` que contém `rotulo`, evitando falso positivo de
+    `aria-current` vazado de um link vizinho."""
+    idx = html.index(rotulo)
+    inicio = html.rfind('<a', 0, idx)
+    fim = html.index('</a>', idx) + len('</a>')
+    return html[inicio:fim]
+
+
 def _todas_as_flags():
     return {
         item['flag']: True
@@ -137,12 +146,10 @@ def test_topbar_usa_capitalizacao_sentence_case_para_fila_de_autorizacoes():
 
 def test_side_nav_marca_aria_current_no_item_ativo():
     html = _side_nav(current='requisicoes:minhas')
-    idx_ativo = html.index('Minhas requisições')
-    idx_inativo = html.index('Nova requisição')
-    trecho_ativo = html[max(0, idx_ativo - 400) : idx_ativo]
-    trecho_inativo = html[max(0, idx_inativo - 400) : idx_inativo]
-    assert 'aria-current="page"' in trecho_ativo
-    assert 'aria-current="page"' not in trecho_inativo
+    link_ativo = _link_com_rotulo(html, 'Minhas requisições')
+    link_inativo = _link_com_rotulo(html, 'Nova requisição')
+    assert 'aria-current="page"' in link_ativo
+    assert 'aria-current="page"' not in link_inativo
 
 
 def test_side_nav_role_list_preservado():
@@ -164,10 +171,8 @@ def test_trio_scpi_marca_aria_current_em_ambos_renderers(current):
     topbar_html = _topbar_nav(**ctx)
     assert 'Importar SCPI' in side_html
     assert 'Importar SCPI' in topbar_html
-    idx_side = side_html.index('Importar SCPI')
-    idx_topbar = topbar_html.index('Importar SCPI')
-    assert 'aria-current="page"' in side_html[max(0, idx_side - 400) : idx_side]
-    assert 'aria-current="page"' in topbar_html[max(0, idx_topbar - 400) : idx_topbar]
+    assert 'aria-current="page"' in _link_com_rotulo(side_html, 'Importar SCPI')
+    assert 'aria-current="page"' in _link_com_rotulo(topbar_html, 'Importar SCPI')
 
 
 def test_topbar_preserva_aria_label_por_secao():
@@ -184,31 +189,42 @@ def test_sidebar_e_drawer_mostram_os_mesmos_rotulos_para_o_mesmo_papel():
     }
     side_html = _side_nav(**ctx)
     topbar_html = _topbar_nav(**ctx)
-    for rotulo in [
+    esperados = {
         'Nova requisição',
         'Minhas requisições',
         'Fila de autorizações',
         'Histórico de requisições',
         'Atendimento',
-    ]:
-        assert rotulo in side_html
-        assert rotulo in topbar_html
+    }
+    catalogo = {item['rotulo'] for secao in NAVEGACAO for item in secao['itens']}
+    visiveis_side = {rotulo for rotulo in catalogo if rotulo in side_html}
+    visiveis_topbar = {rotulo for rotulo in catalogo if rotulo in topbar_html}
+    assert visiveis_side == visiveis_topbar == esperados
 
 
 def test_duas_chamadas_consecutivas_nao_compartilham_containers_mutaveis():
-    primeira = secoes_navegacao({'pode_ver_fila_autorizacao': True})
-    segunda = secoes_navegacao({})
+    flags = {'pode_ver_fila_autorizacao': True}
+    primeira = secoes_navegacao(flags)
+    segunda = secoes_navegacao(flags)
 
     assert primeira is not segunda
-    (requisicoes_primeira,) = primeira
-    assert 'Fila de autorizações' in [
-        item['rotulo'] for item in requisicoes_primeira['itens']
-    ]
+    for secao_primeira, secao_segunda in zip(primeira, segunda, strict=True):
+        assert secao_primeira is not secao_segunda
+        assert secao_primeira['itens'] is not secao_segunda['itens']
+        for item_primeira, item_segunda in zip(
+            secao_primeira['itens'], secao_segunda['itens'], strict=True
+        ):
+            assert item_primeira is not item_segunda
+            assert (
+                item_primeira['url_names_ativos']
+                is not item_segunda['url_names_ativos']
+            )
+            assert item_primeira == item_segunda
 
     for secao in NAVEGACAO:
-        assert secao is not requisicoes_primeira
+        assert secao is not primeira[0]
     for item_original in NAVEGACAO[0]['itens']:
-        for item_retornado in requisicoes_primeira['itens']:
+        for item_retornado in primeira[0]['itens']:
             assert item_retornado is not item_original
             if 'url_names_ativos' in item_original:
                 assert (
