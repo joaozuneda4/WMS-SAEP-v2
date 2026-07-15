@@ -1,0 +1,10 @@
+{% comment %}
+  Item de resultado do autocomplete de material: código + nome + saldo.
+  Compartilhado pelas 2 buscas de material (requisições e saída excepcional),
+  que retornam o saldo em campos JSON diferentes (`saldo_disponivel` vs
+  `saldo_fisico`) — resolvido em runtime via `??`.
+  Incluído por `components/autocomplete.html` dentro do escopo Alpine `item`/`idx`.
+{% endcomment %}
+<span class="font-medium text-slate-900" x-text="item.codigo"></span>
+<span class="text-slate-600" x-text="' — ' + item.nome"></span>
+<span class="ml-1 text-xs text-slate-400" x-text="'(disp: ' + (item.saldo_disponivel ?? item.saldo_fisico) + ' ' + item.unidade + ')'"></span>

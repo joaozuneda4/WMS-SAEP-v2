@@ -131,88 +131,20 @@
           <div
             class="item-form-row flex flex-wrap items-start gap-3 rounded-lg border border-slate-200 bg-white p-3"
           >
-            {# Hidden: material_id para POST #}
-            <input type="hidden" :name="'itens-' + idx + '-material_id'" :value="item.material_id">
-
-            {# Autocomplete de material #}
-            <div class="min-w-0 flex-1 basis-full sm:basis-0">
-              <label
-                class="mb-1 block text-xs font-medium text-slate-600"
-                :for="'mat-busca-' + idx"
-              >
-                Material
-              </label>
-              <div class="relative" @click.outside="fecharDropdown(idx)">
-                <input
-                  type="search"
-                  :id="'mat-busca-' + idx"
-                  :value="item.query"
-                  class="material-autocomplete w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autocomplete="new-password"
-                  autocorrect="off"
-                  autocapitalize="none"
-                  spellcheck="false"
-                  data-lpignore="true"
-                  data-1p-ignore="true"
-                  placeholder="Buscar por código ou descrição…"
-                  @input.debounce.300ms="buscarMateriais(idx, $event.target.value)"
-                  @focus="abrirOuBuscar(idx)"
-                  @keydown.escape="fecharDropdown(idx)"
-                  @keydown.arrow-down.prevent="proximo(idx)"
-                  @keydown.arrow-up.prevent="anterior(idx)"
-                  @keydown.enter.prevent="confirmar(idx)"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-haspopup="listbox"
-                  :aria-controls="'mat-listbox-' + idx"
-                  :aria-expanded="item.aberto"
-                  :aria-activedescendant="item.ativo >= 0 ? 'mat-opt-' + item.ativo + '-' + idx : null"
-                >
-                <span
-                  x-show="item.buscando"
-                  x-cloak
-                  class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-                  aria-hidden="true"
-                >
-                  <svg class="h-4 w-4 animate-spin motion-reduce:animate-none text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                  </svg>
-                </span>
-                <ul
-                  x-show="item.aberto"
-                  x-cloak
-                  :id="'mat-listbox-' + idx"
-                  role="listbox"
-                  aria-label="Resultados de materiais"
-                  class="absolute z-20 mt-1 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg"
-                  style="max-height: 14rem"
-                >
-                  <template x-for="(mat, i) in item.resultados" :key="mat.id">
-                    <li
-                      :id="'mat-opt-' + i + '-' + idx"
-                      role="option"
-                      :aria-selected="item.ativo === i"
-                      @mousedown.prevent="selecionarMaterial(idx, mat)"
-                      @mouseover="item.ativo = i"
-                      :class="item.ativo === i ? 'bg-blue-50' : 'hover:bg-slate-50'"
-                      class="cursor-pointer px-3 py-2"
-                    >
-                      <span class="font-medium text-slate-900" x-text="mat.codigo"></span>
-                      <span class="text-slate-600" x-text="' — ' + mat.nome"></span>
-                      <span class="ml-1 text-xs text-slate-400" x-text="'(saldo: ' + mat.saldo_fisico + ' ' + mat.unidade + ')'"></span>
-                    </li>
-                  </template>
-                  <li
-                    x-show="!item.buscando && item.query.length >= 2 && item.resultados.length === 0"
-                    class="px-3 py-2 text-sm italic text-slate-500"
-                    role="option"
-                    aria-disabled="true"
-                  >
-                    Nenhum material elegível encontrado.
-                  </li>
-                </ul>
-              </div>
+            {# Autocomplete de material — cada linha tem seu próprio escopo Alpine #}
+            <div
+              class="min-w-0 flex-1 basis-full sm:basis-0"
+              x-data="autocomplete({
+                endpoint: '{% url 'estoque:buscar_materiais_saida_excepcional' %}',
+                minChars: 2,
+                campoDisplay: 'label',
+                onSelect: (item) => selecionarMaterial(idx, item),
+                onInvalidate: () => { itens[idx].material_id = ''; },
+              })"
+              @click.outside="fecharDropdown()"
+            >
+              <input type="hidden" x-ref="hiddenInput" :name="'itens-' + idx + '-material_id'">
+              {% include "components/autocomplete.html" with label="Material" placeholder="Buscar por código ou descrição…" item_template="estoque/partials/_autocomplete_item_material.html" sem_resultados_label="Nenhum material elegível encontrado." tipo_input="search" %}
             </div>
 
             {# Quantidade #}
@@ -231,7 +163,7 @@
                 min="0.001"
                 step="any"
                 class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                :aria-label="'Quantidade do material ' + (item.label || (idx + 1))"
+                :aria-label="'Quantidade do material ' + (idx + 1)"
               >
             </div>
 
@@ -303,13 +235,7 @@
       return {
         _uid: ++_uid,
         material_id: '',
-        label: '',
-        query: '',
         quantidade: '',
-        resultados: [],
-        aberto: false,
-        buscando: false,
-        ativo: -1,
       };
     }
 
@@ -329,90 +255,21 @@
           this.erroDuplicado = '';
         },
 
-        abrirOuBuscar(idx) {
-          const item = this.itens[idx];
-          if (!item.query) {
-            this.buscarMateriais(idx, '');
-          } else if (item.resultados.length > 0) {
-            item.aberto = true;
-          } else {
-            this.buscarMateriais(idx, item.query);
-          }
-        },
-
-        async buscarMateriais(idx, q) {
-          const item = this.itens[idx];
-          item.query = q;
-
-          if (q.length > 0 && q.length < 2) {
-            item.material_id = '';
-            item.label = '';
-            item.resultados = [];
-            item.aberto = false;
-            return;
-          }
-
-          // Digitar limpa seleção anterior
-          item.material_id = '';
-          item.label = '';
-          item.buscando = true;
-
-          try {
-            const res = await fetch(
-              `{% url 'estoque:buscar_materiais_saida_excepcional' %}?q=${encodeURIComponent(q || '')}`,
-              { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
-            );
-            const data = await res.json();
-            item.resultados = data.resultados || [];
-            item.aberto = item.resultados.length > 0;
-            item.ativo = -1;
-          } catch (_e) {
-            item.resultados = [];
-          } finally {
-            item.buscando = false;
-          }
-        },
-
-        selecionarMaterial(idx, mat) {
-          // Guarda de duplicidade — um material por documento
+        // Guarda de duplicidade — um material por documento. Chamada pelo
+        // componente genérico via config.onSelect; retornar `false` veta a
+        // seleção (o componente não altera query/hidden/dropdown nesse caso).
+        selecionarMaterial(idx, item) {
           const duplicado = this.itens.some(
-            (it, i) => i !== idx && it.material_id === String(mat.id)
+            (it, i) => i !== idx && it.material_id === String(item.id)
           );
           if (duplicado) {
             this.erroDuplicado =
               'Este material já foi adicionado. Cada material pode aparecer apenas uma vez no documento.';
-            return;
+            return false;
           }
           this.erroDuplicado = '';
-
-          const item = this.itens[idx];
-          item.material_id = String(mat.id);
-          item.label = mat.label;
-          item.query = mat.label;
-          item.aberto = false;
-          item.ativo = -1;
-        },
-
-        fecharDropdown(idx) {
-          this.itens[idx].aberto = false;
-          this.itens[idx].ativo = -1;
-        },
-
-        proximo(idx) {
-          const item = this.itens[idx];
-          if (item.ativo < item.resultados.length - 1) item.ativo++;
-        },
-
-        anterior(idx) {
-          const item = this.itens[idx];
-          if (item.ativo > 0) item.ativo--;
-        },
-
-        confirmar(idx) {
-          const item = this.itens[idx];
-          if (item.ativo >= 0 && item.resultados[item.ativo]) {
-            this.selecionarMaterial(idx, item.resultados[item.ativo]);
-          }
+          this.itens[idx].material_id = String(item.id);
+          return true;
         },
       };
     };

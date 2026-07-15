@@ -1,0 +1,102 @@
+{% comment %}
+  Combobox ARIA de autocomplete — busca (input + spinner) + listbox.
+
+  Requer que o chamador já esteja dentro de um escopo `x-data="autocomplete({...})"`
+  (ver `apps/core/static/core/js/autocomplete.js`) e tenha declarado, no mesmo
+  escopo, um hidden input com `x-ref="hiddenInput"` para o valor selecionado.
+
+  Params:
+    label               -> texto do <label> visível (obrigatório)
+    placeholder         -> placeholder do input de busca (obrigatório)
+    item_template       -> caminho do partial incluído dentro de cada <li> de
+                           resultado (recebe `item`/`idx` do escopo Alpine).
+                           Este componente é genérico e não conhece semântica
+                           de domínio — o item_template é sempre um partial de
+                           domínio, vive no app dono da entidade exibida (ex.
+                           `requisicoes/partials/...`, `estoque/partials/...`)
+    sem_resultados_label -> texto exibido quando a busca não retorna nada
+    tipo_input          -> "text" (default) | "search"
+    com_erro            -> (boolean) aplica borda vermelha e aria-invalid
+                           (paridade com form_field.html)
+    erro_id             -> id do elemento que exibe a mensagem de erro
+                           (obrigatório junto com com_erro para expor o erro
+                           ao leitor de tela via aria-describedby)
+
+  Uso típico (no template chamador, dentro do x-data que também declara o
+  hidden input):
+    {% include "components/autocomplete.html" with
+       label="Selecione o beneficiário"
+       placeholder="Buscar por nome ou matrícula…"
+       item_template="requisicoes/partials/_autocomplete_item_beneficiario.html"
+       sem_resultados_label="Nenhum beneficiário encontrado."
+    %}
+{% endcomment %}
+<label class="block text-xs font-medium text-slate-600 mb-1" :for="idBase + '-busca'">{{ label }}</label>
+<div class="relative">
+  <input
+    type="{{ tipo_input|default:'text' }}"
+    :id="idBase + '-busca'"
+    x-ref="displayInput"
+    x-model="query"
+    @input="buscarComDebounce()"
+    @keydown.arrow-down.prevent="selecionarProximo()"
+    @keydown.arrow-up.prevent="selecionarAnterior()"
+    @keydown.enter="if (ativo >= 0) { $event.preventDefault(); confirmarSelecao(); }"
+    @keydown.escape="fecharDropdown()"
+    @blur="fecharDropdown()"
+    @focus="buscarTodos()"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="none"
+    spellcheck="false"
+    data-lpignore="true"
+    data-1p-ignore="true"
+    placeholder="{{ placeholder }}"
+    class="w-full rounded-lg border {% if com_erro %}border-red-400{% else %}border-slate-300{% endif %} px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+    role="combobox"
+    aria-autocomplete="list"
+    aria-haspopup="listbox"
+    {% if com_erro %}aria-invalid="true"{% if erro_id %} aria-describedby="{{ erro_id }}"{% endif %}{% endif %}
+    :aria-controls="idBase + '-listbox'"
+    :aria-expanded="aberto"
+    :aria-activedescendant="ativo >= 0 ? (idBase + '-opt-' + ativo) : null"
+  />
+  <span x-show="buscando" x-cloak class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" aria-hidden="true">
+    <svg class="h-4 w-4 animate-spin motion-reduce:animate-none text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+    </svg>
+  </span>
+  <ul
+    x-show="aberto"
+    x-cloak
+    :id="idBase + '-listbox'"
+    role="listbox"
+    aria-label="Resultados"
+    class="absolute z-20 mt-1 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg"
+    style="max-height: 14rem"
+  >
+    <template x-for="(item, idx) in resultados" :key="item.id">
+      <li
+        :id="idBase + '-opt-' + idx"
+        role="option"
+        :aria-selected="ativo === idx"
+        @mousedown.prevent="selecionar(item)"
+        @mouseover="ativo = idx"
+        :class="ativo === idx ? 'bg-blue-50' : 'hover:bg-slate-50'"
+        class="cursor-pointer px-3 py-2"
+      >
+        {% include item_template %}
+      </li>
+    </template>
+  </ul>
+  <p
+    x-show="aberto && mensagemVaziaVisivel()"
+    x-cloak
+    class="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm italic text-slate-500 shadow-lg"
+    role="status"
+    aria-live="polite"
+  >
+    {{ sem_resultados_label }}
+  </p>
+</div>

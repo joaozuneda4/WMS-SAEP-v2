@@ -1,0 +1,7 @@
+{% comment %}
+  Item de resultado do autocomplete de beneficiário: nome + matrícula + setor.
+  Incluído por `components/autocomplete.html` dentro do escopo Alpine `item`/`idx`.
+{% endcomment %}
+<span class="font-medium text-slate-900" x-text="item.nome"></span>
+<span class="ml-1 text-xs text-slate-500" x-text="'(' + item.matricula + ')'"></span>
+<span x-show="item.setor" class="ml-1 text-xs text-slate-400" x-text="'· ' + item.setor"></span>
