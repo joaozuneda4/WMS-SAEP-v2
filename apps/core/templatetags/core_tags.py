@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.core.exceptions import ImproperlyConfigured
 from django import template
 
@@ -16,7 +18,7 @@ def validar_contrato_modal(action_url, submit_form_id):
     return ''
 
 
-NAVEGACAO = [
+NAVEGACAO: list[dict[str, Any]] = [
     {
         'titulo': 'Requisições',
         'aria_label': 'Requisições',
@@ -96,7 +98,7 @@ NAVEGACAO = [
     },
 ]
 
-ICONES = {
+ICONES: dict[str, str] = {
     'criar': 'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
     'lista': 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
     'autorizacao': (
@@ -125,16 +127,16 @@ ICONES = {
 
 
 @register.simple_tag(takes_context=True)
-def secoes_navegacao(context):
+def secoes_navegacao(context: Any) -> list[dict[str, Any]]:
     """Devolve as seções de nav visíveis, lidas de NAVEGACAO/ICONES.
 
     Filtra itens pela flag de permissão já presente no contexto (sem
     reimplementar policy) e descarta seções sem nenhum item visível.
     Constrói dicts/listas novos a cada chamada — nunca muta NAVEGACAO/ICONES.
     """
-    secoes = []
+    secoes: list[dict[str, Any]] = []
     for secao in NAVEGACAO:
-        itens = []
+        itens: list[dict[str, Any]] = []
         for item in secao['itens']:
             flag = item.get('flag')
             if flag is not None and not context.get(flag):

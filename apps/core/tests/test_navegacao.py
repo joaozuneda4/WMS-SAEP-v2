@@ -1,9 +1,20 @@
 """Testes da tag core_tags.secoes_navegacao (sem DB, sem view)."""
 
 import pytest
+from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse
 
 from apps.core.templatetags.core_tags import ICONES, NAVEGACAO, secoes_navegacao
+
+
+def _side_nav(**ctx):
+    ctx.setdefault('current', '')
+    return render_to_string('core/partials/_side_nav.html', ctx)
+
+
+def _topbar_nav(**ctx):
+    ctx.setdefault('current', '')
+    return render_to_string('core/_topbar_nav.html', ctx)
 
 
 def _todas_as_flags():
@@ -116,6 +127,72 @@ def test_todo_url_name_e_url_names_ativos_sao_resolviveis():
             assert _url_name_existe(item['url_name']), item['url_name']
             for nome_ativo in item['url_names_ativos']:
                 assert _url_name_existe(nome_ativo), nome_ativo
+
+
+def test_topbar_usa_capitalizacao_sentence_case_para_fila_de_autorizacoes():
+    html = _topbar_nav(pode_ver_fila_autorizacao=True)
+    assert 'Fila de autorizações' in html
+    assert 'Fila de Autorizações' not in html
+
+
+def test_side_nav_marca_aria_current_no_item_ativo():
+    html = _side_nav(current='requisicoes:minhas')
+    idx_ativo = html.index('Minhas requisições')
+    idx_inativo = html.index('Nova requisição')
+    trecho_ativo = html[max(0, idx_ativo - 400) : idx_ativo]
+    trecho_inativo = html[max(0, idx_inativo - 400) : idx_inativo]
+    assert 'aria-current="page"' in trecho_ativo
+    assert 'aria-current="page"' not in trecho_inativo
+
+
+def test_side_nav_role_list_preservado():
+    html = _side_nav()
+    assert 'role="list"' in html
+
+
+@pytest.mark.parametrize(
+    'current',
+    [
+        'estoque:preview_importacao_scpi',
+        'requisicoes:confirmar_importacao_scpi',
+        'estoque:sucesso_importacao_scpi',
+    ],
+)
+def test_trio_scpi_marca_aria_current_em_ambos_renderers(current):
+    ctx = {'current': current, 'pode_visualizar_preview_scpi': True}
+    side_html = _side_nav(**ctx)
+    topbar_html = _topbar_nav(**ctx)
+    assert 'Importar SCPI' in side_html
+    assert 'Importar SCPI' in topbar_html
+    idx_side = side_html.index('Importar SCPI')
+    idx_topbar = topbar_html.index('Importar SCPI')
+    assert 'aria-current="page"' in side_html[max(0, idx_side - 400) : idx_side]
+    assert 'aria-current="page"' in topbar_html[max(0, idx_topbar - 400) : idx_topbar]
+
+
+def test_topbar_preserva_aria_label_por_secao():
+    html = _topbar_nav(pode_ver_fila_atendimento=True)
+    assert 'aria-label="Requisições"' in html
+    assert 'aria-label="Almoxarifado"' in html
+
+
+def test_sidebar_e_drawer_mostram_os_mesmos_rotulos_para_o_mesmo_papel():
+    ctx = {
+        'pode_ver_fila_autorizacao': True,
+        'pode_consultar_historico_requisicoes': True,
+        'pode_ver_fila_atendimento': True,
+    }
+    side_html = _side_nav(**ctx)
+    topbar_html = _topbar_nav(**ctx)
+    for rotulo in [
+        'Nova requisição',
+        'Minhas requisições',
+        'Fila de autorizações',
+        'Histórico de requisições',
+        'Atendimento',
+    ]:
+        assert rotulo in side_html
+        assert rotulo in topbar_html
 
 
 def test_duas_chamadas_consecutivas_nao_compartilham_containers_mutaveis():

@@ -1,131 +1,23 @@
-<nav class="app-bar__menu-section" aria-label="Requisições">
-  <p class="app-bar__menu-heading">Requisições</p>
-  <a
-    href="{% url 'requisicoes:nova_requisicao' %}"
-    class="app-bar__menu-item"
-    {% if current == 'requisicoes:nova_requisicao' %}aria-current="page"{% endif %}
-  >
-    <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-    </svg>
-    Nova requisição
-  </a>
-  <a
-    href="{% url 'requisicoes:minhas' %}"
-    class="app-bar__menu-item"
-    {% if current == 'requisicoes:minhas' %}aria-current="page"{% endif %}
-  >
-    <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
-    </svg>
-    Minhas requisições
-  </a>
-  {% if pode_ver_fila_autorizacao %}
+{% load core_tags %}
+{% comment %}
+Itens/ícones vêm de core_tags.secoes_navegacao — fonte única com
+core/partials/_side_nav.html.
+{% endcomment %}
+{% secoes_navegacao as secoes %}
+{% for secao in secoes %}
+<nav class="app-bar__menu-section" aria-label="{{ secao.aria_label }}">
+  <p class="app-bar__menu-heading">{{ secao.titulo }}</p>
+  {% for item in secao.itens %}
     <a
-      href="{% url 'requisicoes:autorizacoes' %}"
+      href="{% url item.url_name %}"
       class="app-bar__menu-item"
-      {% if current == 'requisicoes:autorizacoes' %}aria-current="page"{% endif %}
+      {% if current in item.url_names_ativos %}aria-current="page"{% endif %}
     >
       <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm-1 14-4-4 1.41-1.41L11 13.17l5.59-5.59L18 9l-7 7z"/>
+        <path d="{{ item.icone_path }}"/>
       </svg>
-      Fila de Autorizações
+      {{ item.rotulo }}
     </a>
-  {% endif %}
-  {% if pode_consultar_historico_requisicoes %}
-    <a
-      href="{% url 'requisicoes:historico' %}"
-      class="app-bar__menu-item"
-      {% if current == 'requisicoes:historico' %}aria-current="page"{% endif %}
-    >
-      <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v4l5-5-5-5v4z"/>
-      </svg>
-      Histórico de requisições
-    </a>
-  {% endif %}
+  {% endfor %}
 </nav>
-
-{% if pode_ver_fila_atendimento or pode_consultar_saidas_excepcionais or pode_consultar_catalogo_estoque or pode_consultar_movimentacoes_estoque or pode_visualizar_preview_scpi or pode_consultar_historico_scpi %}
-<nav class="app-bar__menu-section" aria-label="Almoxarifado">
-  <p class="app-bar__menu-heading">Almoxarifado</p>
-
-  {% if pode_ver_fila_atendimento %}
-    <a
-      href="{% url 'requisicoes:atendimentos' %}"
-      class="app-bar__menu-item"
-      {% if current == 'requisicoes:atendimentos' %}aria-current="page"{% endif %}
-    >
-      <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M20 8h-3V6c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-9c0-1.1-.9-2-2-2zM9 6h6v2H9V6zm11 13H4v-2h16v2zm0-4H4v-5h3v2h2v-2h6v2h2v-2h3v5z"/>
-      </svg>
-      Atendimento
-    </a>
-  {% endif %}
-
-  {% if pode_consultar_saidas_excepcionais %}
-    <a
-      href="{% url 'estoque:listar_saidas_excepcionais' %}"
-      class="app-bar__menu-item"
-      {% if current == 'estoque:listar_saidas_excepcionais' %}aria-current="page"{% endif %}
-    >
-      <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/>
-      </svg>
-      Saídas excepcionais
-    </a>
-  {% endif %}
-
-  {% if pode_consultar_catalogo_estoque %}
-    <a
-      href="{% url 'estoque:lista_materiais' %}"
-      class="app-bar__menu-item"
-      {% if current == 'estoque:lista_materiais' %}aria-current="page"{% endif %}
-    >
-      <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M20 3H4v2h16V3zm1 5H3l1 13h16l1-13zm-5 7h-3v3h-2v-3H8v-2h3V10h2v3h3v2z"/>
-      </svg>
-      Catálogo de materiais
-    </a>
-  {% endif %}
-
-  {% if pode_consultar_movimentacoes_estoque %}
-    <a
-      href="{% url 'estoque:historico_movimentacoes' %}"
-      class="app-bar__menu-item"
-      {% if current == 'estoque:historico_movimentacoes' %}aria-current="page"{% endif %}
-    >
-      <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
-      </svg>
-      Movimentações
-    </a>
-  {% endif %}
-
-  {% if pode_visualizar_preview_scpi %}
-    <a
-      href="{% url 'estoque:preview_importacao_scpi' %}"
-      class="app-bar__menu-item"
-      {% if current == 'estoque:preview_importacao_scpi' or current == 'requisicoes:confirmar_importacao_scpi' or current == 'estoque:sucesso_importacao_scpi' %}aria-current="page"{% endif %}
-    >
-      <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-      </svg>
-      Importar SCPI
-    </a>
-  {% endif %}
-
-  {% if pode_consultar_historico_scpi %}
-    <a
-      href="{% url 'estoque:historico_importacoes_scpi' %}"
-      class="app-bar__menu-item"
-      {% if current == 'estoque:historico_importacoes_scpi' %}aria-current="page"{% endif %}
-    >
-      <svg class="app-bar__menu-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v4l5-5-5-5v4z"/>
-      </svg>
-      Histórico de importações SCPI
-    </a>
-  {% endif %}
-</nav>
-{% endif %}
+{% endfor %}
