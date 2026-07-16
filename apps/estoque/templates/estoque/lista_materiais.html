@@ -44,7 +44,7 @@
 
   {% if saldos %}
 
-    {# Dispositivos móveis: cartões empilhados #}
+    {# Dispositivos móveis: cartões empilhados — <article> literal (estilo condicional ao estado de domínio, fora do #card_abertura) #}
     <div class="space-y-3 sm:hidden">
       {% for saldo in saldos %}
         <article
@@ -85,42 +85,42 @@
       {% endfor %}
     </div>
 
-    {# Desktop: tabela de dados #}
-    <div class="hidden sm:block overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
-      <table class="min-w-full divide-y divide-slate-200 text-sm">
-        <thead class="bg-slate-50">
-          <tr>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Código</th>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Material</th>
-            <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Físico</th>
-            <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Reservado</th>
-            <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">Disponível</th>
-            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">Un.</th>
-            <th scope="col" class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-600">Status</th>
+    {# Desktop: tabela de dados. <tr> literal (mesmo motivo do <article> acima); <th> "Status" literal (alinhamento central, não suportado por #th) #}
+    {% include "components/table.html#tabela_abertura" %}
+      <caption class="sr-only">Saldo físico, reservado e disponível de cada material no estoque.</caption>
+      <thead class="bg-slate-50">
+        <tr>
+          {% include "components/table.html#th" with rotulo="Código" %}
+          {% include "components/table.html#th" with rotulo="Material" %}
+          {% include "components/table.html#th" with rotulo="Físico" alinhamento="direita" %}
+          {% include "components/table.html#th" with rotulo="Reservado" alinhamento="direita" %}
+          {% include "components/table.html#th" with rotulo="Disponível" alinhamento="direita" %}
+          {% include "components/table.html#th" with rotulo="Un." %}
+          <th scope="col" class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 bg-white">
+        {% for saldo in saldos %}
+          <tr class="{% if saldo.divergente_calculado %}bg-red-50 hover:bg-red-100{% else %}hover:bg-slate-50{% endif %}">
+            <td class="px-4 py-3 font-mono text-xs text-slate-700">{{ saldo.material.codigo }}</td>
+            <td class="px-4 py-3 text-sm text-slate-900">{{ saldo.material.nome }}</td>
+            <td class="px-4 py-3 text-right text-sm tabular-nums text-slate-700">{{ saldo.saldo_fisico }}</td>
+            <td class="px-4 py-3 text-right text-sm tabular-nums text-slate-700">{{ saldo.saldo_reservado }}</td>
+            <td class="px-4 py-3 text-right text-sm tabular-nums {% if saldo.divergente_calculado %}font-semibold text-red-700{% else %}text-slate-700{% endif %}">
+              {{ saldo.saldo_disponivel_calculado }}
+            </td>
+            <td class="px-4 py-3 text-sm text-slate-600">{{ saldo.material.unidade }}</td>
+            <td class="px-4 py-3 text-center">
+              {% if saldo.divergente_calculado %}
+                {% include "components/badge.html" with variant="red-strong" label="Divergente" aria_label="Divergência crítica: físico menor que reservado" %}
+              {% else %}
+                <span class="text-slate-400 text-xs">—</span>
+              {% endif %}
+            </td>
           </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100 bg-white">
-          {% for saldo in saldos %}
-            <tr class="{% if saldo.divergente_calculado %}bg-red-50 hover:bg-red-100{% else %}hover:bg-slate-50{% endif %}">
-              <td class="px-4 py-3 font-mono text-xs text-slate-700">{{ saldo.material.codigo }}</td>
-              <td class="px-4 py-3 text-slate-900">{{ saldo.material.nome }}</td>
-              <td class="px-4 py-3 text-right tabular-nums text-slate-700">{{ saldo.saldo_fisico }}</td>
-              <td class="px-4 py-3 text-right tabular-nums text-slate-700">{{ saldo.saldo_reservado }}</td>
-              <td class="px-4 py-3 text-right tabular-nums {% if saldo.divergente_calculado %}font-semibold text-red-700{% else %}text-slate-700{% endif %}">
-                {{ saldo.saldo_disponivel_calculado }}
-              </td>
-              <td class="px-4 py-3 text-slate-600">{{ saldo.material.unidade }}</td>
-              <td class="px-4 py-3 text-center">
-                {% if saldo.divergente_calculado %}
-                  {% include "components/badge.html" with variant="red-strong" label="Divergente" aria_label="Divergência crítica: físico menor que reservado" %}
-                {% else %}
-                  <span class="text-slate-400 text-xs">—</span>
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+        {% endfor %}
+      </tbody>
+    </table>
     </div>
 
   {% elif busca %}

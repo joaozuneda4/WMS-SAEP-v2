@@ -879,6 +879,29 @@ class TestListaMateriaisView:
         critico = next(s for s in saldos if s.material == material_scpi_critico)
         assert critico.divergente_calculado is True
 
+    def test_tabela_tem_caption_sr_only(
+        self, client, chefe_almoxarifado, material_disponivel, estoque_principal
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_MATERIAIS)
+        conteudo = response.content.decode()
+        assert conteudo.count('<caption class="sr-only">') == 1
+        assert (
+            'Saldo físico, reservado e disponível de cada material no estoque.'
+            in conteudo
+        )
+
+    def test_material_divergente_realca_linha_e_card(
+        self, client, chefe_almoxarifado, material_scpi_critico, estoque_principal
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_MATERIAIS)
+        conteudo = response.content.decode()
+        assert 'bg-red-50 hover:bg-red-100' in conteudo
+        assert 'border-red-300 bg-red-50' in conteudo
+        assert 'aria-label="Material com divergência crítica"' in conteudo
+        assert conteudo.count('Divergente') == 2
+
 
 URL_MOVIMENTACOES = reverse('estoque:historico_movimentacoes')
 
@@ -1032,8 +1055,12 @@ class TestHistoricoMovimentacoesFiltros:
         client.force_login(superuser)
         response = client.get(URL_MOVIMENTACOES, HTTP_HX_REQUEST='true')
         assert response.status_code == 200
+        assert any(
+            t.name == 'resultados'
+            and t.origin.template_name == 'estoque/historico_movimentacoes.html'
+            for t in response.templates
+        )
         nomes = {t.name for t in response.templates}
-        assert 'estoque/partials/_tabela_movimentacoes.html' in nomes
         # Não renderiza o template completo (app-bar) num swap parcial.
         assert 'estoque/historico_movimentacoes.html' not in nomes
 
