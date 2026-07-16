@@ -173,7 +173,7 @@ def historico_movimentacoes_view(request):
     }
 
     if resultado.is_htmx:
-        template = 'estoque/partials/_tabela_movimentacoes.html'
+        template = 'estoque/historico_movimentacoes.html#resultados'
     else:
         template = 'estoque/historico_movimentacoes.html'
     return render(request, template, contexto)

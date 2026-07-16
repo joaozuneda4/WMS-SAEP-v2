@@ -1032,8 +1032,12 @@ class TestHistoricoMovimentacoesFiltros:
         client.force_login(superuser)
         response = client.get(URL_MOVIMENTACOES, HTTP_HX_REQUEST='true')
         assert response.status_code == 200
+        assert any(
+            t.name == 'resultados'
+            and t.origin.template_name == 'estoque/historico_movimentacoes.html'
+            for t in response.templates
+        )
         nomes = {t.name for t in response.templates}
-        assert 'estoque/partials/_tabela_movimentacoes.html' in nomes
         # Não renderiza o template completo (app-bar) num swap parcial.
         assert 'estoque/historico_movimentacoes.html' not in nomes
 
