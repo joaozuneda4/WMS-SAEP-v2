@@ -466,11 +466,80 @@ Render: `<dialog>` ou `<div role="dialog">`
 
 Adiado. Implementar quando houver HTMX modal concreto.
 
-### 8. tables (adiar até listagem real)
+### 8. Listagem responsiva (cards mobile + tabela desktop)
 
-Render: `<table>` com cabeçalho, linhas, estados
+Render: `<table>` desktop (`sm:` acima) + cards `<article>` mobile — mesmo dado, duas
+apresentações. Chrome vive em `apps/core/templates/components/table.html`, via
+`{% partialdef %}` nativo do Django 6 (`{% partialdef nome %}...{% endpartialdef %}`
+define; `{% include "components/table.html#nome" with ... %}` renderiza de outro
+arquivo). Implementado a partir das filas gêmeas (`fila_atendimento.html`,
+`fila_autorizacao.html` — issue #83).
 
-Adiado. Implementar com contexto da primeira fila (autorização/almoxarifado).
+**Decisão de arquitetura**: nada de `DataTable` genérico config-driven (colunas como
+lista de dicts) — células reais têm HTML rico e condicional de domínio; uma DSL de
+colunas seria pior que HTML explícito e hostil ao ARIA custom. Só as **aberturas**
+com string de classe canônica viram `partialdef` — fechamentos (`</table>`, `</div>`,
+`</article>`) são triviais e ficam literais na tela. Células `<td>` e conteúdo do
+card permanecem 100% explícitos na tela chamadora.
+
+Fragmentos disponíveis:
+```
+tabela_abertura   wrapper desktop: div.hidden...sm:block + table.min-w-full
+                  (fechamento literal: </tbody></table></div>)
+th                <th scope="col"> — rotulo, alinhamento ("direita", default
+                  esquerda), rotulo_somente_leitura (renderiza <span class="sr-only">)
+cards_abertura    container mobile: div.space-y-3.sm:hidden
+                  (fechamento literal: </div>)
+card_abertura     card individual: article.rounded-xl...
+                  (fechamento literal: </article>)
+```
+
+**Guardrail**: se o chrome precisar de parâmetro que descreve conteúdo de célula
+(não estrutura visual), a abstração está errada — parar e registrar, não generalizar.
+
+**One-template pattern (HTMX)**: a própria tela envolve o bloco de resultado
+(cards + tabela + empty state) em `{% partialdef resultados %}` e renderiza com
+`{% partial resultados %}` logo abaixo. Isso elimina o par página/partial em
+arquivos separados: quando uma tela ganhar swap HTMX (filtro, paginação), a view
+passa a renderizar `template.html#resultados` para esse mesmo fragmento — sempre
+**GET-only**. Transições de estado de domínio continuam retornando `204` com
+`HX-Redirect` (`docs/CONVENTIONS.md`); este fragmento nunca é alvo delas.
+
+Exemplo canônico:
+```django
+{% partialdef resultados %}
+{% if lista %}
+  {% include "components/table.html#cards_abertura" %}
+    {% for item in lista %}
+      {% include "components/table.html#card_abertura" %}
+        <div class="flex items-start justify-between gap-3">
+          <h2 class="break-words text-sm font-semibold text-slate-900">{{ item.titulo }}</h2>
+          <span class="shrink-0">{% include "components/badge.html" with variant="blue" label="Estado" %}</span>
+        </div>
+        {# dl explícito + botão explícito #}
+      </article>
+    {% endfor %}
+  </div>
+
+  {% include "components/table.html#tabela_abertura" %}
+    <caption class="sr-only">Descrição da listagem.</caption>
+    <thead class="bg-slate-50">
+      <tr>
+        {% include "components/table.html#th" with rotulo="Número" %}
+        {% include "components/table.html#th" with alinhamento="direita" rotulo_somente_leitura="Ações" %}
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 bg-white">
+      {# <tr><td>...</td></tr> explícito #}
+    </tbody>
+  </table>
+  </div>
+{% else %}
+  {% include 'components/empty_state.html' with titulo='Nada por aqui' %}
+{% endif %}
+{% endpartialdef %}
+{% partial resultados %}
+```
 
 ## Code review — checklist acessibilidade
 
