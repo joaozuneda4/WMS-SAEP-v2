@@ -879,6 +879,30 @@ class TestListaMateriaisView:
         critico = next(s for s in saldos if s.material == material_scpi_critico)
         assert critico.divergente_calculado is True
 
+    def test_tabela_tem_caption_sr_only(
+        self, client, chefe_almoxarifado, material_disponivel, estoque_principal
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_MATERIAIS)
+        conteudo = response.content.decode()
+        marcador = (
+            '<table class="min-w-full divide-y divide-slate-200">'
+            '\n\n      <caption class="sr-only">Saldo físico, reservado e '
+            'disponível de cada material no estoque.</caption>'
+        )
+        assert conteudo.count(marcador) == 1
+
+    def test_material_divergente_realca_linha_e_card(
+        self, client, chefe_almoxarifado, material_scpi_critico, estoque_principal
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_MATERIAIS)
+        conteudo = response.content.decode()
+        assert 'bg-red-50 hover:bg-red-100' in conteudo
+        assert 'border-red-300 bg-red-50' in conteudo
+        assert 'aria-label="Material com divergência crítica"' in conteudo
+        assert conteudo.count('Divergente') == 2
+
 
 URL_MOVIMENTACOES = reverse('estoque:historico_movimentacoes')
 
