@@ -1209,7 +1209,7 @@ def historico_requisicoes_view(request):
     }
 
     if resultado.is_htmx:
-        template = 'requisicoes/partials/_tabela_historico_requisicoes.html'
+        template = 'requisicoes/historico_requisicoes.html#resultados'
     else:
         template = 'requisicoes/historico_requisicoes.html'
     return render(request, template, contexto)

@@ -640,6 +640,21 @@ def test_minhas_botao_ver_detalhes_rascunho_preserva_aria_label(
 
 
 @pytest.mark.django_db
+def test_minhas_tabela_tem_caption_sr_only(
+    client, solicitante, req_enviada_solicitante
+):
+    _login(client, solicitante)
+    response = client.get(reverse('requisicoes:minhas'))
+    conteudo = response.content.decode()
+    marcador = (
+        '<table class="min-w-full divide-y divide-slate-200">'
+        '\n\n      <caption class="sr-only">Requisições onde você é '
+        'criador ou beneficiário.</caption>'
+    )
+    assert conteudo.count(marcador) == 1
+
+
+@pytest.mark.django_db
 def test_minhas_vazia_exibe_empty_state_com_cta_canonico(client, solicitante):
     _login(client, solicitante)
     response = client.get(reverse('requisicoes:minhas'))
@@ -3011,8 +3026,12 @@ class TestHistoricoRequisicoesView:
         _login(client, superuser)
         response = client.get(URL_HISTORICO_REQUISICOES, HTTP_HX_REQUEST='true')
         assert response.status_code == 200
+        assert any(
+            t.name == 'resultados'
+            and t.origin.template_name == 'requisicoes/historico_requisicoes.html'
+            for t in response.templates
+        )
         nomes = {t.name for t in response.templates}
-        assert 'requisicoes/partials/_tabela_historico_requisicoes.html' in nomes
         assert 'requisicoes/historico_requisicoes.html' not in nomes
 
     def test_requisicao_normal_devolve_template_completo(self, client, superuser):
