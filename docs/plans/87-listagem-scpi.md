@@ -129,9 +129,37 @@ Em vez disso:
        assert conteudo.count('<caption class="sr-only">') == 1
        assert 'Histórico de importações SCPI, mais recente primeiro.' in conteudo
    ```
-3. **Paridade visual** — mobile 375px + desktop, com e sem importações
+3. **Teste novo obrigatório** — regressão de markup para a decisão central
+   deste PR (wrapper não usa `#tabela_abertura`): sem ele, um futuro reuso
+   descuidado do fragmento canônico reintroduziria `hidden`/`sm:block` e
+   esconderia a tabela em mobile silenciosamente, sem quebrar nenhum teste
+   existente.
+   ```python
+   def test_wrapper_nao_usa_chrome_hidden_em_mobile(
+       self, client, superuser, estoque_principal
+   ):
+       from apps.estoque.models import ImportacaoSCPI, StatusImportacaoSCPI
+
+       ImportacaoSCPI.objects.create(
+           arquivo_nome='relatorio.csv',
+           arquivo_hash='b' * 64,
+           importado_por=superuser,
+           estoque=estoque_principal,
+           status=StatusImportacaoSCPI.CONCLUIDA,
+       )
+       client.force_login(superuser)
+       resp = client.get(self.URL)
+       conteudo = resp.content.decode()
+       assert (
+           '<div class="overflow-x-auto rounded-xl border border-slate-200 '
+           'bg-white shadow-sm">' in conteudo
+       )
+       assert 'sm:block' not in conteudo
+   ```
+4. **Paridade visual** — mobile 375px + desktop, com e sem importações
    registradas. Foco em confirmar que a tabela **continua visível em
-   mobile** (não escondida) — é o risco central desta decisão de design.
+   mobile** (não escondida) — é o risco central desta decisão de design;
+   complementa o teste de markup acima com verificação visual real.
 
 ## Invariantes relevantes (`docs/matriz-invariantes.md`)
 
@@ -170,5 +198,6 @@ Em vez disso:
 - Verde antes do PR final:
   `uv run pytest -q -ra --tb=short --strict-markers --disable-warnings -n logical`,
   `uv run ruff format .`, `uv run ruff format --check .`,
-  `uv run ruff check .`, `uv run mypy apps`.
+  `uv run ruff check .`, `uv run mypy apps`, `npm run css:build` (zero diff
+  esperado em `app.css`).
 - PT-BR em identificadores, comentários e copy.
