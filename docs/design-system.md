@@ -483,7 +483,7 @@ com string de classe canônica viram `partialdef` — fechamentos (`</table>`, `
 card permanecem 100% explícitos na tela chamadora.
 
 Fragmentos disponíveis:
-```
+```text
 tabela_abertura   wrapper desktop: div.hidden...sm:block + table.min-w-full
                   (fechamento literal: </tbody></table></div>)
 th                <th scope="col"> — rotulo, alinhamento ("direita", default
@@ -493,6 +493,15 @@ cards_abertura    container mobile: div.space-y-3.sm:hidden
 card_abertura     card individual: article.rounded-xl...
                   (fechamento literal: </article>)
 ```
+
+**Contrato do `<caption>`**: `tabela_abertura` não inclui `<caption>` — a tela chamadora
+fornece a sua, com descrição específica da listagem, imediatamente após o
+`{% include "components/table.html#tabela_abertura" %}` (ver exemplo abaixo). O
+componente compartilhado não conhece semântica de negócio o suficiente para descrever
+o que a tabela lista; colocar a caption nele generalizaria conteúdo de célula, o que o
+guardrail abaixo proíbe. Divergência entre este contrato e o código (ex. tela sem
+caption, ou caption dentro do chrome) deve ser sinalizada em vez de silenciosamente
+replicada.
 
 **Guardrail**: se o chrome precisar de parâmetro que descreve conteúdo de célula
 (não estrutura visual), a abstração está errada — parar e registrar, não generalizar.
