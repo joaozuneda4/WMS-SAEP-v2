@@ -234,9 +234,10 @@ def test_requisicao_htmx_devolve_so_partial(
 - Padrão de #83 é lei — variações documentadas nas decisões 1, 3 e 4 (não
   são chrome novo, são exceções já com precedente do PR 1 ou do próprio
   `<tr>`/`<td>` que é sempre literal).
-- ARIA inegociável: `caption sr-only` (já existe nas 3 telas, preservado),
-  `aria-live`/`hx-push-url` do wrapper de histórico, `aria-sort`,
-  `aria-label` do `<article>` divergente.
+- ARIA inegociável: `caption sr-only` (preservado nas 2 telas que já têm —
+  `historico_movimentacoes`, `lista_saidas_excepcionais` — e adicionado em
+  `lista_materiais`, decisão 5), `aria-live`/`hx-push-url` do wrapper de
+  histórico, `aria-sort`, `aria-label` do `<article>` divergente.
 - Tailwind v4 JIT + `npm run css:build` obrigatório — decisão 6 introduz
   `bg-white` que já deve estar compilado (classe usada em outras telas), mas
   rodar de qualquer forma para confirmar zero diff inesperado.
@@ -244,5 +245,8 @@ def test_requisicao_htmx_devolve_so_partial(
   arquivo de teste.
 - Zero dependência nova.
 - Branch: `refactor/listagem-estoque-historicos`.
-- Suíte + `ruff format`/`ruff check` + `mypy apps` verdes antes do PR final.
+- Verde antes do PR final:
+  `uv run pytest -q -ra --tb=short --strict-markers --disable-warnings -n logical`,
+  `uv run ruff format .`, `uv run ruff format --check .`,
+  `uv run ruff check .`, `uv run mypy apps`.
 - PT-BR em identificadores, comentários e copy.
