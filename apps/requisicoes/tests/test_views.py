@@ -3026,8 +3026,12 @@ class TestHistoricoRequisicoesView:
         _login(client, superuser)
         response = client.get(URL_HISTORICO_REQUISICOES, HTTP_HX_REQUEST='true')
         assert response.status_code == 200
+        assert any(
+            t.name == 'resultados'
+            and t.origin.template_name == 'requisicoes/historico_requisicoes.html'
+            for t in response.templates
+        )
         nomes = {t.name for t in response.templates}
-        assert 'requisicoes/partials/_tabela_historico_requisicoes.html' in nomes
         assert 'requisicoes/historico_requisicoes.html' not in nomes
 
     def test_requisicao_normal_devolve_template_completo(self, client, superuser):

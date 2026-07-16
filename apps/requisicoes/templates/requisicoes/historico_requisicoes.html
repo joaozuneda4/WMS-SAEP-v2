@@ -144,9 +144,126 @@
     </div>
   </details>
 
-  {# Wrapper estável do swap HTMX: alvo persistente (id + aria-live único). O partial entrega só o conteúdo interno. #}
+  {# Wrapper estável do swap HTMX: alvo persistente (id + aria-live único). O fragmento {% partialdef resultados %} entrega só o conteúdo interno. #}
   <div id="resultados-historico-requisicoes" aria-live="polite" aria-atomic="true">
-    {% include 'requisicoes/partials/_tabela_historico_requisicoes.html' %}
+    {% partialdef resultados %}
+    {% if page_obj.object_list %}
+
+      {% include "components/table.html#cards_abertura" %}
+        {% for req in page_obj.object_list %}
+          {% include "components/table.html#card_abertura" %}
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <h2 class="text-sm font-semibold text-slate-900">
+                  {% if req.numero_publico %}{{ req.numero_publico }}{% else %}<span class="text-slate-500">Rascunho</span>{% endif %}
+                </h2>
+                <p class="mt-1 text-xs text-slate-500">{{ req.criado_em|date:"d/m/Y H:i" }}</p>
+              </div>
+              <div class="shrink-0">
+                {% include "requisicoes/partials/_estado_badge.html" with requisicao=req %}
+              </div>
+            </div>
+
+            <dl class="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Solicitante</dt>
+                <dd class="mt-0.5 text-slate-800">{{ req.criador.nome }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Beneficiário</dt>
+                <dd class="mt-0.5 text-slate-800">{{ req.beneficiario.nome }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Setor</dt>
+                <dd class="mt-0.5 text-slate-800">{{ req.setor_beneficiario.nome }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Material</dt>
+                <dd class="mt-0.5 text-slate-800">
+                  {{ req.quantidade_itens }} {{ req.quantidade_itens|pluralize:"item,itens" }}{% if req.quantidade_itens == 1 %}<br><span class="text-xs text-slate-400">{{ req.itens.all.0.material.nome }}</span>{% endif %}
+                </dd>
+              </div>
+            </dl>
+
+            {% url 'requisicoes:detalhe' pk=req.pk as url_detalhe_req %}
+            {% with next_encoded=request.get_full_path|urlencode %}
+              {% include "components/button.html" with variant="secondary" size="md" href=url_detalhe_req|add:"?next="|add:next_encoded label="Ver detalhes" class="mt-4" %}
+            {% endwith %}
+          </article>
+        {% endfor %}
+      </div>
+
+      {% include "components/table.html#tabela_abertura" %}
+        <caption class="sr-only">
+          Histórico de requisições, ordenado por data/hora em ordem
+          {% if ordem == 'asc' %}crescente (mais antiga primeiro){% else %}decrescente (mais recente primeiro){% endif %}.
+        </caption>
+        <thead class="bg-slate-50">
+          <tr>
+            <th scope="col" aria-sort="{{ aria_sort }}" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <a
+                href="{{ url_ordenacao }}"
+                hx-get="{{ url_ordenacao }}"
+                hx-target="#resultados-historico-requisicoes"
+                hx-push-url="true"
+                class="-my-1 inline-flex items-center gap-1 rounded py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                aria-label="Ordenar por data/hora, {% if ordem == 'asc' %}atualmente crescente{% else %}atualmente decrescente{% endif %}"
+              >
+                Data/hora
+                <span aria-hidden="true">{% if ordem == 'asc' %}↑{% else %}↓{% endif %}</span>
+              </a>
+            </th>
+            {% include "components/table.html#th" with rotulo="Número" %}
+            {% include "components/table.html#th" with rotulo="Solicitante" %}
+            {% include "components/table.html#th" with rotulo="Beneficiário" %}
+            {% include "components/table.html#th" with rotulo="Setor" %}
+            {% include "components/table.html#th" with rotulo="Material" %}
+            {% include "components/table.html#th" with rotulo="Status" %}
+            {% include "components/table.html#th" with alinhamento="direita" rotulo_somente_leitura="Ações" %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 bg-white">
+          {% for req in page_obj.object_list %}
+            <tr class="hover:bg-slate-50">
+              <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{{ req.criado_em|date:"d/m/Y H:i" }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900">
+                {% if req.numero_publico %}{{ req.numero_publico }}{% else %}<span class="text-slate-500">Rascunho</span>{% endif %}
+              </td>
+              <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">{{ req.criador.nome }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">{{ req.beneficiario.nome }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">{{ req.setor_beneficiario.nome }}</td>
+              <td class="max-w-xs truncate px-4 py-3 text-sm text-slate-700">
+                {{ req.quantidade_itens }} {{ req.quantidade_itens|pluralize:"item,itens" }}{% if req.quantidade_itens == 1 %}<br><span class="text-xs text-slate-400">{{ req.itens.all.0.material.nome }}</span>{% endif %}
+              </td>
+              <td class="whitespace-nowrap px-4 py-3 text-sm">
+                {% include "requisicoes/partials/_estado_badge.html" with requisicao=req %}
+              </td>
+              <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
+                {% url 'requisicoes:detalhe' pk=req.pk as url_detalhe_req_row %}
+                {% with next_encoded=request.get_full_path|urlencode %}
+                  {% include "components/button.html" with variant="secondary" size="sm" href=url_detalhe_req_row|add:"?next="|add:next_encoded label="Ver" %}
+                {% endwith %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+
+      {% include 'components/pagination.html' with page_obj=page_obj querystring_filtros=querystring_filtros rotulo_itens='requisições' aria_label='Paginação do histórico de requisições' %}
+
+    {% else %}
+
+      {# Empty state contextual: filtro sem resultado vs histórico visível vazio #}
+      {% if tem_filtro_ativo %}
+        {% include 'components/empty_state.html' with icone='components/icons/_seta_circular.html' titulo='Nenhum resultado para este filtro' descricao='Ajuste ou limpe os filtros para ver mais requisições.' %}
+      {% else %}
+        {% include 'components/empty_state.html' with icone='components/icons/_seta_circular.html' titulo='Nenhuma requisição encontrada' descricao='Ainda não há requisições visíveis para o seu papel.' %}
+      {% endif %}
+
+    {% endif %}
+    {% endpartialdef %}
+    {% partial resultados %}
   </div>
 
 </div>
