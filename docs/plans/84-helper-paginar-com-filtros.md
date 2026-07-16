@@ -63,8 +63,13 @@ roda no CI e não deve mudar.
 # apps/core/listagem.py
 """Helper de paginação/ordenação/metadados para telas de histórico.
 
-Não importa policies/services/selectors de domínio (ADR-0011): RBAC e regras
-de filtro permanecem explícitos na view.
+Infraestrutura de apresentação pura (ADR-0011): não importa policies,
+services nem selectors de domínio. A view continua chamando `exigir_pode_*`
+(policies.py) e os selectors de filtro (`filtrar_*`) exatamente como hoje —
+este módulo não decide autorização nem filtra domínio, só recebe o queryset
+já autorizado/filtrado pela view e cuida de ordenar, paginar e montar os
+metadados de apresentação (URL de ordenação, aria-sort, querystring,
+flag HTMX).
 """
 
 from __future__ import annotations
@@ -125,7 +130,7 @@ def paginar_com_filtros(
 | Arquivo | Mudança |
 |---|---|
 | `apps/core/listagem.py` | **Novo.** `ResultadoListagem` + `paginar_com_filtros`. |
-| `apps/core/tests/test_listagem.py` | **Novo.** Testes unitários do helper (RequestFactory, sem DB). |
+| `apps/core/tests/test_listagem.py` | **Novo.** Testes unitários do helper (`pytest.mark.django_db`, queryset real). |
 | `apps/requisicoes/views.py` | `historico_requisicoes_view` encolhe: chama o helper, mantém `exigir_pode_consultar_historico_requisicoes`, parsing de filtros de domínio, `filtrar_historico_requisicoes`, `tem_filtro_ativo`, `setores_disponiveis`. |
 | `apps/estoque/views.py` | `historico_movimentacoes_view` encolhe: chama o helper, mantém `exigir_pode_consultar_movimentacoes_estoque`, parsing de filtros, `filtrar_movimentacoes`, `tem_filtro_ativo`, `so_saidas_ativo` + URLs de chip. |
 
@@ -137,21 +142,33 @@ mesma semântica de `?ordem=`/`?page=`/filtros).
 
 Conforme ADR-0010 (camadas de teste):
 
-1. **Unitário do helper** (`apps/core/tests/test_listagem.py`, sem DB real — usa
-   `RequestFactory` + queryset de um model simples já existente, ou mock leve):
-   - ordem default `desc` quando `?ordem=` ausente ou inválido (`?ordem=lixo`);
+1. **Unitário do helper** (`apps/core/tests/test_listagem.py`, `@pytest.mark.django_db`,
+   queryset real — sem mock/fake). Usa fixtures já existentes de
+   `apps/core/tests/conftest.py` (`setor_comum`, `solicitante`) para criar registros de
+   `apps.accounts.models.VinculoAuxiliar` (tem `criado_em`, é o model mais simples do
+   projeto com esse campo, sem depender de domínio de estoque/requisições) e
+   `RequestFactory` para montar a `HttpRequest` (padrão já usado em
+   `apps/core/tests/test_http.py::_htmx_request`, com `request.htmx` setado manualmente).
+   Cenários:
+   - ordem default `desc` quando `?ordem=` ausente ou inválido (`?ordem=lixo`) —
+     `VinculoAuxiliar.objects.all()` sem `order_by` prévio, criados em sequência,
+     paginado pelo helper deve sair em ordem decrescente de `criado_em`;
    - `?ordem=asc` inverte a ordenação e reflete em `ResultadoListagem.ordem`;
    - `url_ordenacao` preserva demais parâmetros da querystring e remove `page`;
    - `aria_sort` corresponde a `ordem`;
-   - `is_htmx` reflete `request.htmx`;
-   - `page_obj` pagina corretamente com `per_page` customizado.
+   - `is_htmx` reflete `request.htmx` (`True`/`False`);
+   - `page_obj` pagina corretamente com `per_page` customizado (`count`/`has_next`).
 2. **Views de histórico (regressão)**: suíte existente
    (`TestHistoricoRequisicoesView`, `TestHistoricoRequisicoesFiltros`,
    `TestHistoricoMovimentacoesView`, `TestHistoricoMovimentacoesFiltros`) deve
-   permanecer verde **sem alteração** — inclui `test_ordenacao_asc_inverte_cronologia`,
-   `test_paginacao_server_side`, `test_querystring_invalida_nao_quebra`,
-   `test_chip_so_saidas_preserva_filtros_atuais`. Se algum precisar mudar, é sinal de
-   regressão (conforme critério de aceite da issue).
+   permanecer verde **sem alteração** — inclui `test_ordenacao_asc_inverte_cronologia`
+   (ambos os apps; asserta `asc == reversed(desc)`, portanto já cobre o caso `desc`
+   padrão do estoque implicitamente), `test_paginacao_server_side`,
+   `test_querystring_invalida_nao_quebra`, `test_chip_so_saidas_preserva_filtros_atuais`.
+   Combinado com o cenário 1 acima (que testa `desc` explicitamente no helper, isolado da
+   view), o caso `desc` padrão do estoque fica coberto tanto no nível do helper quanto no
+   nível de regressão da view — nenhum teste novo de view é necessário. Se algum teste de
+   view precisar mudar, é sinal de regressão (conforme critério de aceite da issue).
 
 ## Invariantes relevantes (`docs/matriz-invariantes.md`)
 
