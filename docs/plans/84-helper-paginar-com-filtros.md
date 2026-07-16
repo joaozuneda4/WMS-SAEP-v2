@@ -172,10 +172,14 @@ Conforme ADR-0010 (camadas de teste):
 
 ## Invariantes relevantes (`docs/matriz-invariantes.md`)
 
-- RBAC de histórico: `exigir_pode_consultar_historico_requisicoes` /
-  `exigir_pode_consultar_movimentacoes_estoque` continuam explícitos na view — helper
-  não vê `request.user` além do necessário para paginar/ordenar.
-- Escopo por setor (`setor_beneficiario`) via selectors — não tocado.
+- RBAC de histórico: autorização continua 100% delegada às policies
+  (`exigir_pode_consultar_historico_requisicoes` / `exigir_pode_consultar_movimentacoes_estoque`,
+  `policies.py`, ADR-0011) — a view só chama a policy, não implementa regra própria; o
+  helper não decide autorização, não recebe `request.user`, só recebe o queryset já
+  autorizado e devolve página/ordenação.
+- Escopo por setor (`setor_beneficiario`): aplicado inteiramente pelos selectors
+  (`historico_requisicoes_visiveis_para` / `movimentacoes_visiveis_para`, que já escopam
+  por setor do ator) — não tocado, não duplicado na view, não visível ao helper.
 - Contrato PRG + HX-Redirect — não tocado (histórico é `@require_GET`, não usa PRG).
 
 ## Riscos
@@ -190,7 +194,10 @@ Conforme ADR-0010 (camadas de teste):
 ## Guardrails
 
 - ADR-0011: helper é infraestrutura de apresentação — proibido importar
-  policies/services/selectors de domínio; RBAC permanece na view.
+  policies/services/selectors de domínio. Autorização (policies) e escopo/visibilidade
+  (selectors) não migram para o helper nem para a view: continuam exatamente onde estão
+  hoje, chamadas explicitamente pela view (padrão pré-existente, inalterado por este
+  refactor).
 - Escopo fechado: 1 módulo novo + 1 arquivo de teste novo + 2 views.
 - Zero dependência nova.
 - Branch: `refactor/helper-paginar-com-filtros`.
