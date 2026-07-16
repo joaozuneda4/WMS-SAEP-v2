@@ -779,6 +779,46 @@ class TestHistoricoImportacoesScpiView:
         resp = client.get(self.URL)
         assert b'conteudo_csv' not in resp.content
 
+    def test_tabela_tem_caption_sr_only(self, client, superuser, estoque_principal):
+        from apps.estoque.models import ImportacaoSCPI, StatusImportacaoSCPI
+
+        ImportacaoSCPI.objects.create(
+            arquivo_nome='relatorio.csv',
+            arquivo_hash='a' * 64,
+            importado_por=superuser,
+            estoque=estoque_principal,
+            status=StatusImportacaoSCPI.CONCLUIDA,
+        )
+        client.force_login(superuser)
+        resp = client.get(self.URL)
+        conteudo = resp.content.decode()
+        assert conteudo.count('<caption class="sr-only">') == 1
+        assert 'Histórico de importações SCPI, mais recente primeiro.' in conteudo
+
+    def test_wrapper_nao_usa_chrome_hidden_em_mobile(
+        self, client, superuser, estoque_principal
+    ):
+        # Regressão: #tabela_abertura é hidden + sm:block (não há cards
+        # mobile aqui). Se alguém trocar o wrapper literal pelo fragmento
+        # canônico, a tabela some em mobile silenciosamente.
+        from apps.estoque.models import ImportacaoSCPI, StatusImportacaoSCPI
+
+        ImportacaoSCPI.objects.create(
+            arquivo_nome='relatorio.csv',
+            arquivo_hash='b' * 64,
+            importado_por=superuser,
+            estoque=estoque_principal,
+            status=StatusImportacaoSCPI.CONCLUIDA,
+        )
+        client.force_login(superuser)
+        resp = client.get(self.URL)
+        conteudo = resp.content.decode()
+        assert (
+            '<div class="overflow-x-auto rounded-xl border border-slate-200 '
+            'bg-white shadow-sm">' in conteudo
+        )
+        assert 'sm:block' not in conteudo
+
 
 URL_MATERIAIS = reverse('estoque:lista_materiais')
 
