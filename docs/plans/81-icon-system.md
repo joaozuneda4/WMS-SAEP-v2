@@ -15,9 +15,9 @@
   | Nome no catálogo | Ocorrências atuais | Arquivos |
   |---|---|---|
   | `voltar` (back-arrow) | 6 | `copiar_confirmacao.html`, `rascunho_form.html` (×2), `atender_retirada.html`, `detalhe.html`, `nova_saida_excepcional.html` |
-  | `lixeira` (variante modal de confirmação de exclusão) | 2 | `_modal_icon.html` (variant="danger"), `detalhe.html` |
+  | `lixeira` (variante modal de confirmação de exclusão) | 3 | `_modal_icon.html` (variant="danger"), `detalhe.html` (×2 — trigger mobile e desktop do mesmo modal) |
   | `remover` (variante de remover linha de item) | 2 | `_item_form_row.html`, `nova_saida_excepcional.html` |
-  | `spinner` | 4 | `autocomplete.html`, `preview_importacao_scpi.html` (×3) |
+  | `spinner` | 3 | `preview_importacao_scpi.html` (×3) |
   | `adicionar` (plus) | 2 | `rascunho_form.html`, `nova_saida_excepcional.html` |
   | `enviar` (send) | 2 | `detalhe.html`, `rascunho_form.html` |
   | `copiar` (copy) | 2 | `copiar_confirmacao.html`, `detalhe.html` |
@@ -47,6 +47,15 @@
 5. **SVGs de uso único** (ex.: ícone do `base_auth.html`, ícones de status internos
    de `_modal_body.html`/`_modal_icon.html` variant info/warning que não se repetem
    fora desse componente) permanecem inline, conforme a issue permite.
+6. **Spinner de `autocomplete.html` não migra.** Descoberto durante a implementação
+   (não pelo grep inicial, que só comparava os 40 primeiros caracteres do path):
+   o spinner de `autocomplete.html` usa `d="M4 12a8 8 0 018-8v8z"`, geometricamente
+   diferente do path usado nas 3 ocorrências de `preview_importacao_scpi.html`
+   (`d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"`). São duas variantes visuais
+   distintas, não uma duplicata — trocá-las pela mesma entrada do catálogo mudaria
+   a forma renderizada de uma delas, violando "zero mudança visual". `autocomplete.html`
+   fica com o SVG inline (uso único da sua variante); `spinner` no catálogo cobre só
+   as 3 ocorrências de `preview_importacao_scpi.html`.
 
 ## Arquivos tocados
 
@@ -63,7 +72,6 @@
 **Modificados:**
 - `apps/core/templatetags/core_tags.py` — nova tag `icon`.
 - `apps/core/templates/components/_modal_icon.html` — variant danger usa `{% icon "lixeira" %}`.
-- `apps/core/templates/components/autocomplete.html` — spinner sem `x-show`.
 - `apps/estoque/templates/estoque/preview_importacao_scpi.html` — 3 spinners; os 2 com
   `x-show="enviando"`/`x-show="confirmando"` passam a envolver a tag num
   `<span x-show="..." class="inline-flex">` — a diretiva Alpine sai do `<svg>` para o

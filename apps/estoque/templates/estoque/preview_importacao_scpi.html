@@ -1,4 +1,5 @@
 {% extends "base_auth.html" %}
+{% load core_tags %}
 
 {% block title %}Pré-visualização SCPI — WMS-SAEP{% endblock %}
 
@@ -97,17 +98,9 @@
                    disabled:cursor-not-allowed disabled:opacity-60
                    touch-manipulation"
           >
-            <svg
-              x-show="enviando"
-              class="h-4 w-4 animate-spin motion-reduce:animate-none"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
+            <span x-show="enviando" class="inline-flex">
+              {% icon "spinner" class="h-4 w-4 animate-spin motion-reduce:animate-none" %}
+            </span>
             <span x-text="enviando ? 'Processando...' : 'Gerar pré-visualização'">Gerar pré-visualização</span>
           </button>
         </form>
@@ -169,10 +162,9 @@
                  hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
                  disabled:cursor-not-allowed disabled:opacity-60 touch-manipulation"
         >
-          <svg x-show="enviando" class="h-4 w-4 animate-spin motion-reduce:animate-none" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
+          <span x-show="enviando" class="inline-flex">
+            {% icon "spinner" class="h-4 w-4 animate-spin motion-reduce:animate-none" %}
+          </span>
           Tentar novamente
         </button>
       </div>
@@ -430,17 +422,9 @@
                    disabled:cursor-not-allowed disabled:opacity-60
                    touch-manipulation"
           >
-            <svg
-              x-show="confirmando"
-              class="h-4 w-4 animate-spin motion-reduce:animate-none"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
+            <span x-show="confirmando" class="inline-flex">
+              {% icon "spinner" class="h-4 w-4 animate-spin motion-reduce:animate-none" %}
+            </span>
             <svg
               x-show="!confirmando"
               class="h-4 w-4"

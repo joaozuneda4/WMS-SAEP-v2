@@ -1,3 +1,4 @@
+{% load core_tags %}
 {% comment %}
   Ícone semântico para header de modal.
   Params: variant -> "info" | "warning" | "danger"
@@ -5,9 +6,7 @@
 
 {% if variant == "danger" %}
   <span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
-    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-      <path d="M8.5 3.5a1.5 1.5 0 0 1 3 0V4H15a1 1 0 1 1 0 2h-1.1l-.5 8.1A2.5 2.5 0 0 1 10.9 16H9.1a2.5 2.5 0 0 1-2.49-1.9L6.1 6H5a1 1 0 1 1 0-2h3.5v-.5Zm-1.35 8.7.25 4.05a.5.5 0 0 0 .5.48h2.7a.5.5 0 0 0 .5-.48l.25-4.05H7.15Z"/>
-    </svg>
+    {% icon "lixeira" class="h-5 w-5" %}
   </span>
 {% elif variant == "warning" %}
   <span aria-hidden="true" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800">

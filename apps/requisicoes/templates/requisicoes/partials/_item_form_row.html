@@ -7,6 +7,7 @@ Parâmetros de contexto:
   saldo_info  — dict {str(material_id): {elegivel, saldo_disponivel, motivo}} (opcional)
 {% endcomment %}
 {% load requisicoes_tags %}
+{% load core_tags %}
 {% with saldo_item=saldo_info|get_item:form.material_id.value %}
 <div class="item-form-row flex flex-wrap items-start gap-3 p-3 rounded-lg border {% if saldo_item and not saldo_item.elegivel %}border-amber-300 bg-amber-50/40{% else %}border-slate-200 bg-white{% endif %}"
      data-index="{{ form_index }}">
@@ -83,9 +84,7 @@ Parâmetros de contexto:
       aria-label="Remover item"
       onclick="var aviso = document.querySelector('.aviso_quantidade'); var row = this.closest('.item-form-row'); if (!podRemoverItem()) { if (aviso) aviso.style.color='#f87171'; if (row) row.style.outline='2px solid #f87171'; setTimeout(function(){ if (aviso) aviso.style.color=''; if (row) row.style.outline=''; }, 2000); return; } if (!row) return; row.style.display='none'; var deleteInput = row.querySelector('[name$=-DELETE]'); if (deleteInput) deleteInput.value='on';"
     >
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-      </svg>
+      {% icon "remover" class="h-4 w-4 shrink-0" %}
       <span class="hidden sm:inline">Remover</span>
     </button>
   </div>
