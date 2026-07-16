@@ -30,18 +30,19 @@
   </div>
 
   {% if importacoes %}
-    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <table class="w-full text-sm" aria-label="Histórico de importações SCPI">
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table class="w-full text-sm">
+        <caption class="sr-only">Histórico de importações SCPI, mais recente primeiro.</caption>
         <thead>
-          <tr class="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-            <th class="px-4 py-3">Arquivo</th>
-            <th class="px-4 py-3">Hash</th>
-            <th class="px-4 py-3">Usuário</th>
-            <th class="px-4 py-3">Data/Hora</th>
-            <th class="px-4 py-3">Status</th>
-            <th class="px-4 py-3 text-right">Linhas</th>
-            <th class="px-4 py-3 text-right">Novos</th>
-            <th class="px-4 py-3 text-right">Divergentes</th>
+          <tr class="border-b border-slate-200 bg-slate-50">
+            {% include "components/table.html#th" with rotulo="Arquivo" %}
+            {% include "components/table.html#th" with rotulo="Hash" %}
+            {% include "components/table.html#th" with rotulo="Usuário" %}
+            {% include "components/table.html#th" with rotulo="Data/Hora" %}
+            {% include "components/table.html#th" with rotulo="Status" %}
+            {% include "components/table.html#th" with rotulo="Linhas" alinhamento="direita" %}
+            {% include "components/table.html#th" with rotulo="Novos" alinhamento="direita" %}
+            {% include "components/table.html#th" with rotulo="Divergentes" alinhamento="direita" %}
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
