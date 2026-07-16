@@ -1,7 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.core.paginator import Paginator
 from django.db.models import DecimalField, ExpressionWrapper, F, Sum
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -14,7 +13,8 @@ from apps.core.exceptions import (
     ErroDominio,
     PermissaoNegada,
 )
-from apps.core.http import parse_data_iso, querystring_sem_page
+from apps.core.http import parse_data_iso
+from apps.core.listagem import paginar_com_filtros
 from apps.core.presentation import traduz_erro_dominio
 from apps.estoque.models import Estoque, SaldoEstoque, TipoMovimentacaoEstoque
 from apps.estoque.policies import (
@@ -108,7 +108,6 @@ def historico_movimentacoes_view(request):
     tipos = [t for t in tipos_brutos if t in TipoMovimentacaoEstoque.values]
     data_ini = parse_data_iso(request.GET.get('data_ini'))
     data_fim = parse_data_iso(request.GET.get('data_fim'))
-    ordem = 'asc' if request.GET.get('ordem') == 'asc' else 'desc'
 
     mostrar_filtro_setor = pode_filtrar_movimentacoes_por_setor(request.user.pk)
     setor = None
@@ -126,11 +125,10 @@ def historico_movimentacoes_view(request):
         data_fim=data_fim,
         setor=setor,
     )
-    if ordem == 'asc':
-        movimentacoes = movimentacoes.order_by('criado_em')
 
-    paginator = Paginator(movimentacoes, PAGINA_MOVIMENTACOES_TAMANHO)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    resultado = paginar_com_filtros(
+        request, movimentacoes, per_page=PAGINA_MOVIMENTACOES_TAMANHO
+    )
 
     setores_disponiveis = []
     if mostrar_filtro_setor:
@@ -140,12 +138,6 @@ def historico_movimentacoes_view(request):
         material or tipos or data_ini or data_fim or setor is not None
     )
     so_saidas_ativo = set(tipos) == set(TIPOS_SO_SAIDAS)
-
-    ordem_inversa = 'asc' if ordem == 'desc' else 'desc'
-    params_ordenacao = request.GET.copy()
-    params_ordenacao.pop('page', None)
-    params_ordenacao['ordem'] = ordem_inversa
-    url_ordenacao = '?' + params_ordenacao.urlencode()
 
     params_chip_on = request.GET.copy()
     params_chip_on.pop('page', None)
@@ -157,10 +149,9 @@ def historico_movimentacoes_view(request):
     params_chip_off.setlist('tipos', [])
     url_chip_sem_so_saidas = '?' + params_chip_off.urlencode()
 
-    is_htmx = request.htmx
     contexto = {
-        'page_obj': page_obj,
-        'is_htmx': is_htmx,
+        'page_obj': resultado.page_obj,
+        'is_htmx': resultado.is_htmx,
         'mostrar_filtro_setor': mostrar_filtro_setor,
         'setores_disponiveis': setores_disponiveis,
         'tipos_opcoes': TipoMovimentacaoEstoque.choices,
@@ -171,17 +162,17 @@ def historico_movimentacoes_view(request):
             'data_fim': request.GET.get('data_fim', ''),
             'setor': setor,
         },
-        'ordem': ordem,
-        'aria_sort': 'ascending' if ordem == 'asc' else 'descending',
-        'url_ordenacao': url_ordenacao,
+        'ordem': resultado.ordem,
+        'aria_sort': resultado.aria_sort,
+        'url_ordenacao': resultado.url_ordenacao,
         'url_chip_so_saidas': url_chip_so_saidas,
         'url_chip_sem_so_saidas': url_chip_sem_so_saidas,
         'tem_filtro_ativo': tem_filtro_ativo,
         'so_saidas_ativo': so_saidas_ativo,
-        'querystring_filtros': querystring_sem_page(request.GET),
+        'querystring_filtros': resultado.querystring_filtros,
     }
 
-    if is_htmx:
+    if resultado.is_htmx:
         template = 'estoque/partials/_tabela_movimentacoes.html'
     else:
         template = 'estoque/historico_movimentacoes.html'

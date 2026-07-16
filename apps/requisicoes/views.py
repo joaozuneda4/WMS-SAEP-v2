@@ -8,7 +8,6 @@ from apps.accounts.papeis import papel_efetivo
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.core.paginator import Paginator
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
 from django.forms import BooleanField
 from django.forms.formsets import DELETION_FIELD_NAME
@@ -25,7 +24,8 @@ from apps.core.exceptions import (
     EstadoInvalido,
     PermissaoNegada,
 )
-from apps.core.http import htmx_redirect, parse_data_iso, querystring_sem_page
+from apps.core.http import htmx_redirect, parse_data_iso
+from apps.core.listagem import paginar_com_filtros
 from apps.core.presentation import traduz_erro_dominio
 from apps.estoque.models import SaldoEstoque
 from apps.estoque.selectors import entregue_liquida_por_material
@@ -1155,7 +1155,6 @@ def historico_requisicoes_view(request):
     estados = [e for e in estados_brutos if e in EstadoRequisicao.values]
     data_ini = parse_data_iso(request.GET.get('data_ini'))
     data_fim = parse_data_iso(request.GET.get('data_fim'))
-    ordem = 'asc' if request.GET.get('ordem') == 'asc' else 'desc'
 
     mostrar_filtro_setor = pode_filtrar_historico_por_setor(request.user.pk)
     setor = None
@@ -1176,10 +1175,10 @@ def historico_requisicoes_view(request):
     requisicoes = requisicoes.annotate(
         quantidade_itens=Count('itens')
     ).prefetch_related('itens__material')
-    requisicoes = requisicoes.order_by('criado_em' if ordem == 'asc' else '-criado_em')
 
-    paginator = Paginator(requisicoes, PAGINA_HISTORICO_REQUISICOES_TAMANHO)
-    page_obj = paginator.get_page(request.GET.get('page'))
+    resultado = paginar_com_filtros(
+        request, requisicoes, per_page=PAGINA_HISTORICO_REQUISICOES_TAMANHO
+    )
 
     setores_disponiveis = []
     if mostrar_filtro_setor:
@@ -1189,16 +1188,9 @@ def historico_requisicoes_view(request):
         texto or estados or data_ini or data_fim or setor is not None
     )
 
-    ordem_inversa = 'asc' if ordem == 'desc' else 'desc'
-    params_ordenacao = request.GET.copy()
-    params_ordenacao.pop('page', None)
-    params_ordenacao['ordem'] = ordem_inversa
-    url_ordenacao = '?' + params_ordenacao.urlencode()
-
-    is_htmx = request.htmx
     contexto = {
-        'page_obj': page_obj,
-        'is_htmx': is_htmx,
+        'page_obj': resultado.page_obj,
+        'is_htmx': resultado.is_htmx,
         'mostrar_filtro_setor': mostrar_filtro_setor,
         'setores_disponiveis': setores_disponiveis,
         'estados_opcoes': EstadoRequisicao.choices,
@@ -1209,14 +1201,14 @@ def historico_requisicoes_view(request):
             'data_fim': request.GET.get('data_fim', ''),
             'setor': setor,
         },
-        'ordem': ordem,
-        'aria_sort': 'ascending' if ordem == 'asc' else 'descending',
-        'url_ordenacao': url_ordenacao,
+        'ordem': resultado.ordem,
+        'aria_sort': resultado.aria_sort,
+        'url_ordenacao': resultado.url_ordenacao,
         'tem_filtro_ativo': tem_filtro_ativo,
-        'querystring_filtros': querystring_sem_page(request.GET),
+        'querystring_filtros': resultado.querystring_filtros,
     }
 
-    if is_htmx:
+    if resultado.is_htmx:
         template = 'requisicoes/partials/_tabela_historico_requisicoes.html'
     else:
         template = 'requisicoes/historico_requisicoes.html'
