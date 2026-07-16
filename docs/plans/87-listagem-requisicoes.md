@@ -61,7 +61,9 @@ Epic: #68. Bloqueador #83 (padrão de listagem responsiva via `partialdef` —
    não tem `<caption>`; o contrato do `tabela_abertura` (`docs/design-system.md`
    § 8) exige que a tela chamadora forneça a sua. Texto proposto:
    `"Requisições onde você é criador ou beneficiário."` — mesma frase do `<p>`
-   de introdução já existente na tela, sem inventar copy nova.
+   de introdução já existente na tela, sem inventar copy nova. Contrato novo
+   exige teste explícito (ver Estratégia de testes, item 1) — sem isso, uma
+   regressão futura pode remover o `<caption>` sem quebrar a suíte.
 3. **Sem swap HTMX em `lista_minhas.html`.** Diferente do histórico, essa tela
    não tem filtro/paginação hoje; o `{% partialdef resultados %}` não é
    necessário ali — só a migração de chrome. Registrado aqui para não ser
@@ -95,15 +97,22 @@ Novo comportamento após a fusão:
   `.name == 'requisicoes/historico_requisicoes.html'` (inalterado — página
   cheia continua sendo um `Template` normal, não um `PartialTemplate`).
 
-Novo assert proposto (RED nesta fase de plano, GREEN na implementação):
+Novo assert proposto (RED nesta fase de plano, GREEN na implementação). Checar
+só `t.name == 'resultados'` não garante que o fragmento veio do template certo
+— outro template poderia coincidentemente ter um `partialdef resultados` —
+então a asserção também verifica `t.origin.template_name`:
 
 ```python
 def test_requisicao_htmx_devolve_so_partial(self, client, superuser):
     _login(client, superuser)
     response = client.get(URL_HISTORICO_REQUISICOES, HTTP_HX_REQUEST='true')
     assert response.status_code == 200
+    assert any(
+        t.name == 'resultados'
+        and t.origin.template_name == 'requisicoes/historico_requisicoes.html'
+        for t in response.templates
+    )
     nomes = {t.name for t in response.templates}
-    assert 'resultados' in nomes
     assert 'requisicoes/historico_requisicoes.html' not in nomes
 ```
 
@@ -128,7 +137,11 @@ segue reportando o path completo).
    **sem alteração de asserção** — o chrome migrado é byte-idêntico ao HTML
    inline atual (`components/table.html` foi extraído textualmente das mesmas
    classes em #83); só a nova `<caption>` é conteúdo adicional, não corta
-   nada existente.
+   nada existente. **Teste novo** (obrigatório, não opcional — sem ele o
+   contrato de acessibilidade fica sem cobertura e uma regressão futura
+   passaria despercebida): `test_minhas_tabela_tem_caption_sr_only` verifica
+   `<caption class="sr-only">Requisições onde você é criador ou
+   beneficiário.</caption>` no `response.content`.
 2. **Regressão de conteúdo do histórico** — suíte existente
    (`TestHistoricoRequisicoesView` e filtros) permanece verde, mesmo raciocínio
    de byte-paridade do chrome.
