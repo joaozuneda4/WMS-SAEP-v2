@@ -4,10 +4,18 @@ import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.template import Context, Template
 
+from apps.core.templatetags.core_tags import ICONES_CATALOGO
+
 
 def _render(tag_call: str, **ctx) -> str:
     template = Template('{% load core_tags %}' + tag_call)
     return template.render(Context(ctx))
+
+
+@pytest.mark.parametrize('name', sorted(ICONES_CATALOGO))
+def test_icon_todo_catalogo_mantem_aria_hidden(name):
+    html = _render(f'{{% icon "{name}" %}}')
+    assert 'aria-hidden="true"' in html
 
 
 def test_icon_adicionar_renderiza_path_e_viewbox_originais():
