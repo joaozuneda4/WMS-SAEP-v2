@@ -7,7 +7,9 @@ import pytest
 from apps.estoque.forms import ItemSaidaExcepcionalFormSet, SaidaExcepcionalForm
 
 
-def _montar_dados_formset(itens: list[dict], deletados: list[int] = None) -> dict:
+def _montar_dados_formset(
+    itens: list[dict], deletados: list[int] | None = None
+) -> dict:
     """Monta POST data para o formset de itens de saída excepcional."""
     deletados = deletados or []
     total = len(itens)

@@ -154,7 +154,7 @@ class BaseItemSaidaExcepcionalFormSet(BaseFormSet):
     def _validar_elegibilidade(self, material_ids: list[int]) -> None:
         """Anexa erro à linha cujo material está inativo ou sem saldo físico
         no estoque desta saída — consulta única pra evitar N+1 (uma query
-        por linha). Escopado por `estoque_id` (o mesmo critério do service
+        por linha). Escopado por `estoque_id` (o mesmo critério do serviço
         `registrar_saida_excepcional`); sem `estoque_id`, verifica saldo em
         qualquer estoque (mesmo critério, mais permissivo, de
         `buscar_materiais_saida_excepcional`).
