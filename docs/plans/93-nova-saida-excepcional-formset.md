@@ -6,10 +6,16 @@
 - `ItemSaidaExcepcionalForm` + `BaseItemSaidaExcepcionalFormSet` (novo `apps/estoque/forms.py`), espelhando `ItemRequisicaoForm`/`BaseItemRequisicaoFormSet` (`apps/requisicoes/forms.py`)
   - `quantidade` como `DecimalField` (baixa é sobre `saldo_fisico`, que é decimal — diferente de `quantidade_solicitada` inteira de requisições)
   - `clean()` do form: material + quantidade > 0 obrigatórios quando linha preenchida (linha vazia é ignorada, mesma regra de `is_linha_valida`)
-  - `clean()` do formset: duplicidade de material (SAE-03) e elegibilidade (`ativo=True` + `saldo_fisico > 0`, mesmo critério de `buscar_materiais_saida_excepcional`) — erro anexado à linha específica, não a um dict `erros` solto
+  - `clean()` do formset: duplicidade de material (SAE-03, erro anexado à linha específica), elegibilidade (`ativo=True` + `saldo_fisico > 0`, mesmo critério de `buscar_materiais_saida_excepcional`, erro na linha) e, separadamente, contagem de `linhas_validas() == 0 → ValidationError` geral (SAE-03, documento vazio — mesma checagem de `BaseItemRequisicaoFormSet.clean`, não uma regra nova) — nenhuma dessas vira dict `erros` solto
 - Endpoint HTMX `nova_linha_item_saida_excepcional` em `apps/estoque/views.py` + rota em `apps/estoque/urls.py`, espelhando `requisicoes:nova_linha_item`
 - `SaidaExcepcionalForm` novo em `apps/estoque/forms.py` para o cabeçalho (`motivo` `ChoiceField` com `MOTIVO_SAIDA_OPCOES`, `observacao` `CharField` obrigatório) — substitui a validação manual de `motivo`/`observação` em dict, seguindo o mesmo padrão de `RequisicaoForm`
-- `nova_saida_excepcional_view` reescrita seguindo exatamente o padrão de `nova_requisicao` (`apps/requisicoes/views.py:229-298`): `form.is_valid() and formset.is_valid()` decide se chama `registrar_saida_excepcional`; dentro do `try`, `except DadosInvalidos as exc: messages.error(request, str(exc))` e `except ConflitoDominio as exc: messages.warning(request, str(exc))` (mapeamento padrão de `docs/CONVENTIONS.md`) — sem redirect nesses `except`, cai no mesmo `return render(..., {'form': form, 'formset': formset, ...})` do fluxo de erro de formulário (mesma request, sem necessidade de PRG); no `else` do `try`, sucesso dispara `messages.success(...)` e `htmx_redirect(request, reverse('estoque:listar_saidas_excepcionais'))` (import de `apps.core.http.htmx_redirect`, já usado em `apps/requisicoes/views.py`) em vez do `redirect()` cru atual
+- `nova_saida_excepcional_view` reescrita seguindo exatamente o padrão de `nova_requisicao` (`apps/requisicoes/views.py:229-298`): `form.is_valid() and formset.is_valid()` decide se chama `registrar_saida_excepcional(ator_id=request.user.pk, estoque_id=estoque.pk, motivo=form.cleaned_data['motivo'], observacao=form.cleaned_data['observacao'], itens=formset.linhas_validas())` — chamada 100% keyword-only, `ator_id` explícito (contrato ADR-0011). Dentro do `try` em torno dessa chamada, tratamento exaustivo (nenhuma exceção de domínio escapa):
+  - `except PermissaoNegada as exc: raise PermissionDenied(str(exc))` — defesa em profundidade, já que o service repete a checagem de policy internamente
+  - `except DadosInvalidos as exc: messages.error(request, str(exc))`
+  - `except ConflitoDominio as exc: messages.warning(request, str(exc))`
+  - **Sem** `except EstadoInvalido` — `registrar_saida_excepcional` não tem máquina de estados (fluxo de criação pura), não levanta essa exceção; não criar handler para caso que o service não produz
+  - Nos 2 `except` de domínio (não no de permissão), sem redirect — cai no mesmo `return render(..., {'form': form, 'formset': formset, ...})` do fluxo de erro de formulário (mesma request, sem necessidade de PRG)
+  - No `else` do `try`, sucesso dispara `messages.success(...)` e `htmx_redirect(request, reverse('estoque:listar_saidas_excepcionais'))` (import de `apps.core.http.htmx_redirect`, já usado em `apps/requisicoes/views.py`) em vez do `redirect()` cru atual
 - Extração do partial de linha de item para `apps/core/templates/components/item_form_row.html` (diretório já usado por `button.html`, `badge.html`, `autocomplete.html` — sem underscore, componente incluído diretamente, não partial interno) parametrizado por: endpoint de autocomplete, `item_template` do autocomplete, nome/prefixo dos campos, `step`/`decimal_places` da quantidade, label da quantidade, e `saldo_info` opcional (dict por material, mesma forma usada em requisições)
   - `apps/requisicoes/templates/requisicoes/rascunho_form.html` e `apps/requisicoes/views.py` (`nova_linha_item`) passam a incluir o partial compartilhado — requer regressão manual da tela de requisições (ver Test strategy)
 - `apps/estoque/templates/estoque/nova_saida_excepcional.html` reescrito: `{{ formset.management_form }}`, loop `{% for item_form in formset %}` incluindo o partial compartilhado, botão "Adicionar material" via `hx-get` para o novo endpoint (idêntico ao padrão de `rascunho_form.html`)
@@ -51,6 +57,8 @@
 | POST não-HTMX válido → 302 para `listar_saidas_excepcionais` + `SaidaExcepcional` criada (mantém teste existente) | view |
 | POST HTMX válido → resposta 204 com header `HX-Redirect` + `SaidaExcepcional` criada | view |
 | POST sem motivo → 200, erro em `form.errors['motivo']` (form de cabeçalho, não mais dict `erros`) | view |
+| POST com motivo fora de `MOTIVO_SAIDA_OPCOES` → 200, erro em `form.errors['motivo']` | view |
+| POST sem observação → 200, erro em `form.errors['observacao']` | view |
 | POST sem itens → 200, erro em `formset.non_form_errors()` | view |
 | POST com item duplicado → 200, erro na linha correspondente (`formset.errors[i]`) | view |
 | POST com quantidade inválida → 200, erro na linha correspondente (`formset.errors[i]`) | view |
@@ -62,7 +70,7 @@
 
 ## Invariants
 
-- SAE-03 — duplicidade de material e documento vazio, agora garantidos também no `clean()` do formset (antes só no service)
+- SAE-03 — duplicidade de material (checagem por linha em `clean()` do formset) e documento vazio (`linhas_validas() == 0` no mesmo `clean()`, erro geral via `ValidationError`) — as duas regras já existiam só no service; formset passa a garanti-las também, sem substituir a validação do service
 - SAE-05 — baixa de `saldo_fisico`, sem tocar `saldo_reservado` — inalterado, service não muda
 - SAE-09 — motivo fechado (enum) e observação obrigatória — agora validados via `SaidaExcepcionalForm` (`forms.py`), não mais dict manual na view (correção de escopo pós-review: `docs/CONVENTIONS.md` exige validação de input em `forms.py`, view fina)
 - ADR-0016 — paradigma único formset server-side; guarda de domínio no `clean()`, JS só como replicação de feedback, nunca fonte única
