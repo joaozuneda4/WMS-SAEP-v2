@@ -13,6 +13,10 @@ Parâmetros de contexto (todos BoundField, exceto indicado):
   quantidade_label         — rótulo do campo de quantidade (str, opcional, default "Quantidade")
   delete_field             — BoundField do campo DELETE do formset (opcional)
   saldo_item               — dict {elegivel, saldo_disponivel, motivo} (opcional)
+  habilitar_veto_duplicidade — bool (opcional): quando True, chama
+    window.selecionarMaterial(form_index, item) no onSelect do autocomplete —
+    a tela chamadora deve definir essa função globalmente (veto client-side
+    opcional; a fonte de verdade continua sendo o clean() do formset)
 {% endcomment %}
 {% load core_tags %}
 <div class="item-form-row flex flex-wrap items-start gap-3 p-3 rounded-lg border {% if saldo_item and not saldo_item.elegivel %}border-amber-300 bg-amber-50/40{% else %}border-slate-200 bg-white{% endif %}"
@@ -27,6 +31,7 @@ Parâmetros de contexto (todos BoundField, exceto indicado):
       campoDisplay: 'label',
       initialId: '{{ material_id_field.value|default:''|escapejs }}',
       initialLabel: '{{ material_label_field.value|default:''|escapejs }}',
+      {% if habilitar_veto_duplicidade %}onSelect: (item) => selecionarMaterial({{ form_index }}, item),{% endif %}
     })"
     @click.outside="fecharDropdown()"
   >

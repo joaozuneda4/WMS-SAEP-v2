@@ -15,10 +15,7 @@
 {% endblock %}
 
 {% block content %}
-<div
-  class="max-w-3xl mx-auto pb-20 sm:pb-0"
-  x-data="novaSaidaExcepcional()"
->
+<div class="max-w-3xl mx-auto pb-20 sm:pb-0">
 
   {% if erro_geral %}
     <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
@@ -29,16 +26,10 @@
   <form method="post" novalidate data-prevent-double-submit>
     {% csrf_token %}
 
-    {# Management form — itens dinâmicos #}
-    <input type="hidden" name="itens-TOTAL_FORMS" :value="itens.length">
-    <input type="hidden" name="itens-INITIAL_FORMS" value="0">
-    <input type="hidden" name="itens-MIN_NUM_FORMS" value="0">
-    <input type="hidden" name="itens-MAX_NUM_FORMS" value="1000">
-
     {# --- Seção 1: Dados da saída --- #}
     <section
       aria-labelledby="sec-dados-titulo"
-      class="mb-6 rounded-xl border {% if erros.motivo or erros.observacao %}border-red-300 bg-red-50{% else %}border-slate-200 bg-white{% endif %} p-5 shadow-sm"
+      class="mb-6 rounded-xl border {% if form.motivo.errors or form.observacao.errors %}border-red-300 bg-red-50{% else %}border-slate-200 bg-white{% endif %} p-5 shadow-sm"
     >
       <h2 id="sec-dados-titulo" class="mb-4 text-base font-medium text-slate-800">
         <span class="mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">1</span>
@@ -49,48 +40,25 @@
 
         {# Motivo — enum fechado #}
         <div>
-          <label class="mb-1 block text-xs font-medium text-slate-600" for="id_motivo">
+          <label class="mb-1 block text-xs font-medium text-slate-600" for="{{ form.motivo.id_for_label }}">
             Motivo
             <span class="ml-0.5 text-red-500" aria-hidden="true">*</span>
           </label>
-          <select
-            name="motivo"
-            id="id_motivo"
-            required
-            class="w-full rounded-lg border {% if erros.motivo %}border-red-400 bg-red-50{% else %}border-slate-300 bg-white{% endif %} px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            autocomplete="off"
-            aria-required="true"
-            {% if erros.motivo %}aria-invalid="true" aria-describedby="motivo-erro"{% endif %}
-          >
-            <option value="">Selecione o motivo…</option>
-            {% for valor, label in motivo_choices %}
-              <option value="{{ valor }}" {% if motivo == valor %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-          {% if erros.motivo %}
-            <p id="motivo-erro" class="mt-1 text-xs text-red-600" role="alert">{{ erros.motivo }}</p>
+          {{ form.motivo }}
+          {% if form.motivo.errors %}
+            <p class="mt-1 text-xs text-red-600" role="alert">{{ form.motivo.errors|join:", " }}</p>
           {% endif %}
         </div>
 
         {# Observação — obrigatória #}
         <div>
-          <label class="mb-1 block text-xs font-medium text-slate-600" for="id_observacao">
+          <label class="mb-1 block text-xs font-medium text-slate-600" for="{{ form.observacao.id_for_label }}">
             Observação
             <span class="ml-0.5 text-red-500" aria-hidden="true">*</span>
           </label>
-          <textarea
-            name="observacao"
-            id="id_observacao"
-            rows="3"
-            required
-            class="w-full rounded-lg border {% if erros.observacao %}border-red-400 bg-red-50{% else %}border-slate-300{% endif %} px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Descreva o contexto e justificativa para esta saída…"
-            autocomplete="off"
-            aria-required="true"
-            {% if erros.observacao %}aria-invalid="true" aria-describedby="obs-erro"{% endif %}
-          >{{ observacao|default:'' }}</textarea>
-          {% if erros.observacao %}
-            <p id="obs-erro" class="mt-1 text-xs text-red-600" role="alert">{{ erros.observacao }}</p>
+          {{ form.observacao }}
+          {% if form.observacao.errors %}
+            <p class="mt-1 text-xs text-red-600" role="alert">{{ form.observacao.errors|join:", " }}</p>
           {% endif %}
         </div>
 
@@ -100,101 +68,55 @@
     {# --- Seção 2: Materiais --- #}
     <section
       aria-labelledby="sec-materiais-titulo"
-      class="mb-6 rounded-xl border {% if erros.itens %}border-red-300 bg-red-50{% else %}border-slate-200 bg-white{% endif %} p-5 shadow-sm"
+      class="mb-6 rounded-xl border {% if formset.non_form_errors %}border-red-300 bg-red-50{% else %}border-slate-200 bg-white{% endif %} p-5 shadow-sm"
     >
       <h2 id="sec-materiais-titulo" class="mb-1 text-base font-medium text-slate-800">
         <span class="mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">2</span>
         Materiais
       </h2>
-      <p class="mb-4 text-xs text-slate-500">Adicione ao menos um material com quantidade a baixar.</p>
+      <p class="aviso_quantidade mb-4 text-xs text-slate-500">Adicione ao menos um material com quantidade a baixar.</p>
 
-      {% if erros.itens %}
+      {# Management form do formset — obrigatório #}
+      {{ formset.management_form }}
+
+      {# Erros gerais do formset #}
+      {% if formset.non_form_errors %}
         <div class="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">
-          {{ erros.itens }}
+          {% for erro in formset.non_form_errors %}
+            <p>{{ erro }}</p>
+          {% endfor %}
         </div>
       {% endif %}
 
-      {# Aviso de material duplicado — Alpine #}
+      {# Aviso de material duplicado — veto client-side otimista (fonte de verdade é o clean() do formset) #}
       <div
-        x-show="erroDuplicado"
-        x-cloak
-        class="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
+        id="aviso-duplicidade"
+        class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
         role="alert"
         aria-live="assertive"
-        x-text="erroDuplicado"
       ></div>
 
-      {# Linhas de item #}
-      <div class="flex flex-col gap-3">
-        <template x-for="(item, idx) in itens" :key="item._uid">
-          <div
-            class="item-form-row flex flex-wrap items-start gap-3 rounded-lg border border-slate-200 bg-white p-3"
-          >
-            {# Autocomplete de material — cada linha tem seu próprio escopo Alpine #}
-            <div
-              class="min-w-0 flex-1 basis-full sm:basis-0"
-              x-data="autocomplete({
-                endpoint: '{% url 'estoque:buscar_materiais_saida_excepcional' %}',
-                minChars: 2,
-                campoDisplay: 'label',
-                onSelect: (item) => selecionarMaterial(idx, item),
-                onInvalidate: () => { itens[idx].material_id = ''; },
-              })"
-              @click.outside="fecharDropdown()"
-            >
-              <input type="hidden" x-ref="hiddenInput" :name="'itens-' + idx + '-material_id'">
-              {% include "components/autocomplete.html" with label="Material" placeholder="Buscar por código ou descrição…" item_template="estoque/partials/_autocomplete_item_material.html" sem_resultados_label="Nenhum material elegível encontrado." tipo_input="search" %}
-            </div>
-
-            {# Quantidade #}
-            <div class="w-28 shrink-0">
-              <label
-                class="mb-1 block text-xs font-medium text-slate-600"
-                :for="'itens-' + idx + '-quantidade'"
-              >
-                Quantidade
-              </label>
-              <input
-                type="number"
-                :name="'itens-' + idx + '-quantidade'"
-                :id="'itens-' + idx + '-quantidade'"
-                x-model="item.quantidade"
-                min="0.001"
-                step="any"
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                :aria-label="'Quantidade do material ' + (idx + 1)"
-              >
-            </div>
-
-            {# Botão remover #}
-            <div class="shrink-0 pt-5">
-              <button
-                type="button"
-                @click="removerItem(idx)"
-                :disabled="itens.length <= 1"
-                :class="itens.length <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:text-red-700'"
-                class="flex items-center gap-1 rounded px-2 py-1.5 text-xs font-medium text-slate-600 transition-colors focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-1"
-                :aria-label="'Remover item ' + (idx + 1)"
-              >
-                {% icon "remover" class="h-4 w-4 shrink-0" %}
-                <span class="hidden sm:inline">Remover</span>
-              </button>
-            </div>
-
-          </div>
-        </template>
+      {# Container de linhas — alvo do HTMX swap #}
+      <div id="itens-container" class="flex flex-col gap-3">
+        {% for item_form in formset %}
+          {% include "components/item_form_row.html" with material_id_field=item_form.material_id material_label_field=item_form.material_label quantidade_field=item_form.quantidade quantidade_label="Quantidade" quantidade_min="0.001" quantidade_step="any" autocomplete_url_name="estoque:buscar_materiais_saida_excepcional" autocomplete_item_template="estoque/partials/_autocomplete_item_material.html" delete_field=item_form.DELETE form_index=forloop.counter0 habilitar_veto_duplicidade=True %}
+        {% endfor %}
       </div>
 
-      {# Botão adicionar material #}
+      {# Botão adicionar item via HTMX #}
       <button
         type="button"
-        @click="adicionarItem()"
-        class="mt-6 flex items-center gap-2 text-sm font-medium text-blue-600 transition-colors hover:text-blue-800"
+        class="mt-6 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+        hx-get="{% url 'estoque:nova_linha_item_saida_excepcional' %}"
+        hx-target="#itens-container"
+        hx-swap="beforeend"
+        hx-include="#id_itens-TOTAL_FORMS"
+        hx-vals='js:{"index": document.querySelectorAll(".item-form-row").length}'
+        @htmx:afterRequest="incrementarTotalForms($event)"
       >
         {% icon "adicionar" class="h-4 w-4" %}
         Adicionar material
       </button>
-
     </section>
 
     {# Ações — sticky no mobile, static no sm+ #}
@@ -223,51 +145,41 @@
 
 {% block extra_scripts %}
 <script>
-  (function () {
-    let _uid = 0;
+  function podRemoverItem() {
+    return document.querySelectorAll('.item-form-row:not([style*="display: none"])').length > 1;
+  }
 
-    function novoItem() {
-      return {
-        _uid: ++_uid,
-        material_id: '',
-        quantidade: '',
-      };
+  // Incrementa TOTAL_FORMS após adicionar nova linha via HTMX
+  function incrementarTotalForms(event) {
+    if (event && event.detail?.xhr?.status !== 200) return;
+    const input = document.getElementById('id_itens-TOTAL_FORMS');
+    if (input) {
+      input.value = parseInt(input.value, 10) + 1;
     }
+  }
 
-    window.novaSaidaExcepcional = function () {
-      return {
-        itens: [novoItem()],
-        erroDuplicado: '',
+  // Guarda de duplicidade — veto client-side otimista. Chamada pelo
+  // componente genérico via config.onSelect; retornar `false` veta a
+  // seleção. Fonte de verdade continua sendo o clean() do formset (ADR-0016).
+  window.selecionarMaterial = function (idx, item) {
+    const linhaAtual = document.querySelector(
+      '#itens-container [data-index="' + idx + '"] input[name$="-material_id"]'
+    );
+    const duplicado = Array.from(
+      document.querySelectorAll('#itens-container input[name$="-material_id"]')
+    ).some((input) => input !== linhaAtual && input.value === String(item.id));
 
-        adicionarItem() {
-          this.itens.push(novoItem());
-          this.erroDuplicado = '';
-        },
-
-        removerItem(idx) {
-          if (this.itens.length <= 1) return;
-          this.itens.splice(idx, 1);
-          this.erroDuplicado = '';
-        },
-
-        // Guarda de duplicidade — um material por documento. Chamada pelo
-        // componente genérico via config.onSelect; retornar `false` veta a
-        // seleção (o componente não altera query/hidden/dropdown nesse caso).
-        selecionarMaterial(idx, item) {
-          const duplicado = this.itens.some(
-            (it, i) => i !== idx && it.material_id === String(item.id)
-          );
-          if (duplicado) {
-            this.erroDuplicado =
-              'Este material já foi adicionado. Cada material pode aparecer apenas uma vez no documento.';
-            return false;
-          }
-          this.erroDuplicado = '';
-          this.itens[idx].material_id = String(item.id);
-          return true;
-        },
-      };
-    };
-  })();
+    const aviso = document.getElementById('aviso-duplicidade');
+    if (duplicado) {
+      if (aviso) {
+        aviso.textContent =
+          'Este material já foi adicionado. Cada material pode aparecer apenas uma vez no documento.';
+        aviso.classList.remove('hidden');
+      }
+      return false;
+    }
+    if (aviso) aviso.classList.add('hidden');
+    return true;
+  };
 </script>
 {% endblock %}
