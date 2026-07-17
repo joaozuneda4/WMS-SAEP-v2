@@ -76,8 +76,9 @@ Cobertura nova a acrescentar (TDD, RED→GREEN por comportamento):
 2. **Submissão sem JS (requisito de aceite explícito)**: separar o contrato
    de navegação nativa do contrato HTMX — dois testes distintos. (a) Afirmar
    no HTML renderizado que o `<form>` expõe `method="get"` e `action="{{
-   url }}"` (o atributo real de fallback sem JS, não `hx-get`/`hx-push-url`,
-   que são comportamento client-side não exercitado por `client.get()`).
+   url }}"` (o atributo real de fallback sem JS — `hx-get`/`hx-push-url`
+   representam comportamento do lado do cliente e não são exercitados por
+   `client.get()`).
    (b) Chamar essa mesma `action` via `client.get(url, {..._querystring_})`
    sem `HTTP_HX_REQUEST` e validar o `page_obj` filtrado — isto comprova o
    fallback de navegação nativa (GET com querystring), não que o cliente de
