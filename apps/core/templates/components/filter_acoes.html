@@ -1,0 +1,32 @@
+{% comment %}
+Ações do filtro: submit "Aplicar filtros" + link condicional "Limpar
+filtros" (navegação nativa via href + progressive enhancement HTMX).
+components/filter_*.html (issue #88).
+
+Parâmetros:
+  action_url        (obrigatório) URL da tela (href/hx-get do link de limpar)
+  target_id          (obrigatório) id do wrapper HTMX alvo do swap (sem #)
+  tem_filtro_ativo   (opcional, boolean) exibe "Limpar filtros" quando truthy
+
+Uso:
+  {% include "components/filter_acoes.html" with action_url=url_historico target_id="resultados-historico-requisicoes" tem_filtro_ativo=tem_filtro_ativo %}
+{% endcomment %}
+<div class="mt-4 flex flex-wrap items-center gap-2">
+  <button
+    type="submit"
+    class="inline-flex min-h-11 items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+  >
+    Aplicar filtros
+  </button>
+  {% if tem_filtro_ativo %}
+    <a
+      href="{{ action_url }}"
+      hx-get="{{ action_url }}"
+      hx-target="#{{ target_id }}"
+      hx-push-url="true"
+      class="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+    >
+      Limpar filtros
+    </a>
+  {% endif %}
+</div>

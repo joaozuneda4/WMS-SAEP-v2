@@ -1,0 +1,32 @@
+{% comment %}
+Campo select de filtro com opção "Todos...". components/filter_*.html
+(issue #88) — uso atual único: filtro de setor.
+
+Parâmetros:
+  id                  (obrigatório) atributo id do select, alvo do <label for=...>
+  name                (obrigatório) atributo name (chave da querystring)
+  label               (obrigatório) rótulo visível
+  opcoes              (obrigatório) iterável de objetos com `.pk` e `.nome`
+  selecionado         (opcional) valor (pk) atualmente selecionado
+  opcao_todos_rotulo  (obrigatório) rótulo da opção vazia (ex. "Todos os setores")
+
+Uso:
+  {% include "components/filter_select.html" with id="filtro-setor" name="setor" label="Setor" opcoes=setores_disponiveis selecionado=filtros.setor opcao_todos_rotulo="Todos os setores" %}
+{% endcomment %}
+<div>
+  <label for="{{ id }}" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+    {{ label }}
+  </label>
+  <select
+    id="{{ id }}"
+    name="{{ name }}"
+    class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+  >
+    <option value="">{{ opcao_todos_rotulo }}</option>
+    {% for opcao in opcoes %}
+      <option value="{{ opcao.pk }}" {% if selecionado == opcao.pk %}selected{% endif %}>
+        {{ opcao.nome }}
+      </option>
+    {% endfor %}
+  </select>
+</div>

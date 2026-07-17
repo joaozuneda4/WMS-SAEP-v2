@@ -1,11 +1,40 @@
 """Testes de view para estoque.saidas_excepcionais."""
 
 import re
+from html.parser import HTMLParser
+from pathlib import Path
 
 from django.urls import reverse
 
 
 URL = reverse('estoque:listar_saidas_excepcionais')
+
+
+_TAGS_VAZIAS = {'input', 'br', 'hr', 'img', 'meta', 'link'}
+
+
+class _PilhaDeTags(HTMLParser):
+    """Valida aninhamento/fechamento de tags num fragmento HTML (issue #88)."""
+
+    def __init__(self):
+        super().__init__()
+        self.pilha = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag not in _TAGS_VAZIAS:
+            self.pilha.append(tag)
+
+    def handle_endtag(self, tag):
+        assert self.pilha and self.pilha[-1] == tag, (
+            f'fechamento inesperado de </{tag}>: pilha atual {self.pilha}'
+        )
+        self.pilha.pop()
+
+
+def _assert_html_balanceado(fragmento):
+    parser = _PilhaDeTags()
+    parser.feed(fragmento)
+    assert parser.pilha == [], f'tags não fechadas: {parser.pilha}'
 
 
 class TestListarSaidasExcepcionaisView:
@@ -1256,6 +1285,67 @@ class TestHistoricoMovimentacoesFiltros:
         assert 'tipos=saida_excepcional' in url_chip
 
 
+class TestHistoricoMovimentacoesFiltrosPartials:
+    """Cobertura da extração dos campos de filtro em partials (issue #88)."""
+
+    def test_form_expoe_method_get_e_action_nativos(self, client, superuser):
+        client.force_login(superuser)
+        content = client.get(URL_MOVIMENTACOES).content.decode()
+        assert 'method="get"' in content
+        assert f'action="{URL_MOVIMENTACOES}"' in content
+
+    def test_submissao_nativa_sem_htmx_retorna_pagina_completa_filtrada(
+        self, client, superuser, requisicao_autorizada
+    ):
+        # Sem HTTP_HX_REQUEST simula o fallback de navegação nativa do
+        # <form method="get">: precisa renderizar a página completa (não só
+        # o partial 'resultados') e ainda assim aplicar o filtro.
+        client.force_login(superuser)
+        response = client.get(URL_MOVIMENTACOES, {'material': 'MAT001'})
+        nomes = {t.name for t in response.templates}
+        assert 'estoque/historico_movimentacoes.html' in nomes
+        assert response.context['page_obj'].paginator.count >= 1
+
+    def test_limpar_filtros_href_navegacao_nativa(
+        self, client, superuser, requisicao_autorizada
+    ):
+        client.force_login(superuser)
+        content = client.get(URL_MOVIMENTACOES, {'material': 'MAT001'}).content.decode()
+        assert f'href="{URL_MOVIMENTACOES}"' in content
+        assert 'Limpar filtros' in content
+
+    def test_checkbox_tipo_tem_alvo_de_toque(self, client, superuser):
+        client.force_login(superuser)
+        content = client.get(URL_MOVIMENTACOES).content.decode()
+        idx = content.index('name="tipos"')
+        label_ini = content.rindex('<label', 0, idx)
+        label_fim = content.index('</label>', idx) + len('</label>')
+        assert 'min-h-11' in content[label_ini:label_fim]
+
+    def test_filtro_setor_label_vinculado_ao_select(self, client, chefe_almoxarifado):
+        client.force_login(chefe_almoxarifado)
+        content = client.get(URL_MOVIMENTACOES).content.decode()
+        assert 'for="filtro-setor"' in content
+        assert 'id="filtro-setor"' in content
+
+    def test_filtro_setor_ausente_para_chefe_de_setor(self, client, chefe_obras):
+        client.force_login(chefe_obras)
+        content = client.get(URL_MOVIMENTACOES).content.decode()
+        assert 'id="filtro-setor"' not in content
+
+    def test_todos_os_campos_esperados_presentes(self, client, chefe_almoxarifado):
+        client.force_login(chefe_almoxarifado)
+        content = client.get(URL_MOVIMENTACOES).content.decode()
+        for campo in (
+            'name="material"',
+            'name="data_ini"',
+            'name="data_fim"',
+            'name="setor"',
+            'name="tipos"',
+        ):
+            assert campo in content
+
+
 class TestHistoricoMovimentacoesResponsivo:
     """Testes de estrutura HTML responsiva e atributos de acessibilidade."""
 
@@ -1293,3 +1383,51 @@ class TestHistoricoMovimentacoesResponsivo:
         assert response.status_code == 200
         assert b'aria-live="polite"' in response.content
         assert b'aria-atomic="true"' in response.content
+
+
+class TestHistoricoMovimentacoesFiltrosResponsivo:
+    """Paridade estrutural da barra de filtros extraída (issue #88)."""
+
+    def test_barra_filtros_html_balanceado(self, client, superuser):
+        client.force_login(superuser)
+        content = client.get(URL_MOVIMENTACOES).content.decode()
+        inicio = content.index('<details')
+        fim = content.index('</details>', inicio) + len('</details>')
+        _assert_html_balanceado(content[inicio:fim])
+
+    def test_wrapper_form_tem_sm_block_important(self, client, superuser):
+        # Regressão de drift: historico_movimentacoes.html não tinha
+        # `sm:block!` no wrapper do form (só historico_requisicoes.html
+        # tinha) — filter_shell.html#abertura unifica as 2 telas.
+        client.force_login(superuser)
+        content = client.get(URL_MOVIMENTACOES).content.decode()
+        assert 'sm:block!' in content
+
+    def test_template_usa_partials_de_filtro_sem_duplicar_campos_inline(self):
+        caminho = (
+            Path(__file__).resolve().parent.parent
+            / 'templates'
+            / 'estoque'
+            / 'historico_movimentacoes.html'
+        )
+        fonte = caminho.read_text()
+        assert 'components/filter_shell.html#abertura' in fonte
+        assert 'components/filter_busca.html' in fonte
+        assert 'components/filter_data.html' in fonte
+        assert 'components/filter_checkbox_group.html' in fonte
+        assert 'components/filter_acoes.html' in fonte
+        assert 'type="search"' not in fonte
+        assert 'type="date"' not in fonte
+        assert 'type="checkbox"' not in fonte
+
+    def test_chip_so_saidas_composto_fora_do_filter_shell(self):
+        caminho = (
+            Path(__file__).resolve().parent.parent
+            / 'templates'
+            / 'estoque'
+            / 'historico_movimentacoes.html'
+        )
+        fonte = caminho.read_text()
+        idx_chip = fonte.index('_chip_so_saidas.html')
+        idx_shell = fonte.index('filter_shell.html#abertura')
+        assert idx_chip < idx_shell

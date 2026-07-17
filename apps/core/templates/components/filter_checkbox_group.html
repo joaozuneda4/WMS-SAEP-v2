@@ -1,0 +1,30 @@
+{% comment %}
+Grupo de checkboxes multi-seleção do filtro (fieldset+legend, alvo de
+toque min-h-11). components/filter_*.html (issue #88).
+
+Parâmetros:
+  legend        (obrigatório) texto do <legend>
+  name          (obrigatório) name comum dos checkboxes (chave da querystring)
+  opcoes        (obrigatório) iterável de tuplas (valor, rótulo)
+  selecionados  (opcional) coleção de valores atualmente marcados
+
+Uso:
+  {% include "components/filter_checkbox_group.html" with legend="Estado" name="estados" opcoes=estados_opcoes selecionados=filtros.estados %}
+{% endcomment %}
+<fieldset class="mt-4">
+  <legend class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ legend }}</legend>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+    {% for valor, rotulo in opcoes %}
+      <label class="inline-flex min-h-11 items-center gap-2 py-1 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          name="{{ name }}"
+          value="{{ valor }}"
+          {% if valor in selecionados %}checked{% endif %}
+          class="h-5 w-5 rounded border-slate-300 text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+        {{ rotulo }}
+      </label>
+    {% endfor %}
+  </div>
+</fieldset>

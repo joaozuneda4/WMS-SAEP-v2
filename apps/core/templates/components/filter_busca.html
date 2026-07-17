@@ -1,0 +1,27 @@
+{% comment %}
+Campo de busca textual do filtro (type=search). Parte da família
+components/filter_*.html (issue #88) — sem conhecer semântica de domínio.
+
+Parâmetros:
+  id           (obrigatório) atributo id do input, alvo do <label for=...>
+  name         (obrigatório) atributo name (chave da querystring)
+  label        (obrigatório) rótulo visível
+  value        (opcional) valor atual
+  placeholder  (opcional) placeholder do input
+
+Uso:
+  {% include "components/filter_busca.html" with id="filtro-texto" name="texto" label="Solicitante ou beneficiário" value=filtros.texto placeholder="Nome ou matrícula" %}
+{% endcomment %}
+<div>
+  <label for="{{ id }}" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+    {{ label }}
+  </label>
+  <input
+    type="search"
+    id="{{ id }}"
+    name="{{ name }}"
+    value="{{ value }}"
+    placeholder="{{ placeholder }}"
+    class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+  >
+</div>

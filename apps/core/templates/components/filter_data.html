@@ -1,0 +1,26 @@
+{% comment %}
+Campo de data único do filtro (type=date). Chamar 2x pra compor um par
+De/Até — não parametriza par internamente (composição explícita da tela
+chamadora, guardrail da issue #88). components/filter_*.html.
+
+Parâmetros:
+  id     (obrigatório) atributo id do input, alvo do <label for=...>
+  name   (obrigatório) atributo name (chave da querystring)
+  label  (obrigatório) rótulo visível (ex. "De", "Até")
+  value  (opcional) valor atual (YYYY-MM-DD)
+
+Uso:
+  {% include "components/filter_data.html" with id="filtro-data-ini" name="data_ini" label="De" value=filtros.data_ini %}
+{% endcomment %}
+<div>
+  <label for="{{ id }}" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+    {{ label }}
+  </label>
+  <input
+    type="date"
+    id="{{ id }}"
+    name="{{ name }}"
+    value="{{ value }}"
+    class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+  >
+</div>

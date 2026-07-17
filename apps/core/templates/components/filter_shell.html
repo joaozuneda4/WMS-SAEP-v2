@@ -1,0 +1,55 @@
+{% comment %}
+Shell da barra de filtros: disclosure nativo details/summary (mobile) +
+abertura do <form> HTMX + abertura do grid de campos, via partialdef
+nativo do Django 6 (mesmo padrão "abertura" de components/table.html,
+issue #83). Não conhece campos de domínio — só a moldura HTMX/disclosure.
+
+Fragmento (só abertura — fechamento fica literal na tela chamadora):
+  abertura   <details open><summary>Filtros...(sm:hidden)</summary>
+             <div class="sm:block!"><form method=get hx-get hx-target
+             hx-push-url><div class="grid ...">
+      Fechamento literal na tela, nesta ordem:
+        </div>  {# fecha o grid de campos #}
+        ... fieldset de checkbox + hidden ordem + filter_acoes explícitos ...
+        </form>
+        </div>  {# fecha o wrapper sm:block! #}
+        </details>
+
+Parâmetros:
+  action_url  (obrigatório) URL da tela (action/hx-get do form)
+  target_id   (obrigatório) id do wrapper HTMX alvo do swap (sem #)
+
+Uso canônico:
+  {% include "components/filter_shell.html#abertura" with action_url=url_x target_id="resultados-x" %}
+      {% include "components/filter_busca.html" with ... %}
+      {% include "components/filter_data.html" with ... %}
+    </div>
+
+    {% include "components/filter_checkbox_group.html" with ... %}
+
+    {% if ordem == 'asc' %}<input type="hidden" name="ordem" value="asc">{% endif %}
+
+    {% include "components/filter_acoes.html" with action_url=url_x target_id="resultados-x" tem_filtro_ativo=tem_filtro_ativo %}
+  </form>
+  </div>
+  </details>
+{% endcomment %}
+{% partialdef abertura %}
+<details class="mb-6" open>
+  <summary
+    class="sm:hidden mb-4 flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+  >
+    Filtros
+    <span aria-hidden="true" class="ml-2 text-slate-400">▼</span>
+  </summary>
+  <div class="sm:block!">
+  <form
+    method="get"
+    action="{{ action_url }}"
+    hx-get="{{ action_url }}"
+    hx-target="#{{ target_id }}"
+    hx-push-url="true"
+    class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+  >
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+{% endpartialdef %}
