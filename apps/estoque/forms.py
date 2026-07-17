@@ -116,6 +116,8 @@ class BaseItemSaidaExcepcionalFormSet(BaseFormSet):
         linhas_validas = 0
 
         for form in self.forms:
+            if self._form_deletado(form):
+                continue
             if not form.cleaned_data:
                 continue
             if not form.is_linha_valida():
@@ -139,6 +141,12 @@ class BaseItemSaidaExcepcionalFormSet(BaseFormSet):
 
         self._validar_elegibilidade(material_ids)
 
+    def _form_deletado(self, form) -> bool:
+        """True se o form foi marcado para deleção (via campo DELETE do formset)."""
+        return self.can_delete and form.cleaned_data.get(
+            forms.formsets.DELETION_FIELD_NAME, False
+        )
+
     def _validar_elegibilidade(self, material_ids: list[int]) -> None:
         """Anexa erro à linha cujo material está inativo ou sem saldo físico.
 
@@ -155,6 +163,8 @@ class BaseItemSaidaExcepcionalFormSet(BaseFormSet):
             .values_list('pk', flat=True)
         )
         for form in self.forms:
+            if self._form_deletado(form):
+                continue
             if not form.cleaned_data or not form.is_linha_valida():
                 continue
             material_id = form.cleaned_data['material_id']
@@ -168,6 +178,8 @@ class BaseItemSaidaExcepcionalFormSet(BaseFormSet):
         """Retorna lista de dicts com material_id e quantidade dos itens válidos."""
         resultado = []
         for form in self.forms:
+            if self._form_deletado(form):
+                continue
             if not form.cleaned_data or not form.is_linha_valida():
                 continue
             resultado.append(
@@ -183,4 +195,5 @@ ItemSaidaExcepcionalFormSet = formset_factory(
     ItemSaidaExcepcionalForm,
     formset=BaseItemSaidaExcepcionalFormSet,
     extra=0,
+    can_delete=True,
 )

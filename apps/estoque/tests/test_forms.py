@@ -7,8 +7,9 @@ import pytest
 from apps.estoque.forms import ItemSaidaExcepcionalFormSet, SaidaExcepcionalForm
 
 
-def _build_formset_data(itens: list[dict]) -> dict:
+def _build_formset_data(itens: list[dict], deletados: list[int] = None) -> dict:
     """Monta POST data para o formset de itens de saída excepcional."""
+    deletados = deletados or []
     total = len(itens)
     data = {
         'itens-TOTAL_FORMS': str(total),
@@ -19,6 +20,8 @@ def _build_formset_data(itens: list[dict]) -> dict:
     for i, item in enumerate(itens):
         data[f'itens-{i}-material_id'] = str(item.get('material_id', ''))
         data[f'itens-{i}-quantidade'] = str(item.get('quantidade', ''))
+        if i in deletados:
+            data[f'itens-{i}-DELETE'] = 'on'
     return data
 
 
@@ -135,3 +138,17 @@ def test_saida_excepcional_form_observacao_ausente():
     form = SaidaExcepcionalForm(data={'motivo': 'avaria', 'observacao': ''})
     assert not form.is_valid()
     assert 'observacao' in form.errors
+
+
+@pytest.mark.django_db
+def test_formset_duplicidade_ignora_linha_deletada(material_disponivel):
+    """Linha marcada como DELETE não conta para verificação de duplicidade."""
+    data = _build_formset_data(
+        [
+            {'material_id': material_disponivel.pk, 'quantidade': '5'},
+            {'material_id': material_disponivel.pk, 'quantidade': '3'},
+        ],
+        deletados=[1],
+    )
+    fs = ItemSaidaExcepcionalFormSet(data, prefix='itens')
+    assert fs.is_valid(), fs.errors
