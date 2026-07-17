@@ -5,6 +5,47 @@ from decimal import Decimal
 from django import forms
 from django.forms import BaseFormSet, formset_factory
 
+MOTIVO_SAIDA_OPCOES = [
+    ('avaria', 'Avaria / Deterioração'),
+    ('vencimento', 'Vencimento / Prazo expirado'),
+    ('obsolescencia', 'Descarte por obsolescência'),
+    ('extravio', 'Perda / Extravio'),
+    ('ajuste', 'Ajuste de inventário'),
+    ('doacao', 'Doação'),
+    ('outro', 'Outro'),
+]
+
+
+class SaidaExcepcionalForm(forms.Form):
+    """Cabeçalho de registro de saída excepcional (SAE-09: motivo fechado, observação obrigatória)."""
+
+    motivo = forms.ChoiceField(
+        label='Motivo',
+        choices=MOTIVO_SAIDA_OPCOES,
+        widget=forms.Select(
+            attrs={
+                'class': 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'autocomplete': 'off',
+            }
+        ),
+    )
+    observacao = forms.CharField(
+        label='Observação',
+        widget=forms.Textarea(
+            attrs={
+                'rows': 3,
+                'class': 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Descreva o contexto e justificativa para esta saída…',
+            }
+        ),
+    )
+
+    def clean_observacao(self):
+        observacao = self.cleaned_data.get('observacao', '').strip()
+        if not observacao:
+            raise forms.ValidationError('A observação é obrigatória.')
+        return observacao
+
 
 class ItemSaidaExcepcionalForm(forms.Form):
     """Linha do formset de itens de saída excepcional."""

@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 
-from apps.estoque.forms import ItemSaidaExcepcionalFormSet
+from apps.estoque.forms import ItemSaidaExcepcionalFormSet, SaidaExcepcionalForm
 
 
 def _build_formset_data(itens: list[dict]) -> dict:
@@ -108,3 +108,30 @@ def test_formset_material_sem_saldo_gera_erro_de_elegibilidade(estoque_principal
         for f in fs.forms
         for e in f.errors.get('material_label', [])
     )
+
+
+def test_saida_excepcional_form_valido():
+    form = SaidaExcepcionalForm(
+        data={'motivo': 'avaria', 'observacao': 'Caixas molhadas'}
+    )
+    assert form.is_valid(), form.errors
+
+
+def test_saida_excepcional_form_motivo_ausente():
+    form = SaidaExcepcionalForm(data={'motivo': '', 'observacao': 'obs válida'})
+    assert not form.is_valid()
+    assert 'motivo' in form.errors
+
+
+def test_saida_excepcional_form_motivo_invalido():
+    form = SaidaExcepcionalForm(
+        data={'motivo': 'nao_existe', 'observacao': 'obs válida'}
+    )
+    assert not form.is_valid()
+    assert 'motivo' in form.errors
+
+
+def test_saida_excepcional_form_observacao_ausente():
+    form = SaidaExcepcionalForm(data={'motivo': 'avaria', 'observacao': ''})
+    assert not form.is_valid()
+    assert 'observacao' in form.errors
