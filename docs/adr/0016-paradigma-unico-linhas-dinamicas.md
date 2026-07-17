@@ -43,19 +43,29 @@ Consequências obrigatórias:
 - toda tela nova com itens dinâmicos usa um Django `FormSet` real (ou
   `formset_factory`), com `management_form` renderizado pelo Django, endpoint
   HTMX próprio para nova linha e swap incremental — seguindo o padrão já
-  estabelecido em `requisicoes/rascunho_form.html`;
+  estabelecido em `requisicoes/rascunho_form.html`. O contrato HTMX de
+  `docs/CONVENTIONS.md` se aplica sem exceção: POST bem-sucedido responde com
+  `HX-Redirect` (nunca com fragmento de escrita); fragments HTMX são
+  exclusivos de requisições GET, para leitura ou interação auxiliar (ex.: a
+  própria linha nova do formset);
 - markup de linha de item deve ser compartilhado via partial reutilizável em
   vez de reimplementado por tela (a extração desse partial fica a cargo da
   issue-filha correspondente do épico #68, quando existir);
 - guardas de domínio (ex.: duplicidade de material, quantidade inválida,
   material inelegível) são validadas no `clean()` do form/formset, não em JS
   — JS pode replicar feedback client-side como otimização, nunca como única
-  fonte de validação;
+  fonte de validação. Para "Saída excepcional" especificamente: cada
+  `Material` pode aparecer no máximo uma vez no documento; entradas repetidas
+  são rejeitadas no `clean()`, nunca combinadas ou somadas silenciosamente;
 - `estoque/nova_saida_excepcional.html` é migrada para esse padrão via
   issue-filha vinculada ao épico #68, herdando os guardrails padrão do épico
   (paridade de comportamento, ARIA, suíte verde, escopo fechado) e exigindo
-  testes de view cobrindo: item duplicado, quantidade inválida, material
-  inelegível;
+  testes distribuídos pelas camadas corretas (ADR-0010): duplicidade,
+  quantidade inválida e elegibilidade de material cobertas em testes de
+  `Form`/`FormSet`; fluxo completo (submissão, redirect, mensagens) coberto
+  em testes de integração da view; autorização e mutação de domínio cobertas
+  em testes de policy/service, com mutações em `services.py` sob
+  `transaction.atomic` conforme `docs/CONVENTIONS.md`;
 - o paradigma Alpine client-side puro (array Alpine sem `Form`/`FormSet` por
   trás) não deve ser usado para itens dinâmicos em novas telas.
 
