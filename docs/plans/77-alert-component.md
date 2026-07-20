@@ -1,0 +1,140 @@
+# Plano — Issue #77: components/alert.html
+
+## Contexto
+
+Issue fechada em 13/07/2026 referenciando commit `77d78890`, mas esse commit não é
+ancestral de `origin/main` nem `upstream/main` — a branch `refactor/alert-component`
+ficou órfã (nunca mergeada, provavelmente perdida num reset/force-push). O componente
+não existe no working tree atual; `rascunho_form.html`, `nova_saida_excepcional.html`,
+`copiar_confirmacao.html` e `preview_importacao_scpi.html` ainda têm caixas de aviso
+inline. Reaberta para reimplementar antes de retomar #85 (form_field.html), que
+depende deste componente.
+
+O conteúdo da branch órfã (`refactor/alert-component-orphan-backup-2026-07-20`) foi
+inspecionado: `components/alert.html`, `test_components_alert.py` e os partials de
+corpo rico já haviam passado por uma rodada de revisão CodeRabbit (commit
+`b9efa40 fix(alert): address CodeRabbit findings`) e continuam válidos como estão —
+nada no contrato do componente em si depende de código que mudou depois. Reaproveitados
+verbatim. O que mudou desde então foi o **conteúdo dos templates a migrar**:
+`nova_saida_excepcional.html` foi totalmente reescrito pela issue #93 (paradigma HTMX
+FormSet, ADR-0016) — os alvos de migração deste plano foram remapeados para o estado
+atual do arquivo, e dois novos casos elegíveis surgiram (formset `non_form_errors` e a
+caixa de duplicidade, que deixou de ser Alpine `x-show`/`x-text` e virou JS vanilla
+simples — portanto migrável, ao contrário do que a issue original presumia).
+
+## Escopo
+
+Criar `apps/core/templates/components/alert.html` conforme `docs/design-system.md`
+(§4, linhas 415-431) e migrar as caixas de aviso inline abaixo.
+
+### Parâmetros do componente
+
+```text
+variant        (default=info) info, success, warning, danger
+message        (obrigatório, exceto se body_template) texto autoescapado (Django
+               escapa por padrão); conteúdo HTML rico só via body_template, nunca via
+               message
+body_template  (opcional) partial incluído no corpo — herda contexto do chamador
+               (mesmo mecanismo de form_body_template em modal.html)
+icone          (opcional, bool, default=True)
+role           (opcional) sobrescreve role padrão (default: info/success=status,
+               warning/danger=alert)
+aria_live      (opcional) valor de aria-live — sem default automático
+id             (opcional) — extensão prática além do inventário do design-system,
+               necessária para o caso da caixa de duplicidade (JS precisa de um alvo
+               estável via getElementById)
+class          (opcional) passthrough de layout
+```
+
+Nomenclatura `danger` (não `error`): consistente com `button.html` e com o próprio
+`docs/design-system.md` §4. Distinto do nível de severidade `error` do contrato de
+mensagens Django (`messages-contract`) — `alert.html` é um componente de apresentação
+(banner estático), não o contêiner de flash messages; não há mapeamento a documentar
+porque operam em camadas diferentes. Dismiss/auto-dismiss é comportamento do contrato
+de mensagens, fora de escopo aqui — `alert.html` é estático, sem JS de dismissal
+próprio (a caixa de duplicidade é populada e mostrada/escondida por JS do *chamador*,
+não do componente).
+
+Visual: `rounded-lg border px-4 py-3 text-sm` + par cor-200/cor-50/cor-800 (spec).
+
+### Migra
+
+- `rascunho_form.html:134-143` — `tem_item_inelegivel`, warning, corpo rico (via
+  `body_template`)
+- `rascunho_form.html:150-156` — `formset.non_form_errors`, danger, corpo rico (loop)
+- `nova_saida_excepcional.html:20-24` — `erro_geral`, danger, mensagem simples
+- `nova_saida_excepcional.html:83-89` — `formset.non_form_errors`, danger, corpo rico
+  (loop) — **novo caso, não existia na issue original** (era dict `erros` manual antes
+  de #93)
+- `nova_saida_excepcional.html:92-97` — caixa de duplicidade (`#aviso-duplicidade`),
+  danger, `icone=False`, `id="aviso-duplicidade"`, `aria_live="assertive"`, `message=""`
+  (JS do chamador continua fazendo `textContent`/`classList.toggle('hidden')` — o
+  componente só fornece a casca estática inicial) — **novo caso**: na issue original
+  isso era Alpine `x-show`/`x-text` reativo (não migrável); pós-#93 é JS vanilla direto
+  no DOM, compatível com uma casca server-rendered
+- `copiar_confirmacao.html:23-26` — nota amber, `role="note"` preservado via override
+- `preview_importacao_scpi.html:111-124` — `erro_arquivo`, danger, corpo rico (título +
+  mensagem)
+
+### Não migra (documentado com justificativa no template)
+
+- `apps/core/templates/components/_modal_body.html:32-39` — caixa `data-modal-erro`.
+  O `id` do contrato ARIA (`aria-describedby="{{ id }}-erro"`, referenciado por 4+
+  partials `_modal_form_*.html`) fica no `<span>` **interno**, não no elemento raiz —
+  meu `alert.html` só aceita `id` no elemento raiz. Migrar exigiria um segundo
+  parâmetro (`inner_id`) e preservar o atributo custom `data-modal-erro` só para este
+  caso, o que expande o componente além do que qualquer outro consumidor precisa.
+  Já documentado como exceção na issue original (coordenar com #78 — mergeada
+  separadamente sem essa migração). Fica inline.
+- `preview_importacao_scpi.html:385-403` — caixas de resumo `novos`/`divergencias`.
+  Fora do escopo textual da issue (que cita só "caixas de erro de arquivo"). A caixa
+  `novos` usa cor teal — não é uma das 4 variantes do componente (forçar para
+  info/success regridiria a semântica de cor já estabelecida via
+  `badge.html` variant="teal" na mesma tela). Fica inline.
+
+## Arquivos tocados
+
+- `apps/core/templates/components/alert.html` (novo)
+- `apps/core/tests/test_components_alert.py` (novo)
+- `apps/requisicoes/templates/requisicoes/partials/_alert_itens_inelegiveis_corpo.html` (novo)
+- `apps/requisicoes/templates/requisicoes/partials/_alert_erros_formset.html` (novo)
+- `apps/requisicoes/templates/requisicoes/partials/_alert_nota_copia_corpo.html` (novo)
+- `apps/estoque/templates/estoque/partials/_alert_erro_arquivo_corpo.html` (novo)
+- `apps/estoque/templates/estoque/partials/_alert_erros_formset.html` (novo)
+- `apps/requisicoes/templates/requisicoes/rascunho_form.html` (migração)
+- `apps/estoque/templates/estoque/nova_saida_excepcional.html` (migração)
+- `apps/requisicoes/templates/requisicoes/copiar_confirmacao.html` (migração)
+- `apps/estoque/templates/estoque/preview_importacao_scpi.html` (migração)
+- `static/app.css` / build do Tailwind (`npm run css:build`)
+
+## Estratégia de teste
+
+- Teste de template do componente isolado (`test_components_alert.py`): variantes
+  (info/success/warning/danger), `role` correto por variante, override de `role`,
+  `icone=False` oculta ícone, `body_template` inclui corpo herdando contexto, `id`
+  renderiza atributo, `class` faz passthrough, `message` é autoescapado.
+- Testes de view existentes (rascunho_form, nova_saida_excepcional, copiar_confirmacao,
+  preview_importacao_scpi) continuam cobrindo a exibição das mensagens — texto e roles
+  seguem presentes após a migração; nenhuma asserção de view deve precisar mudar de
+  significado (só potencialmente de string de classe CSS, se algum teste existente
+  faz assert nisso — verificar antes de migrar cada arquivo).
+
+## Invariantes (docs/design-acesso-rapido/matriz-invariantes.md)
+
+- Nenhuma mudança de camada de domínio — apenas template.
+- Contrato ARIA de mensagens (memória `messages-contract`): error/warning→alert,
+  success/info→status. `role="note"` do `copiar_confirmacao.html` é caso especial
+  documentado (não é mensagem de sistema, é nota informativa fixa) — preservado via
+  override explícito.
+
+## Riscos
+
+- Drift visual mínimo: `preview_importacao_scpi.html` usa `rounded-xl`/`py-4` na caixa
+  de erro de arquivo; componente usa `rounded-lg`/`py-3` (padrão do spec). Normalização
+  intencional — documentar no PR.
+- `rascunho_form.html` warning usava `text-amber-900`; componente padroniza
+  `text-amber-800` (par cor-800 do spec, igual a `copiar_confirmacao.html`).
+  Normalização intencional.
+- Extensão do parâmetro `id` além do inventário original do design-system: necessária
+  e mínima (só a caixa de duplicidade usa), documentada no docstring do componente.
+- Nenhuma dependência nova; sem mudança em services/policies/selectors.
