@@ -70,47 +70,51 @@ badge fora do mapeamento da issue — ficam cru).
   onde bate), `blue`/`blue-strong`/`amber`/`amber-strong`/`green`/`red`/
   `red-strong`/`teal` (cor de marca→token); `orange`/`indigo`/`violet`/`yellow`
   inalterados; fallback `red-600`/`red-700`→`danger`/`danger-hover`.
-- `components/button.html` — `primary`(blue→primary+hover+active+border-focus),
+- `apps/core/templates/components/button.html` — `primary`(blue→primary+hover+active+border-focus),
   `secondary`(slate→tokens onde bate), `danger`(red→danger+hover+active),
   `danger-outline`(red→danger-text+danger-border-strong+danger-accent),
   `ghost`/`link` (slate/blue→tokens).
-- `components/alert.html` — 4 variantes, borda/bg/texto/ícone→tokens
+- `apps/core/templates/components/alert.html` — 4 variantes, borda/bg/texto/ícone→tokens
   (`info`→`primary-*`, não `info-*`, ver nota abaixo).
-- `components/pagination.html` — slate→tokens onde bate; `ring-blue-500`→
+- `apps/core/templates/components/pagination.html` — slate→tokens onde bate; `ring-blue-500`→
   `border-focus`; `text-slate-600`/disabled fica cru (sem token exato).
-- `components/empty_state.html` — slate→tokens; CTA link `text-blue-600`→
+- `apps/core/templates/components/empty_state.html` — slate→tokens; CTA link `text-blue-600`→
   `text-primary`.
-- `components/modal.html` — `border-slate-200`/`bg-white`/`text-slate-900`→
+- `apps/core/templates/components/modal.html` — `border-slate-200`/`bg-white`/`text-slate-900`→
   tokens; backdrop `slate-900/50` fica cru (não bate com `surface-overlay`,
   alpha/matiz diferentes).
-- `components/_modal_body.html` — borda/bg/texto slate→tokens onde bate;
+- `apps/core/templates/components/_modal_body.html` — borda/bg/texto slate→tokens onde bate;
   botão cancelar `ring-slate-400` fica cru; erro→`danger-subtle`/
   `danger-border`/`danger-text-strong`; confirm `danger`→`danger`/
   `danger-hover`/`danger-accent` (ring); confirm `secondary` (`bg-slate-700`)
   fica cru (sem token de superfície pra slate-700, ring-slate-500 idem);
   confirm padrão→`primary`/`primary-hover`/`border-focus` (ring).
-- `components/_modal_icon.html` — 3 variantes→tokens (`danger`→
+- `apps/core/templates/components/_modal_icon.html` — 3 variantes→tokens (`danger`→
   `danger-muted`/`danger-text`; `warning`→`warning-muted`/`warning-text`;
   `info`(else)→`primary-muted`/`primary-text`).
-- `core/partials/_messages.html` — 4 níveis→tokens (`warning`→`warning-muted`
+- `apps/core/templates/core/partials/_messages.html` — 4 níveis→tokens (`warning`→`warning-muted`
   (bg)/`warning-border`/`warning-text-strong`; `error`→`danger-*`; `success`→
   `success-*`; default→`primary-*`).
-- `components/filter_shell.html`, `filter_busca.html`, `filter_select.html`,
-  `filter_data.html`, `filter_checkbox_group.html`, `filter_acoes.html` —
+- `apps/core/templates/components/filter_shell.html`,
+  `apps/core/templates/components/filter_busca.html`,
+  `apps/core/templates/components/filter_select.html`,
+  `apps/core/templates/components/filter_data.html`,
+  `apps/core/templates/components/filter_checkbox_group.html`,
+  `apps/core/templates/components/filter_acoes.html` —
   `ring-blue-500`/`focus:ring-blue-500`→`border-focus`; `bg-blue-600`
   (aplicar filtros)→`primary`+`hover`; `text-blue-600` (checkbox accent)→
   `text-primary`; slate→tokens onde bate.
-- `components/form_field.html` — asterisco `text-red-500`→`text-danger-accent`;
+- `apps/core/templates/components/form_field.html` — asterisco `text-red-500`→`text-danger-accent`;
   erro `text-red-600`→`text-danger`; slate→tokens.
-- `components/autocomplete.html` — `border-red-400`→`border-danger-border-input`;
+- `apps/core/templates/components/autocomplete.html` — `border-red-400`→`border-danger-border-input`;
   `focus:border-blue-500`/`focus:ring-blue-500`→`border-focus`; item
   selecionado `bg-blue-50`→`bg-primary-subtle`; slate→tokens onde bate.
-- `components/item_form_row.html` — `border-amber-300 bg-amber-50/40`→
+- `apps/core/templates/components/item_form_row.html` — `border-amber-300 bg-amber-50/40`→
   `border-warning-border-strong bg-warning-subtle/40`; `text-amber-700`→
   `text-warning-text-subtle`; erros `text-red-600`→`text-danger`; remover
   hover `text-red-700`→`text-danger`; `ring-red-600`→`ring-danger`; slate→
   tokens onde bate.
-- `components/table.html` — `border-slate-200`/`bg-white`/`divide-slate-200`/
+- `apps/core/templates/components/table.html` — `border-slate-200`/`bg-white`/`divide-slate-200`/
   `text-slate-500` (th)→tokens; exemplo dentro do `{% comment %}` também
   atualizado (`bg-slate-50`→`bg-bg-subtle`, `text-slate-900`→
   `text-text-primary`; `divide-slate-100` do exemplo fica cru — sem token
@@ -141,15 +145,25 @@ alert usa os tokens `primary-*`, não `info-*`. Documentar isso em
 ## Estratégia de teste
 
 - Teste automatizado novo (`apps/core/tests/test_tokens_semanticos.py`):
-  grep programático em `apps/core/templates/components/**/*.html` +
-  `core/partials/_messages.html` garantindo zero ocorrência de
-  `(bg|text|border|ring|divide)-(blue|red|amber|green|teal)-[0-9]` fora da
-  lista de exceções documentada (badge `orange`/`indigo`/`violet`/`yellow`).
-  Este é o "busca automatizável" citado no critério de aceite, viabilizado
-  como teste real (falha o CI se alguém reintroduzir cor crua).
-- Suíte completa (`uv run pytest`) — nenhuma mudança de comportamento
-  esperada, só verificação de que templates ainda renderizam (testes
-  existentes de view que tocam badge/button/alert/modal continuam verdes).
+  1. grep programático em `apps/core/templates/components/**/*.html` +
+     `apps/core/templates/core/partials/_messages.html` garantindo zero
+     ocorrência de `(bg|text|border|ring|divide)-(blue|red|amber|green|teal)-[0-9]`
+     fora da lista de exceções documentada (badge
+     `orange`/`indigo`/`violet`/`yellow`). Este é o "busca automatizável"
+     citado no critério de aceite.
+  2. roda `npm run css:build` e valida no `app.css` gerado que os 19 tokens
+     novos existem como custom properties e que as utilities consumidas
+     pelos templates (ex. `bg-warning-subtle/40` → regra com
+     `--color-warning-subtle` presente no `app.css`) foram de fato geradas —
+     falha se algum token ficar sem utility correspondente (nome errado,
+     typo, ou o Tailwind não reconhecer o `@theme`).
+  Isso cobre tanto "cor crua não volta" quanto "token novo realmente gera
+  CSS", falhando o CI nos dois cenários de regressão.
+- Suíte completa
+  (`uv run pytest -q -ra --tb=short --strict-markers --disable-warnings -n logical`)
+  — nenhuma mudança de comportamento esperada, só verificação de que
+  templates ainda renderizam (testes existentes de view que tocam
+  badge/button/alert/modal continuam verdes).
 - Verificação manual/visual: `npm run css:build`, abrir telas com badge,
   botões, alert, paginação, modal — comparar cor computada via DevTools antes
   e depois (deve ser idêntica). Prova de rebrand: trocar temporariamente
