@@ -61,10 +61,16 @@ def renderizar_campo_com_aria(
     método sem argumentos). Usado por components/form_field.html, escopado
     só aos 2 atributos ARIA do contrato do componente. `field.as_widget`
     mescla os attrs recebidos com os automáticos do widget (`required`,
-    `class`, `placeholder` etc. definidos em forms.py não são removidos).
+    `class`, `placeholder` etc. definidos em forms.py não são removidos) —
+    mas *substitui* attrs com a mesma chave, então um `aria-describedby` já
+    definido no widget é preservado explicitamente aqui (concatenado antes
+    dos ids de ajuda/erro) em vez de ser sobrescrito.
     """
     attrs: dict[str, str | bool] = {}
     describedby_ids: list[str] = []
+    describedby_existente = field.field.widget.attrs.get('aria-describedby')
+    if describedby_existente:
+        describedby_ids.append(str(describedby_existente))
     if tem_ajuda:
         describedby_ids.append(f'{field.id_for_label}-ajuda')
     if tem_erro:

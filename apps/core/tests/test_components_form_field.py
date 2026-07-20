@@ -126,3 +126,4 @@ def test_aria_describedby_compoe_ajuda_e_erro_juntos():
 def test_widget_required_nativo_preservado():
     html = _render(field_name='nome')
     assert 'required' in html
+    assert 'placeholder="Digite seu nome"' in html

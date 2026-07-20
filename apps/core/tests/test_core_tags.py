@@ -67,3 +67,27 @@ def test_campo_opcional_nao_tem_required_nativo():
     form = _FormDeTeste()
     html = _render('{% renderizar_campo_com_aria field %}', field=form['apelido'])
     assert 'required' not in html
+
+
+class _FormComDescribedbyNoWidget(forms.Form):
+    campo = forms.CharField(
+        required=True,
+        widget=forms.TextInput(attrs={'aria-describedby': 'hint-externo'}),
+    )
+
+
+def test_preserva_aria_describedby_ja_definido_no_widget():
+    form = _FormComDescribedbyNoWidget()
+    html = _render('{% renderizar_campo_com_aria field %}', field=form['campo'])
+    assert 'aria-describedby="hint-externo"' in html
+
+
+def test_compoe_aria_describedby_do_widget_com_ajuda_e_erro():
+    form = _FormComDescribedbyNoWidget(data={})
+    form.is_valid()
+    html = _render(
+        '{% renderizar_campo_com_aria field tem_ajuda=True tem_erro=field.errors %}',
+        field=form['campo'],
+    )
+    id_campo = form['campo'].id_for_label
+    assert f'aria-describedby="hint-externo {id_campo}-ajuda {id_campo}-erro"' in html
