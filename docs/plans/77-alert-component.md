@@ -62,10 +62,22 @@ Nomenclatura `danger` (não `error`): consistente com `button.html` e com o pró
 `docs/design-system.md` §4. Distinto do nível de severidade `error` do contrato de
 mensagens Django (`messages-contract`) — `alert.html` é um componente de apresentação
 (banner estático), não o contêiner de flash messages; não há mapeamento a documentar
-porque operam em camadas diferentes. Dismiss/auto-dismiss é comportamento do contrato
-de mensagens, fora de escopo aqui — `alert.html` é estático, sem JS de dismissal
-próprio (a caixa de duplicidade é populada e mostrada/escondida por JS do *chamador*,
-não do componente).
+porque operam em camadas diferentes.
+
+**Sobre o botão de dismiss manual de `docs/CONVENTIONS.md` (§Níveis e ARIA,
+linhas 172-181):** essa exigência é do contrato de flash messages do Django
+(`messages.error`/`messages.warning`/etc.), renderizado por
+`apps/core/templates/core/partials/_messages.html` — que tem markup e JS de
+dismiss próprios, **não usa `alert.html` hoje** e não é tocado por este plano
+(já listado em "Fora de escopo" da issue original: "Reestilizar `_messages.html`
+... não nesta issue"). `alert.html` é um componente distinto, para banners de
+página/formulário estáticos — nunca o canal de flash messages — então a regra
+de dismiss de `CONVENTIONS.md` não se aplica a ele por escopo, não por exceção.
+Se `_messages.html` um dia adotar `alert.html` internamente (fora deste plano),
+o dismiss seria implementado no template/JS **chamador** de `_messages.html`,
+do mesmo jeito que a caixa de duplicidade já hidrata `alert.html` com JS
+externo — o componente não precisaria de um parâmetro de dismiss próprio.
+`alert.html` é estático, sem JS de dismissal embutido.
 
 Visual: `rounded-lg border px-4 py-3 text-sm` + par cor-200/cor-50/cor-800 (spec).
 
