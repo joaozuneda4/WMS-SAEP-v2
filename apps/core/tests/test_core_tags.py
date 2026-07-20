@@ -1,7 +1,12 @@
 """Testes diretos de {% renderizar_campo_com_aria %} (sem DB, sem view)."""
 
+from decimal import Decimal
+
+import pytest
 from django import forms
 from django.template import Context, Template
+
+from apps.core.templatetags.core_tags import formatar_quantidade
 
 
 class _FormDeTeste(forms.Form):
@@ -91,3 +96,38 @@ def test_compoe_aria_describedby_do_widget_com_ajuda_e_erro():
     )
     id_campo = form['campo'].id_for_label
     assert f'aria-describedby="hint-externo {id_campo}-ajuda {id_campo}-erro"' in html
+
+
+@pytest.mark.parametrize(
+    'qtd, unidade, esperado',
+    [
+        # Unidade → inteiro
+        (Decimal('5.000'), 'un', '5'),
+        (Decimal('1.000'), 'un', '1'),
+        (Decimal('100.000'), 'un', '100'),
+        # kg → 1 decimal
+        (Decimal('2.500'), 'kg', '2.5'),
+        (Decimal('10.000'), 'kg', '10.0'),
+        (Decimal('0.100'), 'kg', '0.1'),
+        # l → 1 decimal
+        (Decimal('3.000'), 'l', '3.0'),
+        (Decimal('1.500'), 'l', '1.5'),
+        # m → 1 decimal
+        (Decimal('4.200'), 'm', '4.2'),
+        (Decimal('10.000'), 'm', '10.0'),
+        # m2 → strip trailing zeros (casas significativas)
+        (Decimal('2.000'), 'm2', '2'),
+        (Decimal('1.500'), 'm2', '1.5'),
+        (Decimal('1.230'), 'm2', '1.23'),
+        # cx, pct, par, rolo → strip trailing zeros
+        (Decimal('3.000'), 'cx', '3'),
+        (Decimal('2.500'), 'pct', '2.5'),
+        (Decimal('1.000'), 'par', '1'),
+        (Decimal('6.000'), 'rolo', '6'),
+        # None → fallback
+        (None, 'un', '—'),
+        (None, 'kg', '—'),
+    ],
+)
+def test_formatar_quantidade(qtd, unidade, esperado):
+    assert formatar_quantidade(qtd, unidade) == esperado

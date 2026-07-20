@@ -27,6 +27,7 @@ from apps.core.exceptions import (
 from apps.core.http import htmx_redirect, parse_data_iso
 from apps.core.listagem import paginar_com_filtros
 from apps.core.presentation import traduz_erro_dominio
+from apps.core.templatetags.core_tags import formatar_quantidade
 from apps.estoque.models import SaldoEstoque
 from apps.estoque.selectors import entregue_liquida_por_material
 from apps.requisicoes.forms import (
@@ -485,7 +486,9 @@ def buscar_materiais(request):
             'nome': m.nome,
             'unidade': m.unidade,
             'label': f'{m.codigo} — {m.nome}',
-            'saldo_disponivel': str(saldo_por_material.get(m.pk, 0)),
+            'saldo_disponivel': formatar_quantidade(
+                saldo_por_material.get(m.pk, 0), m.unidade
+            ),
         }
         for m in materiais
     ]

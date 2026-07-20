@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
@@ -7,6 +8,8 @@ from django.template.loader import render_to_string
 from django.utils.safestring import SafeString, mark_safe
 
 register = template.Library()
+
+_UMA_DECIMAL = ('kg', 'l', 'm')
 
 ICONES_CATALOGO = frozenset(
     {
@@ -36,6 +39,33 @@ def icon(name: str, size: int = 20, **kwargs: str) -> str:
             {'size': size, 'class': css_class},
         )
     )
+
+
+@register.filter
+def formatar_quantidade(qtd, unidade: str) -> str:
+    """Formata quantidade conforme a unidade de medida do material.
+
+    - 'un' → inteiro
+    - 'kg', 'l', 'm' → 1 casa decimal
+    - demais → strip trailing zeros (casas significativas)
+    """
+    if qtd is None:
+        return '—'
+    try:
+        d = Decimal(str(qtd))
+    except (InvalidOperation, TypeError, ValueError):
+        return str(qtd)
+
+    if unidade == 'un':
+        return str(int(d))
+
+    if unidade in _UMA_DECIMAL:
+        return format(d.quantize(Decimal('0.1')), 'f')
+
+    normalized = d.normalize()
+    if normalized == normalized.to_integral_value():
+        return str(int(normalized))
+    return format(normalized, 'f')
 
 
 @register.simple_tag

@@ -1,4 +1,5 @@
 {% extends "base_auth.html" %}
+{% load core_tags %}
 
 {% block title %}Catálogo de materiais — WMS-SAEP{% endblock %}
 
@@ -68,16 +69,16 @@
           <dl class="mt-4 grid grid-cols-3 gap-3 text-sm">
             <div>
               <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Físico</dt>
-              <dd class="mt-0.5 tabular-nums text-slate-800">{{ saldo.saldo_fisico }} {{ saldo.material.unidade }}</dd>
+              <dd class="mt-0.5 tabular-nums text-slate-800">{{ saldo.saldo_fisico|formatar_quantidade:saldo.material.unidade }} {{ saldo.material.unidade }}</dd>
             </div>
             <div>
               <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Reservado</dt>
-              <dd class="mt-0.5 tabular-nums text-slate-800">{{ saldo.saldo_reservado }} {{ saldo.material.unidade }}</dd>
+              <dd class="mt-0.5 tabular-nums text-slate-800">{{ saldo.saldo_reservado|formatar_quantidade:saldo.material.unidade }} {{ saldo.material.unidade }}</dd>
             </div>
             <div>
               <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Disponível</dt>
               <dd class="mt-0.5 tabular-nums {% if saldo.divergente_calculado %}text-red-700 font-semibold{% else %}text-slate-800{% endif %}">
-                {{ saldo.saldo_disponivel_calculado }} {{ saldo.material.unidade }}
+                {{ saldo.saldo_disponivel_calculado|formatar_quantidade:saldo.material.unidade }} {{ saldo.material.unidade }}
               </dd>
             </div>
           </dl>
@@ -104,10 +105,10 @@
           <tr class="{% if saldo.divergente_calculado %}bg-red-50 hover:bg-red-100{% else %}hover:bg-slate-50{% endif %}">
             <td class="px-4 py-3 font-mono text-xs text-slate-700">{{ saldo.material.codigo }}</td>
             <td class="px-4 py-3 text-sm text-slate-900">{{ saldo.material.nome }}</td>
-            <td class="px-4 py-3 text-right text-sm tabular-nums text-slate-700">{{ saldo.saldo_fisico }}</td>
-            <td class="px-4 py-3 text-right text-sm tabular-nums text-slate-700">{{ saldo.saldo_reservado }}</td>
+            <td class="px-4 py-3 text-right text-sm tabular-nums text-slate-700">{{ saldo.saldo_fisico|formatar_quantidade:saldo.material.unidade }}</td>
+            <td class="px-4 py-3 text-right text-sm tabular-nums text-slate-700">{{ saldo.saldo_reservado|formatar_quantidade:saldo.material.unidade }}</td>
             <td class="px-4 py-3 text-right text-sm tabular-nums {% if saldo.divergente_calculado %}font-semibold text-red-700{% else %}text-slate-700{% endif %}">
-              {{ saldo.saldo_disponivel_calculado }}
+              {{ saldo.saldo_disponivel_calculado|formatar_quantidade:saldo.material.unidade }}
             </td>
             <td class="px-4 py-3 text-sm text-slate-600">{{ saldo.material.unidade }}</td>
             <td class="px-4 py-3 text-center">

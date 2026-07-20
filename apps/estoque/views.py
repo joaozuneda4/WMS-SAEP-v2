@@ -19,6 +19,7 @@ from apps.core.exceptions import (
 from apps.core.http import htmx_redirect, parse_data_iso
 from apps.core.listagem import paginar_com_filtros
 from apps.core.presentation import traduz_erro_dominio
+from apps.core.templatetags.core_tags import formatar_quantidade
 from apps.estoque.forms import ItemSaidaExcepcionalFormSet, SaidaExcepcionalForm
 from apps.estoque.models import Estoque, SaldoEstoque, TipoMovimentacaoEstoque
 from apps.estoque.policies import (
@@ -309,7 +310,9 @@ def buscar_materiais_saida_excepcional_view(request):
             'nome': m.nome,
             'unidade': m.unidade,
             'label': f'{m.codigo} — {m.nome}',
-            'saldo_fisico': str(saldo_por_material.get(m.pk, 0)),
+            'saldo_fisico': formatar_quantidade(
+                saldo_por_material.get(m.pk, 0), m.unidade
+            ),
         }
         for m in materiais
     ]
