@@ -154,7 +154,7 @@
       {# Botão adicionar item via HTMX #}
       <button
         type="button"
-        class="mt-6 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+        class="mt-6 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer transition-colors"
         hx-get="{% url 'requisicoes:nova_linha_item' %}"
         hx-target="#itens-container"
         hx-swap="beforeend"
@@ -196,7 +196,7 @@
           name="acao"
           value="rascunho"
           data-submit-loading-label="Salvando…"
-          class="order-1 inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          class="order-1 inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
           <span data-submit-text>Salvar rascunho</span>
         </button>
@@ -205,7 +205,7 @@
           name="acao"
           value="enviar"
           data-submit-loading-label="Enviando…"
-          class="order-2 inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          class="order-2 inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
           {% icon "enviar" class="h-4 w-4 shrink-0" %}
           <span data-submit-text class="hidden sm:inline">Criar e enviar para autorização</span>
@@ -217,7 +217,7 @@
           name="acao"
           value="rascunho"
           data-submit-loading-label="Salvando…"
-          class="inline-flex shrink-0 items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          class="inline-flex shrink-0 items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
           <span data-submit-text>Salvar rascunho</span>
         </button>

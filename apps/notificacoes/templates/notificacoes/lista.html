@@ -7,7 +7,7 @@
     {% if notificacoes %}
       <form method="post" action="{% url 'notificacoes:marcar_todas_lidas' %}">
         {% csrf_token %}
-        <button type="submit" class="text-sm text-blue-600 hover:underline">
+        <button type="submit" class="text-sm text-blue-600 hover:underline cursor-pointer">
           Marcar todas como lidas
         </button>
       </form>
@@ -39,7 +39,7 @@
               {% csrf_token %}
               <button
                 type="submit"
-                class="text-xs text-blue-600 hover:underline shrink-0"
+                class="text-xs text-blue-600 hover:underline cursor-pointer shrink-0"
                 hx-post="{% url 'notificacoes:marcar_lida' notificacao.pk %}"
                 hx-swap="outerHTML"
                 hx-target="closest li"

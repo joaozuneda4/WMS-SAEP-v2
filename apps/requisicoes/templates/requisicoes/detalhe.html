@@ -124,7 +124,7 @@
                           type="button"
                           onclick="document.getElementById('{{ item.modal_devolver_id }}').showModal()"
                           aria-haspopup="dialog"
-                          class="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-white px-2.5 py-1 text-xs font-medium text-teal-700 shadow-sm hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1"
+                          class="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-white px-2.5 py-1 text-xs font-medium text-teal-700 shadow-sm hover:bg-teal-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1"
                         >
                           Registrar devolução
                         </button>
@@ -189,7 +189,7 @@
                 type="button"
                 data-modal-trigger="confirmar-enviar"
                 @click="abrir($event)"
-                class="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 sm:w-auto"
+                class="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 sm:w-auto"
               >
                 {% icon "enviar" class="h-4 w-4" %}
                 <span>Enviar para autorização</span>
@@ -205,7 +205,7 @@
                 type="button"
                 data-modal-trigger="confirmar-cancelar"
                 @click="abrir($event)"
-                class="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
+                class="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
               >
                 {% icon "lixeira" class="h-4 w-4" %}
                 <span>{{ cancelamento_copy_texto.trigger }}</span>
@@ -254,7 +254,7 @@
               type="button"
               data-modal-trigger="confirmar-autorizar"
               @click="abrir($event)"
-              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 sm:w-auto"
+              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 sm:w-auto"
             >
               Autorizar
             </button>
@@ -275,7 +275,7 @@
               type="button"
               data-modal-trigger="confirmar-retornar"
               @click="abrir($event)"
-              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-amber-700 bg-white px-4 py-2 text-sm font-semibold text-amber-900 shadow-sm hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 sm:w-auto"
+              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-amber-700 bg-white px-4 py-2 text-sm font-semibold text-amber-900 shadow-sm hover:bg-amber-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 sm:w-auto"
             >
               Retornar
             </button>
@@ -296,7 +296,7 @@
               type="button"
               data-modal-trigger="confirmar-recusar"
               @click="abrir($event)"
-              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
+              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
             >
               Recusar
             </button>
@@ -351,7 +351,7 @@
           type="button"
           data-modal-trigger="confirmar-cancelar"
           @click="abrir($event)"
-          class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
+          class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
         >
           {% icon "lixeira" class="h-4 w-4" %}
           <span>{{ cancelamento_copy_texto.trigger }}</span>
@@ -385,7 +385,7 @@
           type="button"
           data-modal-trigger="confirmar-separar"
           @click="abrir($event)"
-          class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 sm:w-auto"
+          class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 sm:w-auto"
         >
           Separar para retirada
         </button>
@@ -417,7 +417,7 @@
           x-data
           @click="$dispatch('modal-open', { id: 'estornar-modal' })"
           aria-haspopup="dialog"
-          class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1"
         >
           <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 3.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" />

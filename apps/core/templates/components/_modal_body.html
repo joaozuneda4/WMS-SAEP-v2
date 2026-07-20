@@ -47,7 +47,7 @@
     <button
       type="button"
       @click="fechar()"
-      class="inline-flex min-h-11 items-center justify-center rounded-md border border-border-strong bg-surface px-4 py-2 text-sm font-medium text-text-secondary shadow-sm transition hover:bg-bg-page focus:outline-none focus-visible:ring-2 focus-visible:ring-text-disabled focus-visible:ring-offset-2"
+      class="inline-flex min-h-11 items-center justify-center rounded-md border border-border-strong bg-surface px-4 py-2 text-sm font-medium text-text-secondary shadow-sm transition hover:bg-bg-page cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-text-disabled focus-visible:ring-offset-2"
     >
       {{ cancel_label|default:"Voltar" }}
     </button>
@@ -56,7 +56,7 @@
         type="button"
         data-modal-confirm
         @click="document.getElementById('{{ submit_form_id }}')?.requestSubmit() ?? console.error('modal {{ id }}: submit_form_id {{ submit_form_id }} nao encontrado')"
-        class="inline-flex min-h-11 items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 {% if confirm_variant == 'danger' %}bg-danger text-white hover:bg-danger-hover focus-visible:ring-danger-accent{% elif confirm_variant == 'secondary' %}bg-slate-700 text-white hover:bg-slate-800 focus-visible:ring-text-tertiary{% else %}bg-primary text-white hover:bg-primary-hover focus-visible:ring-border-focus{% endif %}"
+        class="inline-flex min-h-11 items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow-sm transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 {% if confirm_variant == 'danger' %}bg-danger text-white hover:bg-danger-hover focus-visible:ring-danger-accent{% elif confirm_variant == 'secondary' %}bg-slate-700 text-white hover:bg-slate-800 focus-visible:ring-text-tertiary{% else %}bg-primary text-white hover:bg-primary-hover focus-visible:ring-border-focus{% endif %}"
       >
         {{ confirm_label|default:"Confirmar" }}
       </button>
@@ -64,7 +64,7 @@
       <button
         type="submit"
         data-modal-confirm
-        class="inline-flex min-h-11 items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 {% if confirm_variant == 'danger' %}bg-danger text-white hover:bg-danger-hover focus-visible:ring-danger-accent{% elif confirm_variant == 'secondary' %}bg-slate-700 text-white hover:bg-slate-800 focus-visible:ring-text-tertiary{% else %}bg-primary text-white hover:bg-primary-hover focus-visible:ring-border-focus{% endif %}"
+        class="inline-flex min-h-11 items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow-sm transition cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 {% if confirm_variant == 'danger' %}bg-danger text-white hover:bg-danger-hover focus-visible:ring-danger-accent{% elif confirm_variant == 'secondary' %}bg-slate-700 text-white hover:bg-slate-800 focus-visible:ring-text-tertiary{% else %}bg-primary text-white hover:bg-primary-hover focus-visible:ring-border-focus{% endif %}"
       >
         {{ confirm_label|default:"Confirmar" }}
       </button>
