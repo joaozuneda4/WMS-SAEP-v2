@@ -13,9 +13,10 @@
    extraíram estrutura). Incluídos aqui para o critério de aceite
    ("dentro de `apps/core/templates/components/`") bater literalmente.
 2. **Slate**: migrar para os tokens `text-*`/`border-*`/`bg-*` **só onde o
-   valor já existe idêntico** (ex. `text-slate-900` → `text-text-primary`).
-   Onde não há token com o mesmo valor (`bg-slate-700` do botão secondary do
-   modal, `ring-slate-400/500`, `text-slate-600`, `bg-slate-900/50` do
+   valor já existe idêntico** (ex. `text-slate-900` → `text-text-primary`,
+   `ring-slate-400` → `ring-text-disabled`, `ring-slate-500` →
+   `ring-text-tertiary`). Onde não há token com o mesmo valor (`bg-slate-700`
+   do botão secondary do modal, `text-slate-600`, `bg-slate-900/50` do
    backdrop), fica cru — não invento token novo pra slate.
 3. **Tokens novos**: convenção de sufixo estendendo o vocabulário já usado em
    `input.css` (`-subtle`, `-muted`, `-border`, `-text`, `-hover`, `-active`).
@@ -84,11 +85,11 @@ badge fora do mapeamento da issue — ficam cru).
   tokens; backdrop `slate-900/50` fica cru (não bate com `surface-overlay`,
   alpha/matiz diferentes).
 - `apps/core/templates/components/_modal_body.html` — borda/bg/texto slate→tokens onde bate;
-  botão cancelar `ring-slate-400` fica cru; erro→`danger-subtle`/
+  botão cancelar `ring-slate-400`→`ring-text-disabled`; erro→`danger-subtle`/
   `danger-border`/`danger-text-strong`; confirm `danger`→`danger`/
   `danger-hover`/`danger-accent` (ring); confirm `secondary` (`bg-slate-700`)
-  fica cru (sem token de superfície pra slate-700, ring-slate-500 idem);
-  confirm padrão→`primary`/`primary-hover`/`border-focus` (ring).
+  fica cru (sem token de superfície pra slate-700), `ring-slate-500`→
+  `ring-text-tertiary`; confirm padrão→`primary`/`primary-hover`/`border-focus` (ring).
 - `apps/core/templates/components/_modal_icon.html` — 3 variantes→tokens (`danger`→
   `danger-muted`/`danger-text`; `warning`→`warning-muted`/`warning-text`;
   `info`(else)→`primary-muted`/`primary-text`).
@@ -137,8 +138,7 @@ alert usa os tokens `primary-*`, não `info-*`. Documentar isso em
 - `text-white`/`bg-white` sem correspondência 1:1 já mapeada — `white` não
   está na lista de prefixos do critério de aceite.
 - Slate sem token de mesmo valor: `text-slate-600`, `bg-slate-700`/`800`
-  (botão secondary do modal), `ring-slate-400`/`500`, `bg-slate-900/50`
-  (backdrop do modal).
+  (botão secondary do modal), `bg-slate-900/50` (backdrop do modal).
 - Telas/partials de domínio — herdam via componentes, não tocadas.
 - Dark mode — adiado (decisão já registrada em `input.css`).
 

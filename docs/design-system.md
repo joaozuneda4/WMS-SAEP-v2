@@ -154,9 +154,9 @@ rounded:    rounded-lg (cards, inputs)
 ### Sombras e bordas
 
 ```
-cards:    shadow-sm border border-slate-200
-inputs:   border border-slate-300
-focus:    border-blue-500 ring-2 ring-blue-500 ring-offset-2
+cards:    shadow-sm border border-border
+inputs:   border border-border-strong
+focus:    border-border-focus ring-2 ring-border-focus ring-offset-2
 ```
 
 ## Estados de UI
