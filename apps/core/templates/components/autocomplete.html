@@ -52,7 +52,7 @@
     data-lpignore="true"
     data-1p-ignore="true"
     placeholder="{{ placeholder }}"
-    class="w-full rounded-lg border {% if com_erro %}border-red-400{% else %}border-slate-300{% endif %} px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+    class="w-full rounded-lg border {% if com_erro %}border-danger-border-input{% else %}border-border-strong{% endif %} px-3 py-2 text-sm focus:border-border-focus focus:ring-2 focus:ring-border-focus focus:outline-none"
     role="combobox"
     aria-autocomplete="list"
     aria-haspopup="listbox"
@@ -62,7 +62,7 @@
     :aria-activedescendant="ativo >= 0 ? (idBase + '-opt-' + ativo) : null"
   />
   <span x-show="buscando" x-cloak class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" aria-hidden="true">
-    <svg class="h-4 w-4 animate-spin motion-reduce:animate-none text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg class="h-4 w-4 animate-spin motion-reduce:animate-none text-text-disabled" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
     </svg>
@@ -73,7 +73,7 @@
     :id="idBase + '-listbox'"
     role="listbox"
     aria-label="Resultados"
-    class="absolute z-20 mt-1 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg"
+    class="absolute z-20 mt-1 w-full overflow-y-auto rounded-lg border border-border bg-surface text-sm shadow-lg"
     style="max-height: 14rem"
   >
     <template x-for="(item, idx) in resultados" :key="item.id">
@@ -83,7 +83,7 @@
         :aria-selected="ativo === idx"
         @mousedown.prevent="selecionar(item)"
         @mouseover="ativo = idx"
-        :class="ativo === idx ? 'bg-blue-50' : 'hover:bg-slate-50'"
+        :class="ativo === idx ? 'bg-primary-subtle' : 'hover:bg-bg-page'"
         class="cursor-pointer px-3 py-2"
       >
         {% include item_template %}
@@ -93,7 +93,7 @@
   <p
     x-show="aberto && mensagemVaziaVisivel()"
     x-cloak
-    class="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm italic text-slate-500 shadow-lg"
+    class="absolute z-20 mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm italic text-text-tertiary shadow-lg"
     role="status"
     aria-live="polite"
   >

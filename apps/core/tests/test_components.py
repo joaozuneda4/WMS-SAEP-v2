@@ -51,18 +51,30 @@ def test_disabled_false_nao_aplica_atributo_na_tag():
 @pytest.mark.parametrize(
     'variant,classes_esperadas',
     [
-        ('primary', ['bg-blue-600', 'hover:bg-blue-700', 'active:bg-blue-800']),
+        (
+            'primary',
+            ['bg-primary', 'hover:bg-primary-hover', 'active:bg-primary-active'],
+        ),
         (
             'secondary',
-            ['bg-white', 'border-slate-300', 'hover:bg-slate-50', 'text-slate-700'],
+            [
+                'bg-surface',
+                'border-border-strong',
+                'hover:bg-bg-page',
+                'text-text-secondary',
+            ],
         ),
-        ('danger', ['bg-red-600', 'hover:bg-red-700', 'active:bg-red-800']),
+        ('danger', ['bg-danger', 'hover:bg-danger-hover', 'active:bg-danger-active']),
         (
             'danger-outline',
-            ['border-red-300', 'text-red-700', 'hover:bg-red-50'],
+            [
+                'border-danger-border-strong',
+                'text-danger-text',
+                'hover:bg-danger-subtle',
+            ],
         ),
-        ('ghost', ['bg-transparent', 'hover:bg-slate-100', 'text-slate-700']),
-        ('link', ['bg-transparent', 'text-blue-700', 'hover:underline']),
+        ('ghost', ['bg-transparent', 'hover:bg-bg-subtle', 'text-text-secondary']),
+        ('link', ['bg-transparent', 'text-primary-text', 'hover:underline']),
     ],
 )
 def test_variant_produz_classes_de_cor_esperadas(variant, classes_esperadas):

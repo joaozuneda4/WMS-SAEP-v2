@@ -13,25 +13,25 @@ Uso:
   {% include "components/badge.html" with variant="blue" label="Autorizada" role="status" aria_label="Estado: Autorizada" %}
 {% endcomment %}
 {% if variant == 'slate' %}
-  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-900 ring-1 ring-inset ring-slate-200">{{ label }}</span>
+  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-bg-subtle px-2.5 py-0.5 text-xs font-semibold text-text-primary ring-1 ring-inset ring-border">{{ label }}</span>
 {% elif variant == 'blue' %}
-  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-900 ring-1 ring-inset ring-blue-200">{{ label }}</span>
+  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-primary-muted px-2.5 py-0.5 text-xs font-semibold text-primary-text-strong ring-1 ring-inset ring-primary-border">{{ label }}</span>
 {% elif variant == 'blue-strong' %}
-  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-900 ring-1 ring-inset ring-blue-300">{{ label }}</span>
+  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-primary-muted-strong px-2.5 py-0.5 text-xs font-semibold text-primary-text-strong ring-1 ring-inset ring-primary-border-strong">{{ label }}</span>
 {% elif variant == 'amber' %}
-  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-200">{{ label }}</span>
+  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-warning-muted px-2.5 py-0.5 text-xs font-semibold text-warning-text-strong ring-1 ring-inset ring-warning-border">{{ label }}</span>
 {% elif variant == 'amber-strong' %}
-  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-300">{{ label }}</span>
+  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-warning-muted-strong px-2.5 py-0.5 text-xs font-semibold text-warning-text-strong ring-1 ring-inset ring-warning-border-strong">{{ label }}</span>
 {% elif variant == 'green' %}
-  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-900 ring-1 ring-inset ring-green-200">{{ label }}</span>
+  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-success-muted px-2.5 py-0.5 text-xs font-semibold text-success-text-strong ring-1 ring-inset ring-success-border">{{ label }}</span>
 {% elif variant == 'red' %}
-  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-900 ring-1 ring-inset ring-red-200">{{ label }}</span>
+  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-danger-muted px-2.5 py-0.5 text-xs font-semibold text-danger-text-strong ring-1 ring-inset ring-danger-border">{{ label }}</span>
 {% elif variant == 'red-strong' %}
-  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-red-200 px-2.5 py-0.5 text-xs font-semibold text-red-900 ring-1 ring-inset ring-red-300">{{ label }}</span>
+  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-danger-muted-strong px-2.5 py-0.5 text-xs font-semibold text-danger-text-strong ring-1 ring-inset ring-danger-border-strong">{{ label }}</span>
 {% elif variant == 'orange' %}
   <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-900 ring-1 ring-inset ring-orange-200">{{ label }}</span>
 {% elif variant == 'teal' %}
-  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-900 ring-1 ring-inset ring-teal-200">{{ label }}</span>
+  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-return-muted px-2.5 py-0.5 text-xs font-semibold text-return-text-strong ring-1 ring-inset ring-return-border">{{ label }}</span>
 {% elif variant == 'indigo' %}
   <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-900 ring-1 ring-inset ring-indigo-200">{{ label }}</span>
 {% elif variant == 'violet' %}
@@ -39,5 +39,5 @@ Uso:
 {% elif variant == 'yellow' %}
   <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-semibold text-yellow-900 ring-1 ring-inset ring-yellow-200">{{ label }}</span>
 {% else %}
-  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-red-600 px-2.5 py-0.5 text-xs font-semibold text-white ring-1 ring-inset ring-red-700">Indisponível</span>
+  <span{% if role %} role="{{ role }}"{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center rounded-full bg-danger px-2.5 py-0.5 text-xs font-semibold text-white ring-1 ring-inset ring-danger-hover">Indisponível</span>
 {% endif %}

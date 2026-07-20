@@ -6,21 +6,21 @@ renderiza como botão primário; `cta_secundario=True` renderiza como link
 sublinhado. Nenhum condicional de domínio aqui — quem chama já resolve
 títulos/descrições/flags antes do include.
 {% endcomment %}
-<div class="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+<div class="rounded-xl border border-dashed border-border-strong bg-surface px-6 py-12 text-center">
   {% if icone %}
-    <svg class="mx-auto mb-4 h-10 w-10 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg class="mx-auto mb-4 h-10 w-10 text-text-disabled" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       {% include icone %}
     </svg>
   {% endif %}
-  <h2 class="text-base font-medium text-slate-700">{{ titulo }}</h2>
+  <h2 class="text-base font-medium text-text-secondary">{{ titulo }}</h2>
   {% if descricao %}
-    <p class="mt-1 text-sm text-slate-500">{{ descricao }}</p>
+    <p class="mt-1 text-sm text-text-tertiary">{{ descricao }}</p>
   {% endif %}
   {% if cta_url and cta_label %}
     {% if cta_secundario %}
       <a
         href="{{ cta_url }}"
-        class="mt-3 inline-block rounded text-sm text-blue-600 underline hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        class="mt-3 inline-block rounded text-sm text-primary underline hover:text-primary-text-emphasis focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-2"
       >
         {{ cta_label }}
       </a>

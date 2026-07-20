@@ -13,7 +13,7 @@ Uso:
   {% include "components/filter_data.html" with id="filtro-data-ini" name="data_ini" label="De" value=filtros.data_ini %}
 {% endcomment %}
 <div>
-  <label for="{{ id }}" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
+  <label for="{{ id }}" class="block text-xs font-medium uppercase tracking-wide text-text-tertiary">
     {{ label }}
   </label>
   <input
@@ -21,6 +21,6 @@ Uso:
     id="{{ id }}"
     name="{{ name }}"
     value="{{ value }}"
-    class="mt-1 block min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+    class="mt-1 block min-h-11 w-full rounded-md border border-border-strong px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
   >
 </div>

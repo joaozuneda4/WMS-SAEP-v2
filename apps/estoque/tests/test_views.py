@@ -134,7 +134,7 @@ class TestListarSaidasExcepcionaisView:
         client.force_login(chefe_almoxarifado)
         response = client.get(URL)
         html = response.content.decode()
-        assert 'border-dashed border-slate-300' in html
+        assert 'border-dashed border-border-strong' in html
         assert 'Nenhuma saída excepcional registrada' in html
         assert 'Registre a primeira baixa administrativa direta de material.' in html
         assert reverse('estoque:nova_saida_excepcional') in html
@@ -1092,7 +1092,7 @@ class TestListaMateriaisView:
         client.force_login(chefe_almoxarifado)
         response = client.get(URL_MATERIAIS)
         html = response.content.decode()
-        assert 'border-dashed border-slate-300' in html
+        assert 'border-dashed border-border-strong' in html
         assert 'border-slate-200 bg-white p-8' not in html
         assert 'Nenhum material cadastrado no estoque.' in html
 
@@ -1102,7 +1102,7 @@ class TestListaMateriaisView:
         client.force_login(chefe_almoxarifado)
         response = client.get(URL_MATERIAIS, {'busca': 'inexistente-xyz'})
         html = response.content.decode()
-        assert 'border-dashed border-slate-300' in html
+        assert 'border-dashed border-border-strong' in html
         titulo_idx = html.index('Nenhum material encontrado para')
         match = re.search(r'<a\b[^>]*>', html[titulo_idx:])
         assert match is not None

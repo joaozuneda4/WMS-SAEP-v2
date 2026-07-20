@@ -49,6 +49,79 @@ return:   teal      (devolução operacional, reversão não-negativa)
 900+     = raro; futura expansão para dark mode
 ```
 
+### Tokens semânticos dentro dos componentes
+
+Os componentes globais (`components/badge.html`, `button.html`, `alert.html`,
+`pagination.html`, `empty_state.html`, `modal.html`/`_modal_body.html`,
+`core/partials/_messages.html` e os demais em `components/`) usam as
+utilities semânticas geradas pelo Tailwind a partir dos tokens `--color-*`
+de `input.css` (ex. `bg-primary`, `text-danger-text`), não classes de cor de
+paleta crua (`bg-blue-600`, `text-red-700` etc.) nem a variável CSS direto
+no HTML. Isso viabiliza o rebrand futuro descrito em "Quando aparecer
+identidade corporativa da SAEP" — trocar o valor do token muda todos os
+componentes de uma vez, sem tocar templates (#86).
+
+Além da escala base (`-subtle` 50, `-muted` 100, `-border` 200, `-text` 700,
+`-hover`/`-active` para `primary`), os componentes que precisam de mais
+contraste (badges, alertas, estado de erro) usam uma escala estendida:
+
+**Importante — Tailwind v4 só compila o que é usado.** `@theme` declara o
+token em `input.css`, mas a custom property e a utility só entram no
+`app.css` quando algum template referencia a classe (JIT real, não é um
+dump de todas as variáveis pro `:root`). Hoje `--color-success-text` e
+`--color-return-text` (o tier `-text` 700 base) e toda a família
+`--color-info*` estão declarados mas **não aparecem no `app.css`
+compilado** — nenhum template os consome (`success`/`return` só usam os
+tiers `-emphasis`/`-strong`; `info` é usado só pelo `.app-bar`, que não
+inclui esses tokens). Isso é esperado, não é bug: usar `text-success-text`
+ou `bg-info-subtle` num template novo funciona normalmente após
+`npm run css:build` recompilar. Só não espere a classe já existir no
+`app.css` atual sem ter sido consumida em algum lugar primeiro.
+
+| Sufixo | Shade típico | Uso |
+|---|---|---|
+| `-muted-strong` | 200 | fundo do badge "forte" (`primary-muted-strong`, `warning-muted-strong`, `danger-muted-strong`) |
+| `-border-strong` | 300 | ring do badge "forte"; borda do botão `danger-outline` |
+| `-text-subtle` | 700 (só `warning`) | texto de aviso inline menos enfático (ex. saldo insuficiente em `item_form_row.html`) |
+| `-text-emphasis` | 800 | texto de `alert.html`/`_messages.html` (banner, mais contraste que prosa comum) |
+| `-text-strong` | 900 | texto de badge/pill e caixa de erro do modal (contraste máximo em fundo claro) |
+| `-accent` | 500 (só `danger`) | foco do botão `danger`/`danger-outline`, asterisco de campo obrigatório |
+| `-border-input` | 400 (só `danger`) | borda de campo em estado inválido (`autocomplete.html`) |
+| `-hover`/`-active` | 700/800 (também em `danger`, além de `primary`) | estados de botão/confirm de modal |
+
+**Nota — variante `info` de `alert.html` e `_messages.html`:** o token
+`--color-info*` existe e mapeia pra `slate` (uso neutro/informacional
+reservado para o futuro). A variante `info`/padrão de `alert.html` e o nível
+padrão de `_messages.html`, porém, sempre renderizaram **azul** — por isso
+usam os tokens `primary-*`, não `info-*`. Migrar pra `info-*` mudaria a cor
+renderizada (slate ≠ blue), o que não é o objetivo desta indireção. Se um dia
+precisar de um alerta neutro/cinza de verdade, use `--color-info*`.
+
+Tokens novos adicionados em #86 (todos alias de shades já existentes na
+paleta Tailwind, sem inventar cor nova):
+
+```text
+--color-primary-muted-strong    blue-200
+--color-primary-border-strong   blue-300
+--color-primary-text-emphasis   blue-800
+--color-primary-text-strong     blue-900
+--color-danger-muted-strong     red-200
+--color-danger-border-strong    red-300
+--color-danger-border-input     red-400
+--color-danger-accent           red-500
+--color-danger-hover            red-700
+--color-danger-active           red-800
+--color-danger-text-emphasis    red-800
+--color-danger-text-strong      red-900
+--color-warning-muted-strong    amber-200
+--color-warning-border-strong   amber-300
+--color-warning-text-subtle     amber-700
+--color-warning-text-strong     amber-900
+--color-success-text-emphasis   green-800
+--color-success-text-strong     green-900
+--color-return-text-strong      teal-900
+```
+
 ### Tipografia
 
 **Fonte do sistema** — sem dependência de CDN
@@ -81,9 +154,9 @@ rounded:    rounded-lg (cards, inputs)
 ### Sombras e bordas
 
 ```
-cards:    shadow-sm border border-slate-200
-inputs:   border border-slate-300
-focus:    border-blue-500 ring-2 ring-blue-500 ring-offset-2
+cards:    shadow-sm border border-border
+inputs:   border border-border-strong
+focus:    border-border-focus ring-2 ring-border-focus ring-offset-2
 ```
 
 ## Estados de UI

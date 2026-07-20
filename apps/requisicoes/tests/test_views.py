@@ -653,7 +653,7 @@ def test_minhas_botao_ver_detalhes_corrige_drift_a11y(
         tag = html[html.rindex('<a', 0, idx) : html.index('>', idx) + 1]
         assert 'min-h-11' in tag
         assert 'focus-visible:ring-2' in tag
-        assert 'focus-visible:ring-blue-500' in tag
+        assert 'focus-visible:ring-border-focus' in tag
         assert 'py-1.5' not in tag
 
 
@@ -676,7 +676,7 @@ def test_minhas_tabela_tem_caption_sr_only(
     response = client.get(reverse('requisicoes:minhas'))
     conteudo = response.content.decode()
     marcador = (
-        '<table class="min-w-full divide-y divide-slate-200">'
+        '<table class="min-w-full divide-y divide-border">'
         '\n\n      <caption class="sr-only">Requisições onde você é '
         'criador ou beneficiário.</caption>'
     )
@@ -688,14 +688,14 @@ def test_minhas_vazia_exibe_empty_state_com_cta_canonico(client, solicitante):
     _login(client, solicitante)
     response = client.get(reverse('requisicoes:minhas'))
     html = response.content.decode()
-    assert 'border-dashed border-slate-300' in html
+    assert 'border-dashed border-border-strong' in html
     titulo_idx = html.index('Nenhuma requisição ainda')
     match = re.search(r'<a\b[^>]*>', html[titulo_idx:])
     assert match is not None
     tag = match.group()
     assert re.search(r'href="[^"]*"', tag)
     assert 'min-h-11' in tag
-    assert 'focus-visible:ring-blue-500' in tag
+    assert 'focus-visible:ring-border-focus' in tag
     assert 'justify-center' in tag
     assert 'focus-visible:ring-offset-1' in tag
     assert 'ring-offset-2' not in tag
@@ -3008,7 +3008,7 @@ class TestHistoricoRequisicoesView:
         tag = html[html.rindex('<a', 0, idx) : html.index('>', idx) + 1]
         assert 'min-h-11' in tag
         assert 'focus-visible:ring-2' in tag
-        assert 'focus-visible:ring-blue-500' in tag
+        assert 'focus-visible:ring-border-focus' in tag
 
     def test_empty_state_quando_historico_vazio(self, client, chefe_almoxarifado):
         _login(client, chefe_almoxarifado)
@@ -3435,7 +3435,7 @@ def test_badge_recusada_usa_cor_vermelha(
     _login(client, solicitante)
     response = client.get(reverse('requisicoes:detalhe', kwargs={'pk': req.pk}))
     assert response.status_code == 200
-    assert 'bg-red-200'.encode() in response.content
+    assert 'bg-danger-muted-strong'.encode() in response.content
 
 
 @pytest.mark.django_db
