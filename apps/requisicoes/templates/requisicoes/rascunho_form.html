@@ -158,7 +158,9 @@
       {# Container de linhas — alvo do HTMX swap #}
       <div id="itens-container" class="flex flex-col gap-3">
         {% for item_form in formset %}
-          {% include "requisicoes/partials/_item_form_row.html" with form=item_form form_index=forloop.counter0 prefix="itens-"|add:forloop.counter0|stringformat:"s" %}
+          {% with saldo_item=saldo_info|get_item:item_form.material_id.value %}
+          {% include "components/item_form_row.html" with material_id_field=item_form.material_id material_label_field=item_form.material_label quantidade_field=item_form.quantidade_solicitada quantidade_label="Quantidade" quantidade_min="1" quantidade_step="1" autocomplete_url_name="requisicoes:buscar_materiais" autocomplete_item_template="estoque/partials/_autocomplete_item_material.html" delete_field=item_form.DELETE form_index=forloop.counter0 saldo_item=saldo_item %}
+          {% endwith %}
         {% endfor %}
       </div>
 

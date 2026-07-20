@@ -1,0 +1,104 @@
+{% comment %}
+Linha de item de formset reutilizável entre telas com itens dinâmicos
+(requisições, saída excepcional). Extraído per ADR-0016 — markup de linha
+de item compartilhado em vez de reimplementado por tela.
+
+Parâmetros de contexto (todos BoundField, exceto indicado):
+  material_id_field      — campo hidden com o id do material
+  material_label_field    — campo de autocomplete (texto exibido)
+  quantidade_field        — campo numérico de quantidade
+  autocomplete_url_name   — nome da URL do endpoint de busca de materiais (string, resolvido via {% url %})
+  autocomplete_item_template — path do template de item do dropdown (string)
+  form_index              — índice numérico da linha (int)
+  quantidade_label         — rótulo do campo de quantidade (str, opcional, default "Quantidade")
+  delete_field             — BoundField do campo DELETE do formset (opcional)
+  saldo_item               — dict {elegivel, saldo_disponivel, motivo} (opcional)
+  habilitar_veto_duplicidade — bool (opcional): quando True, chama
+    window.selecionarMaterial(form_index, item) no onSelect do autocomplete —
+    a tela chamadora deve definir essa função globalmente (veto client-side
+    opcional; a fonte de verdade continua sendo o clean() do formset)
+{% endcomment %}
+{% load core_tags %}
+<div class="item-form-row flex flex-wrap items-start gap-3 p-3 rounded-lg border {% if saldo_item and not saldo_item.elegivel %}border-amber-300 bg-amber-50/40{% else %}border-slate-200 bg-white{% endif %}"
+     data-index="{{ form_index }}"
+     {% if delete_field.value %}style="display: none"{% endif %}>
+
+  {# Autocomplete de material — hidden field dentro do escopo Alpine para $refs #}
+  <div
+    class="min-w-0 flex-1 basis-full sm:basis-0"
+    x-data="autocomplete({
+      endpoint: '{% url autocomplete_url_name %}',
+      minChars: 2,
+      campoDisplay: 'label',
+      initialId: '{{ material_id_field.value|default:''|escapejs }}',
+      initialLabel: '{{ material_label_field.value|default:''|escapejs }}',
+      {% if habilitar_veto_duplicidade %}onSelect: (item) => selecionarMaterial({{ form_index }}, item),{% endif %}
+    })"
+    @click.outside="fecharDropdown()"
+  >
+    <input
+      type="hidden"
+      x-ref="hiddenInput"
+      name="{{ material_id_field.html_name }}"
+      id="{{ material_id_field.id_for_label }}"
+      value="{{ material_id_field.value|default:'' }}"
+    >
+    {% include "components/autocomplete.html" with label="Material" placeholder="Buscar por código ou descrição…" item_template=autocomplete_item_template sem_resultados_label="Nenhum material elegível encontrado." tipo_input="search" com_erro=material_label_field.errors erro_id=material_label_field.id_for_label|add:"-erro" %}
+    {% if material_label_field.errors %}
+      <p id="{{ material_label_field.id_for_label }}-erro" class="mt-1 text-xs text-red-600" role="alert">{{ material_label_field.errors|join:", " }}</p>
+    {% endif %}
+    {% if material_id_field.errors %}
+      <p class="mt-1 text-xs text-red-600" role="alert">{{ material_id_field.errors|join:", " }}</p>
+    {% endif %}
+    {% if saldo_item %}
+      {% if not saldo_item.elegivel %}
+        <p class="mt-1.5 flex items-center gap-1 text-xs font-medium text-amber-700" role="alert">
+          <svg aria-hidden="true" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/>
+          </svg>
+          {{ saldo_item.motivo }} — saldo atual: {{ saldo_item.saldo_disponivel|floatformat:"-3" }}
+        </p>
+      {% else %}
+        <p class="mt-1.5 text-xs text-slate-500">Saldo disponível: {{ saldo_item.saldo_disponivel|floatformat:"-3" }}</p>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  {# Quantidade #}
+  <div class="w-28 shrink-0">
+    <label class="block text-xs font-medium text-slate-600 mb-1" for="{{ quantidade_field.id_for_label }}">
+      {{ quantidade_label|default:"Quantidade" }}
+    </label>
+    <input
+      type="number"
+      name="{{ quantidade_field.html_name }}"
+      id="{{ quantidade_field.id_for_label }}"
+      value="{{ quantidade_field.value|default:'' }}"
+      min="{{ quantidade_min|default:'1' }}"
+      step="{{ quantidade_step|default:'1' }}"
+      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+      {% if quantidade_field.errors %}aria-invalid="true" aria-describedby="{{ quantidade_field.id_for_label }}-erro"{% endif %}
+    >
+    {% if quantidade_field.errors %}
+      <p id="{{ quantidade_field.id_for_label }}-erro" class="mt-1 text-xs text-red-600" role="alert">{{ quantidade_field.errors|join:", " }}</p>
+    {% endif %}
+  </div>
+
+  {# Campo DELETE do formset (escondido — controlado por JS/botão) #}
+  {% if delete_field %}
+    <input type="hidden" name="{{ delete_field.html_name }}" value="{{ delete_field.value|default:'' }}">
+  {% endif %}
+
+  {# Botão remover #}
+  <div class="pt-5 shrink-0">
+    <button
+      type="button"
+      class="flex items-center gap-1 text-slate-600 hover:text-red-700 focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-1 transition-colors px-2 py-1.5 rounded text-xs font-medium"
+      aria-label="Remover item"
+      onclick="var aviso = document.querySelector('.aviso_quantidade'); var row = this.closest('.item-form-row'); if (!podRemoverItem()) { if (aviso) aviso.style.color='#f87171'; if (row) row.style.outline='2px solid #f87171'; setTimeout(function(){ if (aviso) aviso.style.color=''; if (row) row.style.outline=''; }, 2000); return; } if (!row) return; row.style.display='none'; var deleteInput = row.querySelector('[name$=-DELETE]'); if (deleteInput) deleteInput.value='on';"
+    >
+      {% icon "remover" class="h-4 w-4 shrink-0" %}
+      <span class="hidden sm:inline">Remover</span>
+    </button>
+  </div>
+</div>

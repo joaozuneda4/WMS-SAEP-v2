@@ -425,11 +425,18 @@ def nova_linha_item(request):
     form.fields[DELETION_FIELD_NAME] = BooleanField(label='Deletar', required=False)
     return render(
         request,
-        'requisicoes/partials/_item_form_row.html',
+        'components/item_form_row.html',
         {
-            'form': form,
+            'material_id_field': form['material_id'],
+            'material_label_field': form['material_label'],
+            'quantidade_field': form['quantidade_solicitada'],
+            'quantidade_label': 'Quantidade',
+            'quantidade_min': '1',
+            'quantidade_step': '1',
+            'autocomplete_url_name': 'requisicoes:buscar_materiais',
+            'autocomplete_item_template': 'estoque/partials/_autocomplete_item_material.html',
+            'delete_field': form[DELETION_FIELD_NAME],
             'form_index': index,
-            'prefix': f'itens-{index}',
         },
     )
 

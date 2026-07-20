@@ -26,6 +26,11 @@ urlpatterns = [
         name='nova_saida_excepcional',
     ),
     path(
+        'saidas-excepcionais/nova/nova-linha/',
+        views.nova_linha_item_saida_excepcional_view,
+        name='nova_linha_item_saida_excepcional',
+    ),
+    path(
         'saidas-excepcionais/buscar-materiais/',
         views.buscar_materiais_saida_excepcional_view,
         name='buscar_materiais_saida_excepcional',

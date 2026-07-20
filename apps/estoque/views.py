@@ -2,8 +2,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import DecimalField, ExpressionWrapper, F, Sum
+from django.forms import BooleanField
+from django.forms.formsets import DELETION_FIELD_NAME
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
 
 from apps.accounts.papeis import papel_efetivo
@@ -13,9 +16,10 @@ from apps.core.exceptions import (
     ErroDominio,
     PermissaoNegada,
 )
-from apps.core.http import parse_data_iso
+from apps.core.http import htmx_redirect, parse_data_iso
 from apps.core.listagem import paginar_com_filtros
 from apps.core.presentation import traduz_erro_dominio
+from apps.estoque.forms import ItemSaidaExcepcionalFormSet, SaidaExcepcionalForm
 from apps.estoque.models import Estoque, SaldoEstoque, TipoMovimentacaoEstoque
 from apps.estoque.policies import (
     exigir_pode_consultar_movimentacoes_estoque,
@@ -31,18 +35,6 @@ from apps.estoque.selectors import (
     pode_filtrar_movimentacoes_por_setor,
 )
 from apps.estoque.services import registrar_saida_excepcional
-
-MOTIVO_SAIDA_OPCOES = [
-    ('avaria', 'Avaria / Deterioração'),
-    ('vencimento', 'Vencimento / Prazo expirado'),
-    ('obsolescencia', 'Descarte por obsolescência'),
-    ('extravio', 'Perda / Extravio'),
-    ('ajuste', 'Ajuste de inventário'),
-    ('doacao', 'Doação'),
-    ('outro', 'Outro'),
-]
-
-_MOTIVO_SAIDA_VALORES = {v for v, _ in MOTIVO_SAIDA_OPCOES}
 
 
 @login_required
@@ -196,72 +188,92 @@ def nova_saida_excepcional_view(request):
             'estoque/nova_saida_excepcional.html',
             {
                 'estoque': None,
-                'motivo_choices': MOTIVO_SAIDA_OPCOES,
+                'form': SaidaExcepcionalForm(),
+                'formset': ItemSaidaExcepcionalFormSet(prefix='itens', initial=[{}]),
                 'erro_geral': 'Não há estoque ativo configurado.',
             },
             status=409,
         )
 
-    ctx_base = {'estoque': estoque, 'motivo_choices': MOTIVO_SAIDA_OPCOES}
-
     if request.method == 'GET':
-        return render(request, 'estoque/nova_saida_excepcional.html', ctx_base)
-
-    motivo = request.POST.get('motivo', '').strip()
-    observacao = request.POST.get('observacao', '').strip()
-
-    erros = {}
-    if not motivo or motivo not in _MOTIVO_SAIDA_VALORES:
-        erros['motivo'] = 'Selecione um motivo válido.'
-    if not observacao:
-        erros['observacao'] = 'A observação é obrigatória.'
-
-    try:
-        total_forms = int(request.POST.get('itens-TOTAL_FORMS', 0))
-        if total_forms < 0:
-            total_forms = 0
-    except (TypeError, ValueError):
-        total_forms = 0
-        erros['itens'] = 'Estrutura de itens inválida.'
-
-    itens_raw = []
-    for i in range(total_forms):
-        mid = request.POST.get(f'itens-{i}-material_id', '').strip()
-        qtd = request.POST.get(f'itens-{i}-quantidade', '').strip()
-        if bool(mid) ^ bool(qtd):
-            erros['itens'] = (
-                'Preencha material e quantidade para cada linha adicionada.'
-            )
-        elif mid and qtd:
-            itens_raw.append({'material_id': mid, 'quantidade': qtd})
-
-    if not itens_raw and 'itens' not in erros:
-        erros['itens'] = 'Adicione ao menos um material.'
-
-    def _render_erro(extra=None):
-        ctx = {**ctx_base, 'erros': erros, 'motivo': motivo, 'observacao': observacao}
-        if extra:
-            ctx.update(extra)
-        return render(request, 'estoque/nova_saida_excepcional.html', ctx)
-
-    if erros:
-        return _render_erro()
-
-    try:
-        saida = registrar_saida_excepcional(
-            ator_id=request.user.pk,
-            estoque_id=estoque.pk,
-            motivo=motivo,
-            observacao=observacao,
-            itens=itens_raw,
+        return render(
+            request,
+            'estoque/nova_saida_excepcional.html',
+            {
+                'estoque': estoque,
+                'form': SaidaExcepcionalForm(),
+                'formset': ItemSaidaExcepcionalFormSet(
+                    prefix='itens', initial=[{}], estoque_id=estoque.pk
+                ),
+            },
         )
-    except DadosInvalidos as exc:
-        return _render_erro({'erro_geral': str(exc)})
-    except ConflitoDominio as exc:
-        return _render_erro({'erro_geral': str(exc)})
 
-    messages.success(request, f'Saída {saida.numero_publico} registrada com sucesso.')
-    return redirect('estoque:listar_saidas_excepcionais')
+    form = SaidaExcepcionalForm(request.POST)
+    formset = ItemSaidaExcepcionalFormSet(
+        request.POST, prefix='itens', estoque_id=estoque.pk
+    )
+
+    if form.is_valid() and formset.is_valid():
+        try:
+            saida = registrar_saida_excepcional(
+                ator_id=request.user.pk,
+                estoque_id=estoque.pk,
+                motivo=form.cleaned_data['motivo'],
+                observacao=form.cleaned_data['observacao'],
+                itens=formset.linhas_validas(),
+            )
+        except PermissaoNegada as exc:
+            raise PermissionDenied(str(exc))
+        except DadosInvalidos as exc:
+            messages.error(request, str(exc))
+        except ConflitoDominio as exc:
+            messages.warning(request, str(exc))
+        else:
+            messages.success(
+                request, f'Saída {saida.numero_publico} registrada com sucesso.'
+            )
+            return htmx_redirect(request, reverse('estoque:listar_saidas_excepcionais'))
+
+    return render(
+        request,
+        'estoque/nova_saida_excepcional.html',
+        {'estoque': estoque, 'form': form, 'formset': formset},
+    )
+
+
+@login_required
+@require_GET
+def nova_linha_item_saida_excepcional_view(request):
+    """Retorna partial HTML com nova linha vazia do formset de saída excepcional."""
+    papel = papel_efetivo(request.user)
+    try:
+        exigir_pode_registrar_saida_excepcional(papel)
+    except PermissaoNegada as exc:
+        raise PermissionDenied(str(exc))
+
+    try:
+        index = int(request.GET.get('index', 0))
+    except (ValueError, TypeError):
+        index = 0
+
+    form = ItemSaidaExcepcionalFormSet.form(prefix=f'itens-{index}')
+    form.fields[DELETION_FIELD_NAME] = BooleanField(label='Deletar', required=False)
+    return render(
+        request,
+        'components/item_form_row.html',
+        {
+            'material_id_field': form['material_id'],
+            'material_label_field': form['material_label'],
+            'quantidade_field': form['quantidade'],
+            'quantidade_label': 'Quantidade',
+            'quantidade_min': '0.001',
+            'quantidade_step': 'any',
+            'autocomplete_url_name': 'estoque:buscar_materiais_saida_excepcional',
+            'autocomplete_item_template': 'estoque/partials/_autocomplete_item_material.html',
+            'delete_field': form[DELETION_FIELD_NAME],
+            'form_index': index,
+        },
+    )
 
 
 @login_required

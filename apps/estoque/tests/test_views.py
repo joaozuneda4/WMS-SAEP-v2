@@ -160,6 +160,14 @@ class TestNovaSaidaExcepcionalView:
         response = client.get(URL_NOVA)
         assert response.status_code == 200
 
+    def test_get_formset_tem_uma_linha_inicial_vazia(
+        self, client, chefe_almoxarifado, estoque_principal
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_NOVA)
+        assert response.status_code == 200
+        assert len(response.context['formset'].forms) == 1
+
     def test_superuser_acessa_formulario(self, client, superuser, estoque_principal):
         client.force_login(superuser)
         response = client.get(URL_NOVA)
@@ -180,7 +188,7 @@ class TestNovaSaidaExcepcionalView:
         assert response.status_code == 302
         assert 'login' in response['Location']
 
-    def test_post_valido_cria_saida_e_redireciona(
+    def test_post_nao_htmx_valido_cria_saida_e_redireciona(
         self, client, chefe_almoxarifado, estoque_principal, material_disponivel
     ):
         client.force_login(chefe_almoxarifado)
@@ -204,6 +212,30 @@ class TestNovaSaidaExcepcionalView:
         saida = SaidaExcepcional.objects.get()
         assert saida.numero_publico.startswith('SXP-')
 
+    def test_post_htmx_valido_cria_saida_e_retorna_hx_redirect(
+        self, client, chefe_almoxarifado, estoque_principal, material_disponivel
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            URL_NOVA,
+            data={
+                'motivo': 'avaria',
+                'observacao': 'Caixas molhadas',
+                'itens-TOTAL_FORMS': '1',
+                'itens-INITIAL_FORMS': '0',
+                'itens-MIN_NUM_FORMS': '0',
+                'itens-MAX_NUM_FORMS': '1000',
+                'itens-0-material_id': str(material_disponivel.pk),
+                'itens-0-quantidade': '5',
+            },
+            HTTP_HX_REQUEST='true',
+        )
+        assert response.status_code == 204
+        assert response['HX-Redirect'] == reverse('estoque:listar_saidas_excepcionais')
+        from apps.estoque.models import SaidaExcepcional
+
+        assert SaidaExcepcional.objects.count() == 1
+
     def test_post_sem_motivo_retorna_form_com_erro(
         self, client, chefe_almoxarifado, estoque_principal, material_disponivel
     ):
@@ -222,9 +254,49 @@ class TestNovaSaidaExcepcionalView:
             },
         )
         assert response.status_code == 200
-        assert 'motivo' in response.context['erros']
+        assert 'motivo' in response.context['form'].errors
 
-    def test_post_sem_itens_retorna_form_com_erro(
+    def test_post_motivo_invalido_retorna_form_com_erro(
+        self, client, chefe_almoxarifado, estoque_principal, material_disponivel
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            URL_NOVA,
+            data={
+                'motivo': 'nao_existe',
+                'observacao': 'obs válida',
+                'itens-TOTAL_FORMS': '1',
+                'itens-INITIAL_FORMS': '0',
+                'itens-MIN_NUM_FORMS': '0',
+                'itens-MAX_NUM_FORMS': '1000',
+                'itens-0-material_id': str(material_disponivel.pk),
+                'itens-0-quantidade': '5',
+            },
+        )
+        assert response.status_code == 200
+        assert 'motivo' in response.context['form'].errors
+
+    def test_post_sem_observacao_retorna_form_com_erro(
+        self, client, chefe_almoxarifado, estoque_principal, material_disponivel
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            URL_NOVA,
+            data={
+                'motivo': 'avaria',
+                'observacao': '',
+                'itens-TOTAL_FORMS': '1',
+                'itens-INITIAL_FORMS': '0',
+                'itens-MIN_NUM_FORMS': '0',
+                'itens-MAX_NUM_FORMS': '1000',
+                'itens-0-material_id': str(material_disponivel.pk),
+                'itens-0-quantidade': '5',
+            },
+        )
+        assert response.status_code == 200
+        assert 'observacao' in response.context['form'].errors
+
+    def test_post_sem_itens_retorna_formset_com_erro(
         self, client, chefe_almoxarifado, estoque_principal
     ):
         client.force_login(chefe_almoxarifado)
@@ -240,7 +312,83 @@ class TestNovaSaidaExcepcionalView:
             },
         )
         assert response.status_code == 200
-        assert 'itens' in response.context['erros']
+        assert any(
+            'ao menos um item' in e
+            for e in response.context['formset'].non_form_errors()
+        )
+
+    def test_post_item_duplicado_retorna_erro_na_linha(
+        self, client, chefe_almoxarifado, estoque_principal, material_disponivel
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            URL_NOVA,
+            data={
+                'motivo': 'avaria',
+                'observacao': 'obs válida',
+                'itens-TOTAL_FORMS': '2',
+                'itens-INITIAL_FORMS': '0',
+                'itens-MIN_NUM_FORMS': '0',
+                'itens-MAX_NUM_FORMS': '1000',
+                'itens-0-material_id': str(material_disponivel.pk),
+                'itens-0-quantidade': '5',
+                'itens-1-material_id': str(material_disponivel.pk),
+                'itens-1-quantidade': '3',
+            },
+        )
+        assert response.status_code == 200
+        formset = response.context['formset']
+        assert any('material_label' in f.errors for f in formset.forms)
+
+    def test_post_quantidade_invalida_retorna_erro_na_linha(
+        self, client, chefe_almoxarifado, estoque_principal, material_disponivel
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            URL_NOVA,
+            data={
+                'motivo': 'avaria',
+                'observacao': 'obs válida',
+                'itens-TOTAL_FORMS': '1',
+                'itens-INITIAL_FORMS': '0',
+                'itens-MIN_NUM_FORMS': '0',
+                'itens-MAX_NUM_FORMS': '1000',
+                'itens-0-material_id': str(material_disponivel.pk),
+                'itens-0-quantidade': '0',
+            },
+        )
+        assert response.status_code == 200
+        formset = response.context['formset']
+        assert 'quantidade' in formset.forms[0].errors
+
+    def test_post_material_inelegivel_retorna_erro_na_linha(
+        self, client, chefe_almoxarifado, estoque_principal
+    ):
+        from apps.estoque.models import Material, SaldoEstoque, UnidadeMedida
+
+        material_inativo = Material.objects.create(
+            codigo='MAT097', nome='Serrote', unidade=UnidadeMedida.UNIDADE, ativo=False
+        )
+        SaldoEstoque.objects.create(
+            estoque=estoque_principal, material=material_inativo, saldo_fisico=10
+        )
+        client.force_login(chefe_almoxarifado)
+        response = client.post(
+            URL_NOVA,
+            data={
+                'motivo': 'avaria',
+                'observacao': 'obs válida',
+                'itens-TOTAL_FORMS': '1',
+                'itens-INITIAL_FORMS': '0',
+                'itens-MIN_NUM_FORMS': '0',
+                'itens-MAX_NUM_FORMS': '1000',
+                'itens-0-material_id': str(material_inativo.pk),
+                'itens-0-quantidade': '1',
+            },
+        )
+        assert response.status_code == 200
+        formset = response.context['formset']
+        assert 'material_label' in formset.forms[0].errors
 
     def test_post_aux_recebe_403_sem_persistencia(
         self, client, aux_almoxarifado, estoque_principal, material_disponivel
@@ -308,11 +456,11 @@ class TestNovaSaidaExcepcionalView:
         assert 'login' in response['Location']
         assert SaidaExcepcional.objects.count() == 0
 
-    def test_dados_invalidos_do_service_rerendera_form_nao_redirect(
+    def test_dados_invalidos_do_service_gera_messages_error_e_rerender(
         self, client, chefe_almoxarifado, estoque_principal, material_disponivel
     ):
-        """Opt-out: DadosInvalidos do service deve re-renderizar form com erro_geral,
-        não redirect com messages (estado UI intermediário)."""
+        """DadosInvalidos do service (ex: race pós-clean) vira messages.error e
+        re-renderiza o form — sem redirect, mesma request (docs/CONVENTIONS.md)."""
         from unittest.mock import patch
 
         from apps.core.exceptions import DadosInvalidos
@@ -326,7 +474,7 @@ class TestNovaSaidaExcepcionalView:
                 URL_NOVA,
                 data={
                     'motivo': 'avaria',
-                    'observacao': 'Teste opt-out',
+                    'observacao': 'Teste',
                     'itens-TOTAL_FORMS': '1',
                     'itens-INITIAL_FORMS': '0',
                     'itens-MIN_NUM_FORMS': '0',
@@ -337,9 +485,44 @@ class TestNovaSaidaExcepcionalView:
             )
 
         assert response.status_code == 200
-        assert 'erro_geral' in response.context
-        assert response.context['erro_geral'] == 'material inativo'
-        assert not list(response.wsgi_request._messages)
+        mensagens = list(response.wsgi_request._messages)
+        assert len(mensagens) == 1
+        assert mensagens[0].level_tag == 'error'
+        assert str(mensagens[0]) == 'material inativo'
+
+    def test_conflito_dominio_do_service_gera_messages_warning_e_rerender(
+        self, client, chefe_almoxarifado, estoque_principal, material_disponivel
+    ):
+        """ConflitoDominio do service (ex: saldo insuficiente na corrida entre
+        clean() e select_for_update()) vira messages.warning e re-renderiza."""
+        from unittest.mock import patch
+
+        from apps.core.exceptions import ConflitoDominio
+
+        client.force_login(chefe_almoxarifado)
+        with patch(
+            'apps.estoque.views.registrar_saida_excepcional',
+            side_effect=ConflitoDominio('saldo físico insuficiente'),
+        ):
+            response = client.post(
+                URL_NOVA,
+                data={
+                    'motivo': 'avaria',
+                    'observacao': 'Teste',
+                    'itens-TOTAL_FORMS': '1',
+                    'itens-INITIAL_FORMS': '0',
+                    'itens-MIN_NUM_FORMS': '0',
+                    'itens-MAX_NUM_FORMS': '1000',
+                    'itens-0-material_id': str(material_disponivel.pk),
+                    'itens-0-quantidade': '5',
+                },
+            )
+
+        assert response.status_code == 200
+        mensagens = list(response.wsgi_request._messages)
+        assert len(mensagens) == 1
+        assert mensagens[0].level_tag == 'warning'
+        assert str(mensagens[0]) == 'saldo físico insuficiente'
 
 
 class TestBuscarMateriasSaidaExcepcionalView:
@@ -1456,3 +1639,32 @@ class TestHistoricoMovimentacoesFiltrosResponsivo:
         idx_chip = fonte.index('_chip_so_saidas.html')
         idx_shell = fonte.index('filter_shell.html#abertura')
         assert idx_chip < idx_shell
+
+
+URL_NOVA_LINHA_ITEM = reverse('estoque:nova_linha_item_saida_excepcional')
+
+
+class TestNovaLinhaItemSaidaExcepcionalView:
+    def test_chefe_recebe_partial_com_linha_vazia(self, client, chefe_almoxarifado):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_NOVA_LINHA_ITEM, {'index': '2'})
+        assert response.status_code == 200
+        html = response.content.decode()
+        assert 'itens-2-material_id' in html
+        assert 'itens-2-quantidade' in html
+
+    def test_index_ausente_usa_zero(self, client, chefe_almoxarifado):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_NOVA_LINHA_ITEM)
+        assert response.status_code == 200
+        assert 'itens-0-material_id' in response.content.decode()
+
+    def test_solicitante_recebe_403(self, client, solicitante):
+        client.force_login(solicitante)
+        response = client.get(URL_NOVA_LINHA_ITEM)
+        assert response.status_code == 403
+
+    def test_anonimo_redirecionado_para_login(self, client):
+        response = client.get(URL_NOVA_LINHA_ITEM)
+        assert response.status_code == 302
+        assert 'login' in response['Location']
