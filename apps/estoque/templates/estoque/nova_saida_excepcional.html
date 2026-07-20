@@ -18,9 +18,7 @@
 <div class="max-w-3xl mx-auto pb-20 sm:pb-0">
 
   {% if erro_geral %}
-    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
-      {{ erro_geral }}
-    </div>
+    {% include "components/alert.html" with variant="danger" icone=False message=erro_geral class="mb-4" %}
   {% endif %}
 
   <form method="post" novalidate data-prevent-double-submit>
@@ -81,20 +79,11 @@
 
       {# Erros gerais do formset #}
       {% if formset.non_form_errors %}
-        <div class="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700" role="alert">
-          {% for erro in formset.non_form_errors %}
-            <p>{{ erro }}</p>
-          {% endfor %}
-        </div>
+        {% include "components/alert.html" with variant="danger" icone=False body_template="estoque/partials/_alert_erros_formset.html" class="mb-3" %}
       {% endif %}
 
       {# Aviso de material duplicado — veto client-side otimista (fonte de verdade é o clean() do formset) #}
-      <div
-        id="aviso-duplicidade"
-        class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"
-        role="alert"
-        aria-live="assertive"
-      ></div>
+      {% include "components/alert.html" with variant="danger" id="aviso-duplicidade" icone=False message="" aria_live="assertive" class="hidden mb-3" %}
 
       {# Container de linhas — alvo do HTMX swap #}
       <div id="itens-container" class="flex flex-col gap-3">

@@ -20,10 +20,7 @@
       O rascunho não será enviado automaticamente.
     </p>
 
-    <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 mb-6" role="note">
-      <strong>Atenção:</strong> quantidades autorizadas e entregues não são copiadas.
-      Somente as quantidades solicitadas originais são aproveitadas.
-    </div>
+    {% include "components/alert.html" with variant="warning" role="note" icone=False body_template="requisicoes/partials/_alert_nota_copia_corpo.html" class="mb-6" %}
 
     <form method="post" action="{% url 'requisicoes:copiar' requisicao.pk %}">
       {% csrf_token %}
