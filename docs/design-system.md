@@ -53,11 +53,13 @@ return:   teal      (devolução operacional, reversão não-negativa)
 
 Os componentes globais (`components/badge.html`, `button.html`, `alert.html`,
 `pagination.html`, `empty_state.html`, `modal.html`/`_modal_body.html`,
-`core/partials/_messages.html` e os demais em `components/`) usam os tokens
-`--color-*` de `input.css`, não classes de cor de paleta crua
-(`bg-blue-600`, `text-red-700` etc). Isso viabiliza o rebrand futuro descrito
-em "Quando aparecer identidade corporativa da SAEP" — trocar o valor do
-token muda todos os componentes de uma vez, sem tocar templates (#86).
+`core/partials/_messages.html` e os demais em `components/`) usam as
+utilities semânticas geradas pelo Tailwind a partir dos tokens `--color-*`
+de `input.css` (ex. `bg-primary`, `text-danger-text`), não classes de cor de
+paleta crua (`bg-blue-600`, `text-red-700` etc.) nem a variável CSS direto
+no HTML. Isso viabiliza o rebrand futuro descrito em "Quando aparecer
+identidade corporativa da SAEP" — trocar o valor do token muda todos os
+componentes de uma vez, sem tocar templates (#86).
 
 Além da escala base (`-subtle` 50, `-muted` 100, `-border` 200, `-text` 700,
 `-hover`/`-active` para `primary`), os componentes que precisam de mais
@@ -65,7 +67,7 @@ contraste (badges, alertas, estado de erro) usam uma escala estendida:
 
 | Sufixo | Shade típico | Uso |
 |---|---|---|
-| `-muted-strong` | 200 | fundo do badge "forte" (`blue-strong`, `amber-strong`, `red-strong`) |
+| `-muted-strong` | 200 | fundo do badge "forte" (`primary-muted-strong`, `warning-muted-strong`, `danger-muted-strong`) |
 | `-border-strong` | 300 | ring do badge "forte"; borda do botão `danger-outline` |
 | `-text-subtle` | 700 (só `warning`) | texto de aviso inline menos enfático (ex. saldo insuficiente em `item_form_row.html`) |
 | `-text-emphasis` | 800 | texto de `alert.html`/`_messages.html` (banner, mais contraste que prosa comum) |
@@ -85,7 +87,7 @@ precisar de um alerta neutro/cinza de verdade, use `--color-info*`.
 Tokens novos adicionados em #86 (todos alias de shades já existentes na
 paleta Tailwind, sem inventar cor nova):
 
-```
+```text
 --color-primary-muted-strong    blue-200
 --color-primary-border-strong   blue-300
 --color-primary-text-emphasis   blue-800
