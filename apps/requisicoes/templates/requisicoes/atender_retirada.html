@@ -174,21 +174,8 @@
       <h2 id="cabecalho-titulo" class="mb-4 text-sm font-semibold text-slate-900">Dados da retirada</h2>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label for="{{ cabecalho.retirante_nome.id_for_label }}" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
-            Retirante <span aria-hidden="true" class="text-red-500">*</span>
-          </label>
-          {{ cabecalho.retirante_nome }}
-          {% if cabecalho.retirante_nome.errors %}
-            <p class="mt-1 text-xs text-red-600" role="alert">{{ cabecalho.retirante_nome.errors.0 }}</p>
-          {% endif %}
-        </div>
-        <div class="sm:col-span-2">
-          <label for="{{ cabecalho.observacao.id_for_label }}" class="block text-xs font-medium uppercase tracking-wide text-slate-500">
-            Observação
-          </label>
-          {{ cabecalho.observacao }}
-        </div>
+        {% include "components/form_field.html" with field=cabecalho.retirante_nome %}
+        {% include "components/form_field.html" with field=cabecalho.observacao class="sm:col-span-2" %}
       </div>
     </section>
 

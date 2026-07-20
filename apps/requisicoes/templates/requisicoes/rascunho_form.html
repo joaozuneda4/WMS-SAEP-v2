@@ -173,17 +173,7 @@
         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold mr-1.5">3</span>
         Observação geral
       </h2>
-      <label class="sr-only" for="{{ form.observacao_geral.id_for_label }}">Observação geral</label>
-      <textarea
-        name="{{ form.observacao_geral.html_name }}"
-        id="{{ form.observacao_geral.id_for_label }}"
-        rows="3"
-        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        placeholder="Opcional — contexto adicional sobre esta requisição"
-      >{{ form.observacao_geral.value|default:'' }}</textarea>
-      {% if form.observacao_geral.errors %}
-        <p class="mt-1 text-xs text-red-600" role="alert">{{ form.observacao_geral.errors|join:", " }}</p>
-      {% endif %}
+      {% include "components/form_field.html" with field=form.observacao_geral label_class="sr-only" %}
     </section>
 
     {% comment %}
