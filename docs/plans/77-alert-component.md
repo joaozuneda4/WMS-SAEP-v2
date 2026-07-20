@@ -41,7 +41,13 @@ message        (obrigatório, exceto se body_template ou casca JS-hidratada) tex
                responsabilidade do chamador tratar (o componente não valida
                obrigatoriedade em runtime, só documenta a expectativa)
 body_template  (opcional) partial incluído no corpo — herda contexto do chamador
-               (mesmo mecanismo de form_body_template em modal.html)
+               (mesmo mecanismo de form_body_template em modal.html). Precedência
+               explícita quando ambos são passados: `body_template` sempre vence,
+               `message` é ignorado nesse caso (sem erro, sem renderização
+               duplicada) — mesma regra de exclusividade mútua de `icon_variant`
+               vs. conteúdo textual em outros componentes do projeto. Não é
+               esperado que um chamador passe os dois; quando `body_template` é
+               usado, `message` normalmente fica ausente
 icone          (opcional, bool, default=True)
 role           (opcional) sobrescreve role padrão (default: info/success=status,
                warning/danger=alert)
@@ -74,10 +80,13 @@ Visual: `rounded-lg border px-4 py-3 text-sm` + par cor-200/cor-50/cor-800 (spec
   de #93)
 - `nova_saida_excepcional.html:92-97` — caixa de duplicidade (`#aviso-duplicidade`),
   danger, `icone=False`, `id="aviso-duplicidade"`, `aria_live="assertive"`,
-  `message=""` (uso explicitamente coberto pelo contrato do parâmetro `message` acima —
-  casca JS-hidratada; JS do chamador continua fazendo `textContent`/
-  `classList.toggle('hidden')`, componente só fornece a casca estática inicial) —
-  **novo caso**: na issue original
+  `message=""`, `class="hidden"` (**invariante obrigatória**: a casca renderiza
+  oculta por padrão via `class="hidden"` — sem isso, um `role="alert"` vazio poderia
+  ser anunciado por leitor de tela antes da hidratação. JS do chamador continua
+  fazendo `textContent`/`classList.remove('hidden')` para popular e mostrar,
+  `classList.add('hidden')` para esconder de novo — ciclo
+  oculto→preenchido→visível→oculto idêntico ao comportamento atual, componente só
+  fornece a casca estática inicial) — **novo caso**: na issue original
   isso era Alpine `x-show`/`x-text` reativo (não migrável); pós-#93 é JS vanilla direto
   no DOM, compatível com uma casca server-rendered
 - `copiar_confirmacao.html:23-26` — nota amber, `role="note"` preservado via override
@@ -119,9 +128,17 @@ Visual: `rounded-lg border px-4 py-3 text-sm` + par cor-200/cor-50/cor-800 (spec
 
 - Teste de template do componente isolado (`test_components_alert.py`): variantes
   (info/success/warning/danger), `role` correto por variante, override de `role`,
-  `icone=False` oculta ícone, `body_template` inclui corpo herdando contexto, `id`
-  renderiza atributo, `class` faz passthrough, `message` é autoescapado, `message=""`
-  sem `body_template` renderiza casca válida sem erro (caso da casca JS-hidratada).
+  `icone=False` oculta ícone, `body_template` inclui corpo herdando contexto sem exigir
+  `message` (caso omitido), `body_template` tem precedência quando os dois são
+  passados juntos, `id` renderiza atributo, `class` faz passthrough, `message` é
+  autoescapado, `message=""` sem `body_template` renderiza casca válida sem erro
+  (caso da casca JS-hidratada) — incluindo o cenário `class="hidden"` +
+  `message=""` da caixa de duplicidade, com asserção de que a classe `hidden` está
+  presente na renderização inicial (o restante do ciclo — popular e reexibir via
+  `textContent`/`classList` — é client-side; o projeto não tem suíte de teste de
+  JS/browser hoje, então esse trecho permanece verificado manualmente no browser,
+  igual ao comportamento inline atual, sem regressão de cobertura introduzida por
+  esta migração).
 - Testes de view existentes (rascunho_form, nova_saida_excepcional, copiar_confirmacao,
   preview_importacao_scpi) continuam cobrindo a exibição das mensagens — texto e roles
   seguem presentes após a migração; nenhuma asserção de view deve precisar mudar de
