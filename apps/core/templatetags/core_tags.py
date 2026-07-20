@@ -2,8 +2,9 @@ from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
 from django import template
+from django.forms import BoundField
 from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 register = template.Library()
 
@@ -47,6 +48,31 @@ def validar_contrato_modal(action_url, submit_form_id):
             f'action_url={action_url!r}, submit_form_id={submit_form_id!r}).'
         )
     return ''
+
+
+@register.simple_tag
+def renderizar_campo_com_aria(
+    field: BoundField, tem_ajuda: object = False, tem_erro: object = False
+) -> SafeString:
+    """Renderiza o BoundField injetando aria-invalid/aria-describedby.
+
+    Único mecanismo do projeto pra passar attrs extras a `{{ field }}` —
+    Django não permite isso via linguagem de template pura (chamada de
+    método sem argumentos). Usado por components/form_field.html, escopado
+    só aos 2 atributos ARIA do contrato do componente. `field.as_widget`
+    mescla os attrs recebidos com os automáticos do widget (`required`,
+    `class`, `placeholder` etc. definidos em forms.py não são removidos).
+    """
+    attrs: dict[str, str | bool] = {}
+    describedby_ids: list[str] = []
+    if tem_ajuda:
+        describedby_ids.append(f'{field.id_for_label}-ajuda')
+    if tem_erro:
+        describedby_ids.append(f'{field.id_for_label}-erro')
+        attrs['aria-invalid'] = 'true'
+    if describedby_ids:
+        attrs['aria-describedby'] = ' '.join(describedby_ids)
+    return field.as_widget(attrs=attrs)
 
 
 NAVEGACAO: list[dict[str, Any]] = [

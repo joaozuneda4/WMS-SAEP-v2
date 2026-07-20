@@ -1,0 +1,48 @@
+{% comment %}
+Componente global de campo de formulário: label vinculada + ajuda + erro +
+ARIA. Não conhece exceções de domínio — textos de erro vêm sempre do Form
+(field.errors), nunca hardcoded aqui.
+
+Parâmetros:
+  field           (obrigatório) BoundField do Django
+  label_override  (opcional) texto customizado — senão usa field.label
+  help_text       (opcional) sobrescreve field.help_text
+  label_class     (opcional, default "block text-xs font-medium uppercase
+                  tracking-wide text-slate-500") classes da label
+  required_marker (opcional, bool) True força mostrar o asterisco mesmo se o
+                  campo não for obrigatório; False força esconder mesmo se
+                  for; ausente (default) deriva de field.field.required
+  class           (opcional) passthrough pro <div> wrapper
+
+Comportamento: aria-invalid + aria-describedby (compondo hint e erro quando
+presentes) injetados no widget via {% renderizar_campo_com_aria %}
+(apps/core/templatetags/core_tags.py) — Django não permite passar attrs
+extras a {{ field }} via linguagem de template pura. O atributo `required`
+nativo do HTML já vem do Django por padrão em campo obrigatório
+(Form.use_required_attribute) e não é duplicado como aria-required.
+
+Uso:
+  {% include "components/form_field.html" with field=form.motivo %}
+  {% include "components/form_field.html" with field=form.observacao_geral label_class="sr-only" %}
+{% endcomment %}
+{% load core_tags %}
+{% with texto_ajuda=help_text|default:field.help_text %}
+<div{% if class %} class="{{ class }}"{% endif %}>
+  <label
+    for="{{ field.id_for_label }}"
+    class="{{ label_class|default:'block text-xs font-medium uppercase tracking-wide text-slate-500' }}"
+  >
+    {{ label_override|default:field.label }}
+    {% if required_marker == False %}{% elif required_marker or field.field.required %}
+      <span class="ml-0.5 text-red-500" aria-hidden="true">*</span>
+    {% endif %}
+  </label>
+  {% if texto_ajuda %}
+    <p id="{{ field.id_for_label }}-ajuda" class="mt-1 text-xs text-slate-500">{{ texto_ajuda }}</p>
+  {% endif %}
+  {% renderizar_campo_com_aria field tem_ajuda=texto_ajuda tem_erro=field.errors %}
+  {% if field.errors %}
+    <p id="{{ field.id_for_label }}-erro" class="mt-1 text-xs text-red-600" role="alert">{{ field.errors|join:", " }}</p>
+  {% endif %}
+</div>
+{% endwith %}
