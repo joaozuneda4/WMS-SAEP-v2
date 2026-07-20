@@ -13,11 +13,13 @@ automatizável":
 
 import pathlib
 import re
+import shutil
 import subprocess
 
 import pytest
 
 BASE_DIR = pathlib.Path(__file__).resolve().parents[3]
+TAILWIND_CLI = BASE_DIR / 'node_modules' / '.bin' / 'tailwindcss'
 COMPONENTS_DIR = BASE_DIR / 'apps' / 'core' / 'templates' / 'components'
 MESSAGES_TEMPLATE = (
     BASE_DIR / 'apps' / 'core' / 'templates' / 'core' / 'partials' / '_messages.html'
@@ -90,6 +92,14 @@ def test_tokens_novos_documentados_existem_no_input_css():
     assert faltando == [], f'Tokens ausentes em input.css: {faltando}'
 
 
+@pytest.mark.skipif(
+    not TAILWIND_CLI.exists() and shutil.which('tailwindcss') is None,
+    reason=(
+        'Tailwind CLI não instalado (node_modules ausente) — ambiente sem '
+        '`npm install`, ex. job de CI só-Python. Rodar localmente após '
+        '`npm install` para validar o build.'
+    ),
+)
 def test_css_build_gera_tokens_e_utilities_novas():
     resultado = subprocess.run(
         ['npm', 'run', 'css:build'],
