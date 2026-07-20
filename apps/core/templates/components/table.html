@@ -33,7 +33,7 @@ este fragmento):
       {% include "components/table.html#card_abertura" %}
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <h2 class="break-words text-sm font-semibold text-slate-900">{{ item.titulo }}</h2>
+            <h2 class="break-words text-sm font-semibold text-text-primary">{{ item.titulo }}</h2>
           </div>
           <span class="shrink-0">{% include "components/badge.html" with variant="blue" label="Estado" %}</span>
         </div>
@@ -44,28 +44,28 @@ este fragmento):
 
   {% include "components/table.html#tabela_abertura" %}
     <caption class="sr-only">Descrição da listagem.</caption>
-    <thead class="bg-slate-50">
+    <thead class="bg-bg-subtle">
       <tr>
         {% include "components/table.html#th" with rotulo="Número" %}
         {% include "components/table.html#th" with alinhamento="direita" rotulo_somente_leitura="Ações" %}
       </tr>
     </thead>
-    <tbody class="divide-y divide-slate-100 bg-white">
+    <tbody class="divide-y divide-slate-100 bg-surface">
       ... <tr><td>...</td></tr> explícito ...
     </tbody>
   </table>
   </div>
 {% endcomment %}
 {% partialdef tabela_abertura %}
-<div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:block">
-  <table class="min-w-full divide-y divide-slate-200">
+<div class="hidden overflow-x-auto rounded-xl border border-border bg-surface shadow-sm sm:block">
+  <table class="min-w-full divide-y divide-border">
 {% endpartialdef %}
 
 {% partialdef th %}
 {% if alinhamento == 'direita' %}
-<th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">{% if rotulo_somente_leitura %}<span class="sr-only">{{ rotulo_somente_leitura }}</span>{% else %}{{ rotulo }}{% endif %}</th>
+<th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">{% if rotulo_somente_leitura %}<span class="sr-only">{{ rotulo_somente_leitura }}</span>{% else %}{{ rotulo }}{% endif %}</th>
 {% else %}
-<th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{% if rotulo_somente_leitura %}<span class="sr-only">{{ rotulo_somente_leitura }}</span>{% else %}{{ rotulo }}{% endif %}</th>
+<th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">{% if rotulo_somente_leitura %}<span class="sr-only">{{ rotulo_somente_leitura }}</span>{% else %}{{ rotulo }}{% endif %}</th>
 {% endif %}
 {% endpartialdef %}
 
@@ -74,5 +74,5 @@ este fragmento):
 {% endpartialdef %}
 
 {% partialdef card_abertura %}
-<article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+<article class="rounded-xl border border-border bg-surface p-4 shadow-sm">
 {% endpartialdef %}

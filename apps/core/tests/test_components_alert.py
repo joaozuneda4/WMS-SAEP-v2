@@ -12,17 +12,33 @@ def _render(**ctx):
 def test_variant_padrao_info_usa_role_status():
     html = _render()
     assert 'role="status"' in html
-    assert 'border-blue-200' in html
-    assert 'bg-blue-50' in html
-    assert 'text-blue-800' in html
+    assert 'border-primary-border' in html
+    assert 'bg-primary-subtle' in html
+    assert 'text-primary-text-emphasis' in html
 
 
 @pytest.mark.parametrize(
     'variant,role_esperado,classes_esperadas',
     [
-        ('success', 'status', ['border-green-200', 'bg-green-50', 'text-green-800']),
-        ('warning', 'alert', ['border-amber-200', 'bg-amber-50', 'text-amber-800']),
-        ('danger', 'alert', ['border-red-200', 'bg-red-50', 'text-red-800']),
+        (
+            'success',
+            'status',
+            [
+                'border-success-border',
+                'bg-success-subtle',
+                'text-success-text-emphasis',
+            ],
+        ),
+        (
+            'warning',
+            'alert',
+            ['border-warning-border', 'bg-warning-subtle', 'text-warning-text'],
+        ),
+        (
+            'danger',
+            'alert',
+            ['border-danger-border', 'bg-danger-subtle', 'text-danger-text-emphasis'],
+        ),
     ],
 )
 def test_variante_define_role_e_cor(variant, role_esperado, classes_esperadas):
