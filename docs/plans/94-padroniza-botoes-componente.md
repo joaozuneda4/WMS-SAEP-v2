@@ -53,7 +53,7 @@
 ## Estratégia de testes
 
 Não há lógica de domínio nova — é refatoração de apresentação. Estratégia:
-1. `uv run pytest -q -ra --tb=short --strict-markers --disable-warnings -n logical` completo antes de tocar em qualquer arquivo (baseline). Gates de qualidade obrigatórios (`uv run ruff format .`, `uv run ruff check .`, `uv run mypy apps`) rodados antes de cada commit, por ser mudança que toca Python (`core_tags.py`) além de templates.
+1. `uv run pytest -q -ra --tb=short --strict-markers --disable-warnings -n logical` completo antes de tocar em qualquer arquivo (baseline). Gates de qualidade obrigatórios (`uv run ruff format --check .`, `uv run ruff check .`, `uv run mypy apps`) rodados antes de cada commit, por ser mudança que toca Python (`core_tags.py`) além de modelos Django.
 2. Novos testes unitários de template para os params novos de `button.html` em `apps/core/tests/test_button_component.py` (arquivo novo, segue convenção de `test_icons.py`: `Template(...).render(Context(...))` sem DB/view):
    - `loading_label` gera `data-submit-loading-label` + `<span data-submit-text>`.
    - `label_mobile` gera os dois spans responsivos.
