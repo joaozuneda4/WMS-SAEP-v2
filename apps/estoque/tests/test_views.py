@@ -844,6 +844,24 @@ class TestPreviewImportacaoScpiView:
         assert 'border-warning-border bg-warning-subtle text-warning-text' in conteudo
         assert conteudo.count('aria-live="polite"') == 3
 
+    def test_post_csv_com_dois_novos_flexiona_plural_corretamente(
+        self, client, superuser, estoque_principal
+    ):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        client.force_login(superuser)
+        csv_bytes = (
+            f'CADPRO;DENOMINACAO;QUAN3\n'
+            f'000.000.997;Material Novo 1;5.000\n'
+            f'000.000.998;Material Novo 2;5.000\n'
+        ).encode('utf-8')
+        arquivo = SimpleUploadedFile('teste.csv', csv_bytes, content_type='text/csv')
+        resp = client.post(self.URL, {'arquivo': arquivo})
+        conteudo = resp.content.decode()
+
+        assert 'serão criados' in conteudo
+        assert 'seráão' not in conteudo
+
     def test_post_sem_arquivo_retorna_200_com_erro(self, client, superuser):
         client.force_login(superuser)
         resp = client.post(self.URL, {})
