@@ -92,6 +92,19 @@ def test_login_senha_invalida_exibe_erro_inline(client, usuario):
     assert 'aria-invalid="true"' in conteudo
 
 
+def test_login_senha_invalida_erro_usa_components_alert(client, usuario):
+    resposta = client.post(
+        reverse('accounts:login'),
+        {'username': 'OP-001', 'password': 'errada'},
+    )
+    conteudo = resposta.content.decode()
+
+    assert 'id="login-error"' in conteudo
+    assert 'border-danger-border' in conteudo
+    assert 'bg-danger-subtle' in conteudo
+    assert conteudo.count('aria-live') == 0
+
+
 class FormularioComErroDeCampoEGlobal(MatriculaAuthenticationForm):
     def clean(self):
         raise ValidationError('Erro global de autenticação.')

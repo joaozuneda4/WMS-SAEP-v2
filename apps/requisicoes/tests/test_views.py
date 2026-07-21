@@ -2554,6 +2554,21 @@ def test_copiar_requisicao_view_get_retorna_confirmacao(
 
 
 @pytest.mark.django_db
+def test_copiar_requisicao_view_nota_usa_components_alert_sem_role_note(
+    client, solicitante, req_recusada_view
+):
+    _login(client, solicitante)
+    url = reverse('requisicoes:copiar', kwargs={'pk': req_recusada_view.pk})
+    response = client.get(url)
+    conteudo = response.content.decode()
+
+    assert 'role="note"' not in conteudo
+    assert 'role="alert"' in conteudo
+    assert 'border-warning-border' in conteudo
+    assert 'bg-warning-subtle' in conteudo
+
+
+@pytest.mark.django_db
 def test_copiar_requisicao_view_post_cria_rascunho_e_redireciona(
     client, solicitante, req_recusada_view
 ):

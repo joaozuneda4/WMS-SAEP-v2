@@ -822,6 +822,46 @@ class TestPreviewImportacaoScpiView:
             b'CADPRO' in resp.content or material_scpi.codigo.encode() in resp.content
         )
 
+    def test_post_csv_com_novos_e_divergencias_usa_components_alert_com_aria(
+        self, client, superuser, estoque_principal, material_scpi
+    ):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        client.force_login(superuser)
+        csv_bytes = (
+            f'CADPRO;DENOMINACAO;QUAN3\n'
+            f'{material_scpi.codigo};Teste;150.000\n'
+            f'000.000.999;Material Novo;5.000\n'
+        ).encode('utf-8')
+        arquivo = SimpleUploadedFile('teste.csv', csv_bytes, content_type='text/csv')
+        resp = client.post(self.URL, {'arquivo': arquivo})
+        conteudo = resp.content.decode()
+
+        assert (
+            'border-primary-border bg-primary-subtle text-primary-text-emphasis'
+            in conteudo
+        )
+        assert 'border-warning-border bg-warning-subtle text-warning-text' in conteudo
+        assert conteudo.count('aria-live="polite"') == 3
+
+    def test_post_csv_com_dois_novos_flexiona_plural_corretamente(
+        self, client, superuser, estoque_principal
+    ):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        client.force_login(superuser)
+        csv_bytes = (
+            'CADPRO;DENOMINACAO;QUAN3\n'
+            '000.000.997;Material Novo 1;5.000\n'
+            '000.000.998;Material Novo 2;5.000\n'
+        ).encode('utf-8')
+        arquivo = SimpleUploadedFile('teste.csv', csv_bytes, content_type='text/csv')
+        resp = client.post(self.URL, {'arquivo': arquivo})
+        conteudo = resp.content.decode()
+
+        assert 'serão criados' in conteudo
+        assert 'seráão' not in conteudo
+
     def test_post_sem_arquivo_retorna_200_com_erro(self, client, superuser):
         client.force_login(superuser)
         resp = client.post(self.URL, {})
@@ -917,6 +957,36 @@ class TestConfirmarImportacaoScpiView:
             or b'reimporta' in resp.content.lower()
             or b'j\xc3\xa1' in resp.content.lower()
         )
+
+    def test_get_sucesso_usa_components_alert_com_aria(
+        self, client, superuser, estoque_principal
+    ):
+        csv_bytes = self._csv('000.888.030')
+        self._seed_session(client, superuser, csv_bytes)
+        redirect = client.post(self.URL, {})
+        resp = client.get(redirect['Location'])
+        conteudo = resp.content.decode()
+
+        assert 'border-success-border' in conteudo
+        assert 'bg-success-subtle' in conteudo
+        assert 'role="status"' in conteudo
+        assert 'aria-live="polite"' in conteudo
+
+    def test_hash_duplicado_usa_components_alert_com_aria(
+        self, client, superuser, estoque_principal
+    ):
+        csv_bytes = self._csv('000.888.031')
+        self._seed_session(client, superuser, csv_bytes)
+        client.post(self.URL, {})
+
+        self._seed_session(client, superuser, csv_bytes)
+        resp = client.post(self.URL, {})
+        conteudo = resp.content.decode()
+
+        assert 'border-danger-border' in conteudo
+        assert 'bg-danger-subtle' in conteudo
+        assert 'role="alert"' in conteudo
+        assert 'aria-live="assertive"' in conteudo
 
     def test_get_nao_permitido_retorna_405(self, client, superuser):
         client.force_login(superuser)

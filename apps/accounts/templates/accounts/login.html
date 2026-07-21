@@ -16,11 +16,7 @@
       <p class="mb-6 text-sm text-slate-700">Acesse com sua matrícula e senha.</p>
 
       {% if form.non_field_errors %}
-        <div id="login-error" class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
-          {% for error in form.non_field_errors %}
-            <p>{{ error }}</p>
-          {% endfor %}
-        </div>
+        {% include "components/alert.html" with variant="danger" id="login-error" body_template="accounts/partials/_alert_login_erro_corpo.html" class="mb-5" %}
       {% endif %}
 
       <form method="post" x-data="{ submitting: false }" x-on:submit="submitting = true">

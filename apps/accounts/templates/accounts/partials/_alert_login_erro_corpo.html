@@ -1,0 +1,4 @@
+{% comment %}Corpo do alerta de erro geral de autenticação em login.html.{% endcomment %}
+{% for error in form.non_field_errors %}
+  <p>{{ error }}</p>
+{% endfor %}
