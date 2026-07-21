@@ -2489,7 +2489,8 @@ def test_detalhe_registrar_retirada_botao_azul(
     )
     assert response.status_code == 200
     html = response.content.decode('utf-8')
-    assert 'bg-blue-600' in html
+    assert '>Registrar retirada</a>' in html
+    assert 'bg-primary' in html
     assert 'bg-emerald-600' not in html
 
 

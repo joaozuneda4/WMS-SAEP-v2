@@ -8,20 +8,43 @@ Parâmetros:
                      danger-outline, ghost, link
   size               (opcional, default=md) sm, md
   type               (opcional, default=button) button, submit — só se href ausente
+  name/value         (opcionais) atributos padrão do <button> — usados quando o
+                     form distingue qual botão foi clicado (ex: múltiplos
+                     submits com `name="acao"`); só <button>, ignorados no <a>
   label              (obrigatório) texto visível do botão
   href               (opcional) presente renderiza <a>, ausente renderiza <button>
   disabled           (opcional, boolean) — só <button>
   icon_template      (opcional) caminho de partial incluído antes do label
+  icon_class         (opcional, default="h-4 w-4") classe repassada ao `icon_template`
   full_width_mobile  (opcional, boolean) aplica w-full sm:w-auto
   aria_label         (opcional) sobrescreve o nome acessível
   class              (opcional) passthrough para ajuste de layout do chamador
   hx_get/hx_post/hx_target/hx_swap  (opcionais) passthrough HTMX literal,
                      renderizados como hx-get/hx-post/hx-target/hx-swap
-  data_modal_trigger (opcional) passthrough para abertura de modal via Alpine
+  data_modal_trigger (opcional) id do modal a abrir; emite `data-modal-trigger`
+                     + `@click="abrir($event)"` juntos, conforme contrato de
+                     components/modal.html (o wrapper precisa envolver trigger
+                     e modal no mesmo `x-data="modalController(...)"`)
+
+  Os params abaixo só têm efeito no ramo <button> (href ausente):
+  loading_label      (opcional) valor de `data-submit-loading-label`, lido pelo
+                     form-submit.js; envolve `label` em `<span data-submit-text>`
+  label_mobile       (opcional) só tem efeito junto de `loading_label`; troca o
+                     label único por dois spans responsivos (desktop/mobile)
+  x_disabled         (opcional, expressão Alpine) emite `:disabled="..."` — tem
+                     precedência sobre `disabled` estático (não emite os dois)
+  x_aria_busy        (opcional, expressão Alpine) emite `:aria-busy="..."`
+  label_bind         (opcional, expressão Alpine) emite `<span x-text="...">`
+                     em volta do `label`, preservando-o como fallback estático
+  spinner_show       (opcional, expressão Alpine) mostra o ícone "spinner" do
+                     catálogo num `<span x-show="...">` antes do ícone/label; se
+                     `icon_template` também estiver setado, esconde-o com
+                     `x-show="!(...)"` enquanto o spinner aparece
 
 Uso:
   {% include "components/button.html" with variant="secondary" size="sm" label="Ver" href=url aria_label="Ver detalhes de X" %}
 {% endcomment %}
+{% load core_tags %}
 {% if href %}
 <a
   href="{{ href }}"
@@ -31,18 +54,22 @@ Uso:
   {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
   {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
   {% if hx_swap %}hx-swap="{{ hx_swap }}"{% endif %}
-  {% if data_modal_trigger %}data-modal-trigger="{{ data_modal_trigger }}"{% endif %}
->{% if icon_template %}<span class="mr-2 inline-flex" aria-hidden="true">{% include icon_template %}</span>{% endif %}{{ label }}</a>
+  {% if data_modal_trigger %}data-modal-trigger="{{ data_modal_trigger }}" @click="abrir($event)"{% endif %}
+>{% if icon_template %}<span class="mr-2 inline-flex" aria-hidden="true">{% include icon_template with class=icon_class|default:"h-4 w-4" %}</span>{% endif %}{{ label }}</a>
 {% else %}
 <button
   type="{{ type|default:'button' }}"
-  {% if disabled %}disabled{% endif %}
+  {% if name %}name="{{ name }}"{% endif %}
+  {% if value is not None %}value="{{ value }}"{% endif %}
+  {% if x_disabled %}:disabled="{{ x_disabled }}"{% elif disabled %}disabled{% endif %}
   class="{% if variant == 'link' %}inline-flex items-center rounded{% else %}inline-flex items-center justify-center min-h-11 rounded-md{% endif %} cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 {% if variant == 'secondary' %}bg-surface text-text-secondary border border-border-strong hover:bg-bg-page hover:text-text-primary focus-visible:ring-border-focus{% elif variant == 'danger' %}bg-danger text-white hover:bg-danger-hover active:bg-danger-active focus-visible:ring-danger-accent{% elif variant == 'danger-outline' %}bg-surface text-danger-text border border-danger-border-strong hover:bg-danger-subtle focus-visible:ring-danger-accent{% elif variant == 'ghost' %}bg-transparent text-text-secondary hover:bg-bg-subtle focus-visible:ring-border-focus{% elif variant == 'link' %}bg-transparent text-primary-text hover:underline focus-visible:ring-border-focus{% else %}bg-primary text-white hover:bg-primary-hover active:bg-primary-active focus-visible:ring-border-focus{% endif %} {% if size == 'sm' %}px-3 py-2 text-xs{% else %}px-3 py-2 text-sm{% endif %}{% if full_width_mobile %} w-full sm:w-auto{% endif %}{% if class %} {{ class }}{% endif %}"
   {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
   {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
   {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
   {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
   {% if hx_swap %}hx-swap="{{ hx_swap }}"{% endif %}
-  {% if data_modal_trigger %}data-modal-trigger="{{ data_modal_trigger }}"{% endif %}
->{% if icon_template %}<span class="mr-2 inline-flex" aria-hidden="true">{% include icon_template %}</span>{% endif %}{{ label }}</button>
+  {% if data_modal_trigger %}data-modal-trigger="{{ data_modal_trigger }}" @click="abrir($event)"{% endif %}
+  {% if x_aria_busy %}:aria-busy="{{ x_aria_busy }}"{% endif %}
+  {% if loading_label %}data-submit-loading-label="{{ loading_label }}"{% endif %}
+>{% if spinner_show %}<span x-show="{{ spinner_show }}" class="mr-2 inline-flex" aria-hidden="true">{% icon "spinner" class="h-4 w-4 animate-spin motion-reduce:animate-none" %}</span>{% endif %}{% if icon_template %}<span {% if spinner_show %}x-show="!({{ spinner_show }})" {% endif %}class="mr-2 inline-flex" aria-hidden="true">{% include icon_template with class=icon_class|default:"h-4 w-4" %}</span>{% endif %}{% if label_bind %}<span x-text="{{ label_bind }}">{{ label }}</span>{% elif loading_label and label_mobile %}<span data-submit-text class="hidden sm:inline">{{ label }}</span><span data-submit-text class="sm:hidden">{{ label_mobile }}</span>{% elif loading_label %}<span data-submit-text>{{ label }}</span>{% else %}{{ label }}{% endif %}</button>
 {% endif %}

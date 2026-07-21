@@ -188,14 +188,7 @@
       >
         Cancelar
       </a>
-      <button
-        type="button"
-        data-modal-trigger="confirmar-atender-retirada"
-        @click="abrir($event)"
-        class="inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        Confirmar retirada
-      </button>
+      {% include "components/button.html" with variant="primary" label="Confirmar retirada" data_modal_trigger="confirmar-atender-retirada" %}
 
       {% include "components/modal.html" with id="confirmar-atender-retirada" titulo="Confirmar registro de retirada?" descricao="Esta ação baixa estoque das quantidades entregues e libera as reservas não entregues. Não pode ser desfeita." submit_form_id="form-atender-retirada" confirm_label="Confirmar retirada" icon_variant="info" %}
     </div>

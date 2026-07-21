@@ -200,27 +200,9 @@
         >
           <span data-submit-text>Salvar rascunho</span>
         </button>
-        <button
-          type="submit"
-          name="acao"
-          value="enviar"
-          data-submit-loading-label="Enviando…"
-          class="order-2 inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {% icon "enviar" class="h-4 w-4 shrink-0" %}
-          <span data-submit-text class="hidden sm:inline">Criar e enviar para autorização</span>
-          <span data-submit-text class="sm:hidden">Enviar</span>
-        </button>
+        {% include "components/button.html" with variant="primary" type="submit" name="acao" value="enviar" label="Criar e enviar para autorização" label_mobile="Enviar" loading_label="Enviando…" icon_template="components/icons/enviar.svg" icon_class="h-4 w-4 shrink-0" class="order-2 shrink-0 transition-colors" %}
       {% else %}
-        <button
-          type="submit"
-          name="acao"
-          value="rascunho"
-          data-submit-loading-label="Salvando…"
-          class="inline-flex shrink-0 items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <span data-submit-text>Salvar rascunho</span>
-        </button>
+        {% include "components/button.html" with variant="primary" type="submit" name="acao" value="rascunho" label="Salvar rascunho" loading_label="Salvando…" class="shrink-0 transition-colors" %}
       {% endif %}
     </div>
 

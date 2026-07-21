@@ -31,13 +31,7 @@
         >
           Cancelar
         </a>
-        <button
-          type="submit"
-          class="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
-        >
-          {% icon "copiar" class="h-4 w-4" %}
-          Criar rascunho
-        </button>
+        {% include "components/button.html" with variant="primary" type="submit" label="Criar rascunho" icon_template="components/icons/copiar.svg" %}
       </div>
     </form>
   </div>

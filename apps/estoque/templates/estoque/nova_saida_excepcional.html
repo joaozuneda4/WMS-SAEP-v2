@@ -98,16 +98,7 @@
       >
         Cancelar
       </a>
-      <button
-        type="submit"
-        data-submit-loading-label="Registrando…"
-        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <svg aria-hidden="true" class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M16.707 5.293a1 1 010 1.414l-8 8a1 1 01-1.414 0l-4-4a1 1 011.414-1.414L8 12.586l7.293-7.293a1 1 011.414 0z" clip-rule="evenodd"/>
-        </svg>
-        <span data-submit-text>Registrar saída excepcional</span>
-      </button>
+      {% include "components/button.html" with variant="primary" type="submit" label="Registrar saída excepcional" loading_label="Registrando…" icon_template="components/icons/confirmar.svg" icon_class="h-4 w-4 shrink-0" class="shrink-0 transition-colors" %}
     </div>
 
   </form>

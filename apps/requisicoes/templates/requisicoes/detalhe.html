@@ -185,15 +185,7 @@
           {% endif %}
           {% if pode_enviar %}
             <div x-data="modalController({ id: 'confirmar-enviar' })">
-              <button
-                type="button"
-                data-modal-trigger="confirmar-enviar"
-                @click="abrir($event)"
-                class="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 sm:w-auto"
-              >
-                {% icon "enviar" class="h-4 w-4" %}
-                <span>Enviar para autorização</span>
-              </button>
+              {% include "components/button.html" with variant="primary" label="Enviar para autorização" data_modal_trigger="confirmar-enviar" icon_template="components/icons/enviar.svg" full_width_mobile=True %}
               {% url 'requisicoes:enviar_rascunho' requisicao.pk as enviar_url %}
               {% include "components/modal.html" with id="confirmar-enviar" titulo="Enviar para autorização?" descricao="O envio gera o número público da requisição e bloqueia edições até retornar para rascunho." action_url=enviar_url confirm_label="Confirmar envio" confirm_variant="primary" icon_variant="info" hidden_inputs=enviar_hidden_inputs %}
             </div>
@@ -201,15 +193,7 @@
           {% if pode_cancelar and requisicao.estado == 'rascunho' %}
             {% cancelamento_copy cancelamento_info requisicao.estado as cancelamento_copy_texto %}
             <div x-data="modalController({ id: 'confirmar-cancelar', abrirAoCarregar: {{ cancelamento_modal_aberto|yesno:'true,false' }} })">
-              <button
-                type="button"
-                data-modal-trigger="confirmar-cancelar"
-                @click="abrir($event)"
-                class="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
-              >
-                {% icon "lixeira" class="h-4 w-4" %}
-                <span>{{ cancelamento_copy_texto.trigger }}</span>
-              </button>
+              {% include "components/button.html" with variant="danger-outline" label=cancelamento_copy_texto.trigger data_modal_trigger="confirmar-cancelar" icon_template="components/icons/lixeira.svg" full_width_mobile=True %}
               {% url 'requisicoes:cancelar' requisicao.pk as cancelar_url %}
               {% include "components/modal.html" with id="confirmar-cancelar" titulo=cancelamento_copy_texto.titulo descricao=cancelamento_copy_texto.descricao action_url=cancelar_url confirm_label=cancelamento_copy_texto.confirmar confirm_variant="danger" icon_variant="danger" form_body_template="requisicoes/partials/_modal_form_cancelar.html" erro=cancelamento_erro hidden_inputs=cancelamento_hidden_inputs %}
             </div>
@@ -250,14 +234,7 @@
             <p class="mt-1 text-xs text-blue-900">
               Aprove a requisição e reserve o saldo necessário para todos os itens.
             </p>
-            <button
-              type="button"
-              data-modal-trigger="confirmar-autorizar"
-              @click="abrir($event)"
-              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 sm:w-auto"
-            >
-              Autorizar
-            </button>
+            {% include "components/button.html" with variant="primary" label="Autorizar" data_modal_trigger="confirmar-autorizar" full_width_mobile=True class="mt-3" %}
             {% url 'requisicoes:autorizar' requisicao.pk as autorizar_url %}
             {% include "components/modal.html" with id="confirmar-autorizar" titulo="Autorizar requisição?" descricao="Reserva o saldo necessário para todos os itens sem alterar o saldo físico." action_url=autorizar_url confirm_label="Confirmar autorização" confirm_variant="primary" icon_variant="info" hidden_inputs=autorizar_hidden_inputs %}
           </div>
@@ -292,14 +269,7 @@
             <p class="mt-1 text-xs text-red-900">
               Recuse informando o motivo. Nenhum saldo é reservado ou baixado.
             </p>
-            <button
-              type="button"
-              data-modal-trigger="confirmar-recusar"
-              @click="abrir($event)"
-              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
-            >
-              Recusar
-            </button>
+            {% include "components/button.html" with variant="danger-outline" label="Recusar" data_modal_trigger="confirmar-recusar" full_width_mobile=True class="mt-3" %}
             {% url 'requisicoes:recusar' requisicao.pk as recusar_url %}
             {% include "components/modal.html" with id="confirmar-recusar" titulo="Recusar requisição?" descricao="A recusa encerra a requisição sem reservar ou baixar estoque." action_url=recusar_url confirm_label="Confirmar recusa" confirm_variant="danger" icon_variant="danger" form_body_template="requisicoes/partials/_modal_form_recusar.html" erro=recusa_erro motivo_recusa=motivo_recusa hidden_inputs=recusar_hidden_inputs %}
           </div>
@@ -322,12 +292,10 @@
           a reserva não entregue é liberada automaticamente.
         </p>
       </div>
-      <a
-        href="{% url 'requisicoes:registrar_atendimento' requisicao.pk %}?next={{ voltar_url|urlencode }}"
-        class="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 sm:w-auto"
-      >
-        Registrar retirada
-      </a>
+      {% url 'requisicoes:registrar_atendimento' requisicao.pk as registrar_atendimento_url %}
+      {% with voltar_url_encoded=voltar_url|urlencode %}
+        {% include "components/button.html" with variant="primary" label="Registrar retirada" href=registrar_atendimento_url|add:"?next="|add:voltar_url_encoded full_width_mobile=True %}
+      {% endwith %}
     </section>
   {% endif %}
 
@@ -347,15 +315,7 @@
             {{ cancelamento_copy_texto.descricao }}
           </p>
         </div>
-        <button
-          type="button"
-          data-modal-trigger="confirmar-cancelar"
-          @click="abrir($event)"
-          class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 sm:w-auto"
-        >
-          {% icon "lixeira" class="h-4 w-4" %}
-          <span>{{ cancelamento_copy_texto.trigger }}</span>
-        </button>
+        {% include "components/button.html" with variant="danger-outline" label=cancelamento_copy_texto.trigger data_modal_trigger="confirmar-cancelar" icon_template="components/icons/lixeira.svg" %}
       </div>
       {% url 'requisicoes:cancelar' requisicao.pk as cancelar_url %}
       {% include "components/modal.html" with id="confirmar-cancelar" titulo=cancelamento_copy_texto.titulo descricao=cancelamento_copy_texto.descricao action_url=cancelar_url confirm_label=cancelamento_copy_texto.confirmar confirm_variant="danger" icon_variant="danger" form_body_template="requisicoes/partials/_modal_form_cancelar.html" erro=cancelamento_erro hidden_inputs=cancelamento_hidden_inputs %}
@@ -381,14 +341,7 @@
         <p class="text-xs text-blue-900">
           Marque como pronta assim que a separação física estiver concluída.
         </p>
-        <button
-          type="button"
-          data-modal-trigger="confirmar-separar"
-          @click="abrir($event)"
-          class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 sm:w-auto"
-        >
-          Separar para retirada
-        </button>
+        {% include "components/button.html" with variant="primary" label="Separar para retirada" data_modal_trigger="confirmar-separar" full_width_mobile=True class="mt-3" %}
       </div>
       {% url 'requisicoes:separar_retirada' requisicao.pk as separar_url %}
       {% include "components/modal.html" with id="confirmar-separar" titulo="Marcar como pronta para retirada?" descricao="A requisição passa a aparecer como pronta para o beneficiário retirar no almoxarifado." action_url=separar_url confirm_label="Confirmar separação" confirm_variant="primary" icon_variant="info" hidden_inputs=separar_hidden_inputs %}

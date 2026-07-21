@@ -23,14 +23,7 @@
 
       {# Botão estornar #}
       {% if saida.estado == 'registrada' and pode_estornar %}
-        <button
-          type="button"
-          data-modal-trigger="estornar-saida"
-          @click="abrir($event)"
-          class="shrink-0 inline-flex min-h-11 items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
-        >
-          Estornar
-        </button>
+        {% include "components/button.html" with variant="danger-outline" label="Estornar" data_modal_trigger="estornar-saida" class="shrink-0" %}
       {% endif %}
     </div>
 

@@ -20,6 +20,9 @@ ICONES_CATALOGO = frozenset(
         'adicionar',
         'enviar',
         'copiar',
+        'confirmar',
+        'confirmar_check',
+        'estornar',
     }
 )
 

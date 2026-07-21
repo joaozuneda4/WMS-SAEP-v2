@@ -86,23 +86,7 @@
             >
           </div>
 
-          <button
-            type="submit"
-            :disabled="enviando"
-            :aria-busy="enviando"
-            class="inline-flex min-h-11 w-full cursor-pointer items-center justify-center
-                   gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold
-                   text-white shadow-sm transition-colors duration-150 motion-reduce:transition-none
-                   hover:bg-blue-700 active:bg-blue-800
-                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
-                   disabled:cursor-not-allowed disabled:opacity-60
-                   touch-manipulation"
-          >
-            <span x-show="enviando" class="inline-flex">
-              {% icon "spinner" class="h-4 w-4 animate-spin motion-reduce:animate-none" %}
-            </span>
-            <span x-text="enviando ? 'Processando...' : 'Gerar pré-visualização'">Gerar pré-visualização</span>
-          </button>
+          {% include "components/button.html" with variant="primary" type="submit" label="Gerar pré-visualização" label_bind="enviando ? 'Processando...' : 'Gerar pré-visualização'" x_disabled="enviando" x_aria_busy="enviando" spinner_show="enviando" class="w-full transition-colors duration-150 motion-reduce:transition-none touch-manipulation" %}
         </form>
       </div>
     </section>
@@ -141,20 +125,7 @@
                    focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
         </div>
-        <button
-          type="submit"
-          :disabled="enviando"
-          class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2
-                 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white
-                 shadow-sm transition-colors duration-150 motion-reduce:transition-none
-                 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
-                 disabled:cursor-not-allowed disabled:opacity-60 touch-manipulation"
-        >
-          <span x-show="enviando" class="inline-flex">
-            {% icon "spinner" class="h-4 w-4 animate-spin motion-reduce:animate-none" %}
-          </span>
-          Tentar novamente
-        </button>
+        {% include "components/button.html" with variant="primary" type="submit" label="Tentar novamente" x_disabled="enviando" x_aria_busy="enviando" spinner_show="enviando" class="transition-colors duration-150 motion-reduce:transition-none touch-manipulation" %}
       </div>
     </form>
 
@@ -398,32 +369,7 @@
           class="inline"
         >
           {% csrf_token %}
-          <button
-            type="submit"
-            :disabled="confirmando"
-            :aria-busy="confirmando"
-            class="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg
-                   bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm
-                   transition-colors duration-150 motion-reduce:transition-none
-                   hover:bg-blue-700 active:bg-blue-800
-                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
-                   disabled:cursor-not-allowed disabled:opacity-60
-                   touch-manipulation"
-          >
-            <span x-show="confirmando" class="inline-flex">
-              {% icon "spinner" class="h-4 w-4 animate-spin motion-reduce:animate-none" %}
-            </span>
-            <svg
-              x-show="!confirmando"
-              class="h-4 w-4"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/>
-            </svg>
-            <span x-text="confirmando ? 'Confirmando...' : 'Confirmar importação'">Confirmar importação</span>
-          </button>
+          {% include "components/button.html" with variant="primary" type="submit" label="Confirmar importação" label_bind="confirmando ? 'Confirmando...' : 'Confirmar importação'" x_disabled="confirmando" x_aria_busy="confirmando" spinner_show="confirmando" icon_template="components/icons/confirmar_check.svg" class="transition-colors duration-150 motion-reduce:transition-none touch-manipulation" %}
         </form>
       {% endif %}
     </div>

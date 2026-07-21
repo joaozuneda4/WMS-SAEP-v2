@@ -57,14 +57,7 @@
 
         <input type="hidden" name="next" value="{{ next }}">
 
-        <button
-          type="submit"
-          class="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-75"
-          x-bind:disabled="submitting"
-        >
-          <span x-show="!submitting">Entrar</span>
-          <span x-cloak x-show="submitting">Entrando…</span>
-        </button>
+        {% include "components/button.html" with variant="primary" type="submit" label="Entrar" label_bind="submitting ? 'Entrando…' : 'Entrar'" x_disabled="submitting" class="mt-6 w-full transition-colors" %}
       </form>
 
       <p class="mt-6 text-center text-xs text-slate-500">Acesso restrito a funcionários autorizados.</p>

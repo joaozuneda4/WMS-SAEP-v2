@@ -126,3 +126,39 @@ def test_icon_copiar_renderiza_os_dois_paths_originais():
     assert 'd="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2V5h8a2 2 0 0 0-2-2H5Z"' in html
     assert 'viewBox="0 0 20 20"' in html
     assert 'class="h-4 w-4"' in html
+
+
+def test_icon_confirmar_renderiza_path_original():
+    html = _render('{% icon "confirmar" class="h-4 w-4 shrink-0" %}')
+    assert (
+        'd="M16.707 5.293a1 1 010 1.414l-8 8a1 1 01-1.414 0l-4-4a1 1 011.414-1.414L8 '
+        '12.586l7.293-7.293a1 1 011.414 0z"' in html
+    )
+    assert 'viewBox="0 0 20 20"' in html
+    assert 'class="h-4 w-4 shrink-0"' in html
+    assert 'aria-hidden="true"' in html
+
+
+def test_icon_confirmar_check_renderiza_path_original():
+    html = _render('{% icon "confirmar_check" %}')
+    assert (
+        'd="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a'
+        '.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"' in html
+    )
+    assert 'viewBox="0 0 20 20"' in html
+    assert 'aria-hidden="true"' in html
+
+
+def test_icon_estornar_renderiza_path_original():
+    html = _render('{% icon "estornar" class="h-4 w-4" %}')
+    assert (
+        'd="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 '
+        '0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 '
+        '2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 '
+        '3.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69'
+        '-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4Z'
+        'M8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75'
+        '.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z"' in html
+    )
+    assert 'viewBox="0 0 20 20"' in html
+    assert 'class="h-4 w-4"' in html
