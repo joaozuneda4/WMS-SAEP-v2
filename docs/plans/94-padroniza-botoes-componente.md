@@ -64,14 +64,14 @@ Não há lógica de domínio nova — é refatoração de apresentação. Estrat
    - com `disabled=True` e `x_disabled="expr"` simultâneos, só `:disabled="expr"` é emitido (sem o atributo `disabled` estático duplicado).
 3. 3 testes novos em `test_icons.py` (`test_icon_confirmar_...`, `test_icon_confirmar_check_...`, `test_icon_estornar_...`), mesmo formato dos existentes (path original, viewBox, class repassada).
 4. Para cada view afetada, os testes de view/HTML existentes (ex: `apps/requisicoes/tests/test_views_detalhe.py`, `apps/estoque/tests/test_views_saida_excepcional.py`, `apps/accounts/tests/test_views_login.py` — nomes exatos a confirmar durante implementação) continuam passando sem alteração — eles não devem estar acoplados a classes Tailwind literais; se algum teste fizer `assertContains(response, "bg-blue-600")` ele será atualizado para checar o texto/atributo funcional (label, `hx-*`, `data-modal-trigger`) em vez da classe.
-5. Suite completa novamente ao final, comparando contagem de pass com o baseline do passo 1.
-6. Verificação manual no browser (dev server) das telas com maior risco visual/funcional: login (loading state), `nova_saida_excepcional` (loading + ícone), `preview_importacao_scpi` (3 estados: upload, erro/retry, preview com spinner), `detalhe.html` (todas as seções de ação).
+5. Suíte completa novamente ao final, comparando contagem de sucessos com o baseline do passo 1.
+6. Verificação manual no navegador (servidor de dev) das telas com maior risco visual/funcional: login (loading state), `nova_saida_excepcional` (loading + ícone), `preview_importacao_scpi` (3 estados: upload, erro/retry, preview com spinner), `detalhe.html` (todas as seções de ação).
 
 ## Invariantes
 
 Projeto não tem `docs/design-acesso-rapido/matriz-invariantes.md` (referência genérica do skill não se aplica aqui). Invariantes relevantes deste projeto:
 - ADR-0008 / `docs/design-system.md`: variantes de botão e tokens semânticos (`bg-primary`, `bg-danger`, etc.) são a fonte de verdade visual — a conversão reforça esse contrato em vez de violá-lo.
-- `docs/CONVENTIONS.md`: frontend server-rendered, sem introdução de JS framework — todos os novos params de `button.html` são só Django template + Alpine/data-attrs já existentes no projeto, nada novo do lado de framework.
+- `docs/CONVENTIONS.md`: frontend renderizado no servidor, sem introdução de framework JS novo — todos os novos params de `button.html` são só modelo Django + Alpine/data-attrs já existentes no projeto, nada novo do lado de framework.
 - Nenhuma alteração de `models`/`views`/`services` — mudança 100% de template, não dispara os fluxos de `make setup` (schema) do ambiente efêmero.
 
 ## Riscos
