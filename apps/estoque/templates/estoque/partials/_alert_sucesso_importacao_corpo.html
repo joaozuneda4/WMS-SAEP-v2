@@ -1,0 +1,20 @@
+{% comment %}Corpo do alerta de sucesso em confirmar_importacao_scpi.html.{% endcomment %}
+<p class="text-sm font-semibold text-success-text-emphasis">Importação confirmada com sucesso</p>
+<dl class="mt-2 grid grid-cols-3 gap-3 text-sm text-success-text-emphasis">
+  <div>
+    <dt class="text-xs font-medium uppercase tracking-wide">Linhas</dt>
+    <dd class="mt-0.5 font-semibold tabular-nums">{{ importacao.total_linhas }}</dd>
+  </div>
+  <div>
+    <dt class="text-xs font-medium uppercase tracking-wide">Novos</dt>
+    <dd class="mt-0.5 font-semibold tabular-nums">{{ importacao.total_novos }}</dd>
+  </div>
+  <div>
+    <dt class="text-xs font-medium uppercase tracking-wide">Divergentes</dt>
+    <dd class="mt-0.5 font-semibold tabular-nums">{{ importacao.total_divergentes }}</dd>
+  </div>
+</dl>
+<p class="mt-2 text-xs text-success-text-emphasis">
+  Arquivo: <code class="font-mono">{{ importacao.arquivo_nome }}</code> —
+  Importado em {{ importacao.importado_em }}
+</p>

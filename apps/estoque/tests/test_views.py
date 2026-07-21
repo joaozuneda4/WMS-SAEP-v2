@@ -918,6 +918,36 @@ class TestConfirmarImportacaoScpiView:
             or b'j\xc3\xa1' in resp.content.lower()
         )
 
+    def test_get_sucesso_usa_components_alert_com_aria(
+        self, client, superuser, estoque_principal
+    ):
+        csv_bytes = self._csv('000.888.030')
+        self._seed_session(client, superuser, csv_bytes)
+        redirect = client.post(self.URL, {})
+        resp = client.get(redirect['Location'])
+        conteudo = resp.content.decode()
+
+        assert 'border-success-border' in conteudo
+        assert 'bg-success-subtle' in conteudo
+        assert 'role="status"' in conteudo
+        assert 'aria-live="polite"' in conteudo
+
+    def test_hash_duplicado_usa_components_alert_com_aria(
+        self, client, superuser, estoque_principal
+    ):
+        csv_bytes = self._csv('000.888.031')
+        self._seed_session(client, superuser, csv_bytes)
+        client.post(self.URL, {})
+
+        self._seed_session(client, superuser, csv_bytes)
+        resp = client.post(self.URL, {})
+        conteudo = resp.content.decode()
+
+        assert 'border-danger-border' in conteudo
+        assert 'bg-danger-subtle' in conteudo
+        assert 'role="alert"' in conteudo
+        assert 'aria-live="assertive"' in conteudo
+
     def test_get_nao_permitido_retorna_405(self, client, superuser):
         client.force_login(superuser)
         resp = client.get(self.URL)
