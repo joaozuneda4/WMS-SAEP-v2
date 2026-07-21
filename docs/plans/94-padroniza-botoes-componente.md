@@ -1,16 +1,17 @@
 # Plano — #94: Padronizar botões para `components/button.html`
 
-## Scope
+## Escopo
 
 **Muda:**
 - Todos os botões `primary` (azul sólido) e `danger`/`danger-outline` (vermelho) implementados com classes Tailwind cruas nos 9 arquivos listados na issue passam a usar `{% include "components/button.html" with variant=... %}`.
 - `apps/core/templates/components/button.html` ganha suporte a passthrough adicional, necessário porque vários botões cru têm comportamento dinâmico que o componente hoje não cobre:
   - `icon_class` (opcional, default `"h-4 w-4"`) — classe repassada ao `icon_template` incluído (hoje o `icon_template` nunca foi usado em produção; sem isso, `{{ class }}` dentro do parcial de ícone resolveria para o `class` do próprio botão em vez de um tamanho de ícone).
-  - `loading_label` (opcional) — padrão `data-submit-loading-label` / `data-submit-text` já usado pelo `form-submit.js` (anti-duplo-submit). Quando presente, o `label` é envolvido em `<span data-submit-text>` e o atributo `data-submit-loading-label` é emitido.
+  - `loading_label` (opcional) — padrão `data-submit-loading-label` / `data-submit-text` já usado pelo `form-submit.js` (anti-duplo-submit). Quando presente, o `label` é envolvido em `<span data-submit-text>` e o atributo `data-submit-loading-label` é emitido. `form-submit.js` também sabe exibir `[data-submit-spinner]`, mas nenhum dos botões convertidos com `loading_label` (`rascunho_form.html`, `nova_saida_excepcional.html`) tem esse elemento hoje — não implementado agora (YAGNI); se um caller futuro precisar de spinner + `loading_label` juntos, estender então.
   - `label_mobile` (opcional) — quando presente junto de `loading_label`, renderiza dois `<span data-submit-text>` (um `hidden sm:inline`, outro `sm:hidden`) em vez de um único label — cobre o botão "Criar e enviar" de `rascunho_form.html`, que hoje tem rótulo responsivo diferente para mobile/desktop.
   - `x_disabled` / `x_aria_busy` (opcionais, expressão Alpine) — emitem `:disabled="..."` / `:aria-busy="..."` no lugar do `disabled` estático, para os botões que usam `x-data`/Alpine para estado de loading em vez do `form-submit.js`.
   - `label_bind` (opcional, expressão Alpine) — envolve o label em `<span x-text="...">{{ label }}</span>`, preservando o texto estático original como fallback pré-hidratação.
   - `spinner_show` (opcional, expressão Alpine) — quando presente, renderiza `{% icon "spinner" %}` num `<span x-show="...">` antes do ícone/label, e — se `icon_template` também estiver setado — envolve esse ícone em `x-show="!(...)"` (o ícone "idle" some durante o loading, o spinner aparece).
+  - Escopo dos params novos: `loading_label`/`label_mobile`/`x_disabled`/`x_aria_busy`/`spinner_show`/`label_bind` só têm efeito no ramo `<button>` de `button.html` (o ramo `<a>` não tem `disabled` nem faz sentido ter loading state). Nenhum dos botões convertidos neste plano usa esses params com `href` setado. Precedência: se `x_disabled` for passado, ele substitui o `disabled` estático (não emite os dois); nenhum botão convertido aqui usa as duas formas ao mesmo tempo.
 - 3 ícones novos no catálogo vendorizado (`apps/core/templatetags/core_tags.py` `ICONES_CATALOGO` + `apps/core/templates/components/icons/*.svg`), extraídos de SVGs inline hoje embutidos nos botões convertidos, porque os paths não são idênticos ao ícone `lixeira` já cadastrado nem entre si:
   - `confirmar` — check usado em `nova_saida_excepcional.html` (ícone estático, sempre visível).
   - `confirmar_check` — check usado em `preview_importacao_scpi.html` (ícone condicional, escondido durante loading).
@@ -25,7 +26,7 @@
 - Padding/border-radius exatos de cada botão cru (ex: `px-4 py-2.5 rounded-lg` vs `rounded-lg` com `gap-2`) — ao consolidar no componente compartilhado, o botão passa a usar o padding/raio padrão de `button.html` (`px-3 py-2`, `rounded-md`). Isso é o resultado esperado de "padronizar" (a própria issue nasce da divergência de padding entre telas); cor, ícone, texto, estados de loading/disabled e comportamento continuam idênticos. Documentado aqui para review explícito.
 - Classes de pseudo-estado `disabled:` (ex: `login.html` usa `disabled:cursor-wait disabled:opacity-75`, `button.html` já embute `disabled:cursor-not-allowed disabled:opacity-60`) — padroniza para o valor do componente, mesma lógica do ponto acima.
 
-## Files touched
+## Arquivos alterados
 
 | Arquivo | Botões convertidos | Novo param usado |
 |---|---|---|
@@ -45,7 +46,7 @@
 | `apps/estoque/templates/estoque/detalhe_saida_excepcional.html` | "Estornar" trigger (danger-outline, corrige divergência) | nenhum |
 | `apps/accounts/templates/accounts/login.html` | "Entrar" (primary) | `x_disabled`, `label_bind` |
 
-## Test strategy
+## Estratégia de testes
 
 Não há lógica de domínio nova — é refatoração de apresentação. Estratégia:
 1. `uv run pytest -q -ra --tb=short --strict-markers --disable-warnings -n logical` completo antes de tocar em qualquer arquivo (baseline).
@@ -55,24 +56,25 @@ Não há lógica de domínio nova — é refatoração de apresentação. Estrat
    - `x_disabled`/`x_aria_busy` geram `:disabled="..."` / `:aria-busy="..."`.
    - `label_bind` gera `<span x-text="...">` com fallback estático.
    - `spinner_show` gera o spinner com `x-show` e esconde `icon_template` com `x-show="!(...)"`.
+   - `icon_class="h-5 w-5"` chega ao `{{ class }}` do SVG incluído, e um `class="mt-4"` do próprio botão (contexto do `include` sem `icon_class`) não vaza pro parcial do ícone — isolamento de contexto do `with class=icon_class`.
    - variant `danger-outline` mantém classes de borda vermelha; `danger` mantém fundo sólido (regressão dos variants existentes).
 3. 3 testes novos em `test_icons.py` (`test_icon_confirmar_...`, `test_icon_confirmar_check_...`, `test_icon_estornar_...`), mesmo formato dos existentes (path original, viewBox, class repassada).
 4. Para cada view afetada, os testes de view/HTML existentes (ex: `apps/requisicoes/tests/test_views_detalhe.py`, `apps/estoque/tests/test_views_saida_excepcional.py`, `apps/accounts/tests/test_views_login.py` — nomes exatos a confirmar durante implementação) continuam passando sem alteração — eles não devem estar acoplados a classes Tailwind literais; se algum teste fizer `assertContains(response, "bg-blue-600")` ele será atualizado para checar o texto/atributo funcional (label, `hx-*`, `data-modal-trigger`) em vez da classe.
 5. Suite completa novamente ao final, comparando contagem de pass com o baseline do passo 1.
 6. Verificação manual no browser (dev server) das telas com maior risco visual/funcional: login (loading state), `nova_saida_excepcional` (loading + ícone), `preview_importacao_scpi` (3 estados: upload, erro/retry, preview com spinner), `detalhe.html` (todas as seções de ação).
 
-## Invariants
+## Invariantes
 
 Projeto não tem `docs/design-acesso-rapido/matriz-invariantes.md` (referência genérica do skill não se aplica aqui). Invariantes relevantes deste projeto:
 - ADR-0008 / `docs/design-system.md`: variantes de botão e tokens semânticos (`bg-primary`, `bg-danger`, etc.) são a fonte de verdade visual — a conversão reforça esse contrato em vez de violá-lo.
 - `docs/CONVENTIONS.md`: frontend server-rendered, sem introdução de JS framework — todos os novos params de `button.html` são só Django template + Alpine/data-attrs já existentes no projeto, nada novo do lado de framework.
 - Nenhuma alteração de `models`/`views`/`services` — mudança 100% de template, não dispara os fluxos de `make setup` (schema) do ambiente efêmero.
 
-## Risks
+## Riscos
 
 - **Regressão visual de padding/raio**: mitigado documentando explicitamente em Scope; é o resultado pretendido da padronização.
 - **`form-submit.js` param mismatch**: `loading_label`/`label_mobile` precisam gerar exatamente os seletores que o JS já lê (`[data-submit-loading-label]`, `[data-submit-text]`) — testado unitariamente (test strategy #2) e verificado no browser (test strategy #6, cliques reais disparando loading state).
 - **Alpine reativo (`x_disabled`/`label_bind`/`spinner_show`) sem cobertura de teste de integração real (Alpine só roda no browser)** — os testes unitários de template garantem que o HTML gerado tem os atributos/expressões Alpine corretos; o comportamento reativo em si é verificado manualmente no browser (test strategy #6), não há suite JS no projeto.
-- **Novos ícones podem já existir sob outro nome** — checado via grep antes de criar (`confirmar`, `confirmar_check`, `estornar` não colidem com `ICONES_CATALOGO` atual: voltar/lixeira/remover/spinner/adicionar/enviar/copiar).
+- **Novos ícones podem já existir sob outro nome** — verificado contra `ICONES_CATALOGO` (`apps/core/templatetags/core_tags.py`) antes de criar: `confirmar`, `confirmar_check`, `estornar` não colidem com o catálogo atual (voltar/lixeira/remover/spinner/adicionar/enviar/copiar).
 - **`icon_template` nunca foi exercitado em produção antes desta mudança** — risco de bug latente na própria mecânica do componente (contexto vazando `class` do botão para o ícone). Mitigado adicionando `icon_class` com `with class=icon_class` explícito no include, testado unitariamente.
 - **Espaçamento duplicado ícone↔label**: vários botões crus usam `gap-1.5`/`gap-2` no container flex para separar ícone e texto; `button.html` já aplica `mr-2` no wrapper do ícone/spinner. Passar o `gap-*` original via `class` somaria às duas margens e alargaria o espaçamento. Regra de implementação: nunca repassar `gap-*` via `class` em botões com `icon_template`/`spinner_show` — o espaçamento é só o `mr-2` do componente.
