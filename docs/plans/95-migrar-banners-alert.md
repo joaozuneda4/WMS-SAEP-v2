@@ -2,9 +2,11 @@
 
 ## Scope
 
-Migrar 5 pontos de banner de alerta implementados com classes Tailwind cruas
-para `{% include "components/alert.html" %}`, e resolver o `role="note"`
-customizado em `copiar_confirmacao.html`.
+Migrar 6 pontos de banner de alerta implementados com classes Tailwind cruas
+para `{% include "components/alert.html" %}` — login (1), confirmar
+importação SCPI (2: sucesso/erro), preview importação SCPI (2: novos/
+divergências) e o `role="note"` customizado em `copiar_confirmacao.html`
+(1) — resolvendo esse último para um variant padrão.
 
 **Muda:**
 - `apps/accounts/templates/accounts/login.html` — banner de erro não-ligado-a-campo (`~L19`)
@@ -35,6 +37,8 @@ customizado em `copiar_confirmacao.html`.
 | `apps/estoque/tests/test_views.py` | Atualiza/adiciona asserts de ARIA nos 4 banners (sucesso, erro confirmação, novos, divergências) |
 | `apps/requisicoes/tests/test_views.py` | Atualiza `test_copiar_requisicao_view_get_retorna_confirmacao` com asserts de `role="alert"` (não `note`) |
 
+Total: 6 pontos de alerta migrados (1 login + 2 SCPI-confirmação + 2 SCPI-preview + 1 copiar_confirmacao), com 3 arquivos de teste atualizados cobrindo os 6.
+
 ## Decisão: `role="note"` em `copiar_confirmacao.html`
 
 Conteúdo do alerta (`_alert_nota_copia_corpo.html`): *"Atenção: quantidades
@@ -55,7 +59,7 @@ aviso (`warning`) do que como notificação neutra (`info`).
 ## Test strategy
 
 - **Happy path**: cada banner migrado renderiza com o texto original preservado e a classe de variante correta (`border-success-border`, `border-danger-border`, `border-warning-border`, `border-primary-border`).
-- **ARIA**: para cada um dos 5 pontos, assert de `role` (via variant automático) e ausência/presença de `aria-live` conforme o comportamento original de cada tela (login sem aria-live; erro/sucesso SCPI com aria-live polite/assertive já existentes; novos/divergências com aria-live polite existente; copiar_confirmacao sem aria-live, `role="alert"` em vez de `role="note"`).
+- **ARIA**: para cada um dos 6 pontos, assert de `role` (via variant automático) e ausência/presença de `aria-live` conforme o comportamento original de cada tela (login sem aria-live; erro/sucesso SCPI com aria-live polite/assertive já existentes; novos/divergências com aria-live polite existente; copiar_confirmacao sem aria-live, `role="alert"` em vez de `role="note"`).
 - **Regressão de contrato**: `id="login-error"` preservado (usado por `aria-describedby` nos campos do form, coberto por teste já existente `test_login_preserva_ids_de_erros_aria`).
 - Nenhum teste de domínio/serviço é afetado — mudança é puramente de apresentação.
 - **Permissão negada / violação de domínio / erro de contrato**: N/A — nenhuma view, service ou policy é tocada; os testes de permissão e contrato HTTP já existentes (`test_sem_permissao_retorna_403`, etc.) continuam cobrindo o comportamento não-visual sem alteração.
