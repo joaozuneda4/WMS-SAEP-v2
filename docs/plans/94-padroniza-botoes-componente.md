@@ -36,8 +36,10 @@
 | `apps/core/templates/components/icons/confirmar_check.svg` (novo) | — | — | — |
 | `apps/core/templates/components/icons/estornar.svg` (novo) | — | — | — |
 | `apps/core/tests/test_icons.py` | — | — | +3 testes de catálogo |
-| `apps/requisicoes/templates/requisicoes/rascunho_form.html` | "Criar e enviar para autorização" (primary), "Salvar rascunho" modo editar (primary) | `submit` (ambos) | `label_mobile`, `loading_label` |
-| `apps/requisicoes/templates/requisicoes/detalhe.html` | "Enviar para autorização" (primary), "Cancelar" ×2 triggers (danger-outline), "Autorizar" (primary), "Recusar" trigger (danger→danger-outline, corrige divergência), "Registrar retirada" (primary, `<a>`), "Separar para retirada" (primary), "Estornar requisição" trigger (danger-outline) | `button` (todos — nenhum submete form diretamente, todos disparam modal via `data-modal-trigger` ou são link) | nenhum (todos estáticos, sem loading) |
+| `apps/requisicoes/templates/requisicoes/rascunho_form.html` | "Criar e enviar para autorização" (primary) | `submit` | `label_mobile`, `loading_label` |
+| `apps/requisicoes/templates/requisicoes/rascunho_form.html` | "Salvar rascunho" modo editar (primary) | `submit` | `loading_label` (sem `label_mobile` — label único, sem variante mobile) |
+| `apps/requisicoes/templates/requisicoes/detalhe.html` | "Enviar para autorização" (primary), "Cancelar" ×2 triggers (danger-outline), "Autorizar" (primary), "Recusar" trigger (danger→danger-outline, corrige divergência), "Separar para retirada" (primary), "Estornar requisição" trigger (danger-outline) | `button` (todos disparam modal via `data-modal-trigger`, nenhum submete form diretamente) | nenhum (todos estáticos, sem loading) |
+| `apps/requisicoes/templates/requisicoes/detalhe.html` | "Registrar retirada" (primary, `<a>`) | — (é link, `type` não se aplica) | nenhum |
 | `apps/requisicoes/templates/requisicoes/atender_retirada.html` | "Confirmar retirada" trigger (primary) | `button` (dispara modal) | nenhum |
 | `apps/requisicoes/templates/requisicoes/copiar_confirmacao.html` | "Criar rascunho" (primary) | `submit` | nenhum |
 | `apps/estoque/templates/estoque/lista_materiais.html` | "Buscar" (primary) | `submit` | nenhum |
@@ -51,7 +53,7 @@
 ## Estratégia de testes
 
 Não há lógica de domínio nova — é refatoração de apresentação. Estratégia:
-1. `uv run pytest -q -ra --tb=short --strict-markers --disable-warnings -n logical` completo antes de tocar em qualquer arquivo (baseline).
+1. `uv run pytest -q -ra --tb=short --strict-markers --disable-warnings -n logical` completo antes de tocar em qualquer arquivo (baseline). Gates de qualidade obrigatórios (`uv run ruff format .`, `uv run ruff check .`, `uv run mypy apps`) rodados antes de cada commit, por ser mudança que toca Python (`core_tags.py`) além de templates.
 2. Novos testes unitários de template para os params novos de `button.html` em `apps/core/tests/test_button_component.py` (arquivo novo, segue convenção de `test_icons.py`: `Template(...).render(Context(...))` sem DB/view):
    - `loading_label` gera `data-submit-loading-label` + `<span data-submit-text>`.
    - `label_mobile` gera os dois spans responsivos.
@@ -60,7 +62,7 @@ Não há lógica de domínio nova — é refatoração de apresentação. Estrat
    - `spinner_show` gera o spinner com `x-show` e esconde `icon_template` com `x-show="!(...)"`.
    - `icon_class="h-5 w-5"` chega ao `{{ class }}` do SVG incluído, e um `class="mt-4"` do próprio botão (contexto do `include` sem `icon_class`) não vaza pro parcial do ícone — isolamento de contexto do `with class=icon_class`.
    - variant `danger-outline` mantém classes de borda vermelha; `danger` mantém fundo sólido (regressão dos variants existentes).
-   - com `href` setado (ramo `<a>`), `loading_label`/`label_mobile`/`x_disabled`/`x_aria_busy`/`spinner_show` não aparecem no HTML gerado — confirma que esses params são no-op fora do ramo `<button>`.
+   - com `href` setado (ramo `<a>`), `loading_label`/`label_mobile`/`x_disabled`/`x_aria_busy`/`spinner_show`/`label_bind` não aparecem no HTML gerado (nenhum `data-submit-text`, `:disabled`, `:aria-busy`, `x-show` ou `x-text`) — confirma que esses params são no-op fora do ramo `<button>`.
    - com `disabled=True` e `x_disabled="expr"` simultâneos, só `:disabled="expr"` é emitido (sem o atributo `disabled` estático duplicado).
 3. 3 testes novos em `test_icons.py` (`test_icon_confirmar_...`, `test_icon_confirmar_check_...`, `test_icon_estornar_...`), mesmo formato dos existentes (path original, viewBox, class repassada).
 4. Para cada view afetada, os testes de view/HTML existentes (ex: `apps/requisicoes/tests/test_views_detalhe.py`, `apps/estoque/tests/test_views_saida_excepcional.py`, `apps/accounts/tests/test_views_login.py` — nomes exatos a confirmar durante implementação) continuam passando sem alteração — eles não devem estar acoplados a classes Tailwind literais; se algum teste fizer `assertContains(response, "bg-blue-600")` ele será atualizado para checar o texto/atributo funcional (label, `hx-*`, `data-modal-trigger`) em vez da classe.
