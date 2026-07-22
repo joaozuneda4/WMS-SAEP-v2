@@ -13,7 +13,7 @@ FIXTURES_DIR = Path(__file__).resolve().parent / 'fixtures'
 
 def _templates_com_fixtures():
     templates = copy.deepcopy(settings.TEMPLATES)
-    templates[0]['DIRS'] = [FIXTURES_DIR]
+    templates[0]['DIRS'] = [FIXTURES_DIR, *templates[0].get('DIRS', [])]
     return templates
 
 
