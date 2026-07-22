@@ -21,7 +21,7 @@
       class="mb-8 rounded-xl border-2 border-dashed border-border bg-surface px-6 py-10 shadow-sm
              transition-colors duration-150 motion-reduce:transition-none"
       aria-label="Formulário de upload do CSV SCPI"
-      x-data="{ arrastando: false, enviando: false }"
+      x-data="{ arrastando: false }"
       :class="arrastando ? 'border-border-focus bg-primary-subtle' : ''"
       @dragover.prevent="arrastando = true"
       @dragleave.prevent="arrastando = false"
@@ -50,7 +50,7 @@
           enctype="multipart/form-data"
           class="mt-6 space-y-4"
           x-ref="form"
-          @submit="enviando = true"
+          data-prevent-double-submit
         >
           {% csrf_token %}
 
@@ -86,7 +86,7 @@
             >
           </div>
 
-          {% include "components/button.html" with variant="primary" type="submit" label="Gerar pré-visualização" label_bind="enviando ? 'Processando...' : 'Gerar pré-visualização'" x_disabled="enviando" x_aria_busy="enviando" spinner_show="enviando" class="w-full transition-colors duration-150 motion-reduce:transition-none touch-manipulation" %}
+          {% include "components/button.html" with variant="primary" type="submit" label="Gerar pré-visualização" loading_label="Processando…" class="w-full transition-colors duration-150 motion-reduce:transition-none touch-manipulation" %}
         </form>
       </div>
     </section>
@@ -99,8 +99,7 @@
       method="post"
       enctype="multipart/form-data"
       class="mb-6 rounded-xl border border-border bg-surface p-4 shadow-sm"
-      x-data="{ enviando: false }"
-      @submit="enviando = true"
+      data-prevent-double-submit
     >
       {% csrf_token %}
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -125,7 +124,7 @@
                    focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
           >
         </div>
-        {% include "components/button.html" with variant="primary" type="submit" label="Tentar novamente" x_disabled="enviando" x_aria_busy="enviando" spinner_show="enviando" class="transition-colors duration-150 motion-reduce:transition-none touch-manipulation" %}
+        {% include "components/button.html" with variant="primary" type="submit" label="Tentar novamente" loading_label="Enviando…" class="transition-colors duration-150 motion-reduce:transition-none touch-manipulation" %}
       </div>
     </form>
 
@@ -351,12 +350,11 @@
         <form
           method="post"
           action="{% url 'requisicoes:confirmar_importacao_scpi' %}"
-          x-data="{ confirmando: false }"
-          @submit="confirmando = true"
+          data-prevent-double-submit
           class="inline"
         >
           {% csrf_token %}
-          {% include "components/button.html" with variant="primary" type="submit" label="Confirmar importação" label_bind="confirmando ? 'Confirmando...' : 'Confirmar importação'" x_disabled="confirmando" x_aria_busy="confirmando" spinner_show="confirmando" icon_template="components/icons/confirmar_check.svg" class="transition-colors duration-150 motion-reduce:transition-none touch-manipulation" %}
+          {% include "components/button.html" with variant="primary" type="submit" label="Confirmar importação" loading_label="Confirmando…" icon_template="components/icons/confirmar_check.svg" class="transition-colors duration-150 motion-reduce:transition-none touch-manipulation" %}
         </form>
       {% endif %}
     </div>
