@@ -95,6 +95,26 @@ def test_nova_requisicao_get_com_login(client, solicitante):
     assert resp.status_code == 200
 
 
+@pytest.mark.django_db
+def test_nova_requisicao_get_container_itens_usa_factory_alpine(client, solicitante):
+    _login(client, solicitante)
+    resp = client.get(reverse('requisicoes:nova_requisicao'))
+    html = resp.content.decode()
+    assert 'id="itens-container"' in html
+    assert 'x-data="itensFormset()"' in html
+
+
+@pytest.mark.django_db
+def test_nova_requisicao_get_botao_remover_usa_click_alpine_sem_onclick(
+    client, solicitante
+):
+    _login(client, solicitante)
+    resp = client.get(reverse('requisicoes:nova_requisicao'))
+    html = resp.content.decode()
+    assert '@click="removerLinha($event)"' in html
+    assert 'onclick=' not in html
+
+
 # ---------------------------------------------------------------------------
 # POST /requisicoes/nova/
 # ---------------------------------------------------------------------------
@@ -328,6 +348,32 @@ def test_editar_rascunho_get_criador_retorna_200(
         reverse('requisicoes:editar_rascunho', kwargs={'pk': rascunho_solicitante.pk})
     )
     assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+def test_editar_rascunho_get_container_itens_usa_factory_alpine(
+    client, solicitante, rascunho_solicitante
+):
+    _login(client, solicitante)
+    resp = client.get(
+        reverse('requisicoes:editar_rascunho', kwargs={'pk': rascunho_solicitante.pk})
+    )
+    html = resp.content.decode()
+    assert 'id="itens-container"' in html
+    assert 'x-data="itensFormset()"' in html
+
+
+@pytest.mark.django_db
+def test_editar_rascunho_get_botao_remover_usa_click_alpine_sem_onclick(
+    client, solicitante, rascunho_solicitante
+):
+    _login(client, solicitante)
+    resp = client.get(
+        reverse('requisicoes:editar_rascunho', kwargs={'pk': rascunho_solicitante.pk})
+    )
+    html = resp.content.decode()
+    assert '@click="removerLinha($event)"' in html
+    assert 'onclick=' not in html
 
 
 # ---------------------------------------------------------------------------

@@ -168,6 +168,24 @@ class TestNovaSaidaExcepcionalView:
         assert response.status_code == 200
         assert len(response.context['formset'].forms) == 1
 
+    def test_container_itens_usa_factory_alpine_itensformset(
+        self, client, chefe_almoxarifado, estoque_principal
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_NOVA)
+        html = response.content.decode()
+        assert 'id="itens-container"' in html
+        assert 'x-data="itensFormset()"' in html
+
+    def test_botao_remover_usa_click_alpine_sem_onclick_inline(
+        self, client, chefe_almoxarifado, estoque_principal
+    ):
+        client.force_login(chefe_almoxarifado)
+        response = client.get(URL_NOVA)
+        html = response.content.decode()
+        assert '@click="removerLinha($event)"' in html
+        assert 'onclick=' not in html
+
     def test_superuser_acessa_formulario(self, client, superuser, estoque_principal):
         client.force_login(superuser)
         response = client.get(URL_NOVA)

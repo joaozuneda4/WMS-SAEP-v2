@@ -89,13 +89,18 @@ Parâmetros de contexto (todos BoundField, exceto indicado):
     <input type="hidden" name="{{ delete_field.html_name }}" value="{{ delete_field.value|default:'' }}">
   {% endif %}
 
-  {# Botão remover #}
+  {% comment %}
+    Botão remover — @click chama a factory Alpine `itensFormset`
+    (apps/core/static/core/js/item_form_row.js), registrada no container pai
+    (ex. #itens-container) e não nesta linha, porque "pode remover" precisa
+    contar linhas-irmãs visíveis.
+  {% endcomment %}
   <div class="pt-5 shrink-0">
     <button
       type="button"
       class="flex items-center gap-1 text-slate-600 hover:text-danger-text cursor-pointer focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-1 transition-colors px-2 py-1.5 rounded text-xs font-medium"
       aria-label="Remover item"
-      onclick="var aviso = document.querySelector('.aviso_quantidade'); var row = this.closest('.item-form-row'); if (!podRemoverItem()) { if (aviso) aviso.style.color='#f87171'; if (row) row.style.outline='2px solid #f87171'; setTimeout(function(){ if (aviso) aviso.style.color=''; if (row) row.style.outline=''; }, 2000); return; } if (!row) return; row.style.display='none'; var deleteInput = row.querySelector('[name$=-DELETE]'); if (deleteInput) deleteInput.value='on';"
+      @click="removerLinha($event)"
     >
       {% icon "remover" class="h-4 w-4 shrink-0" %}
       <span class="hidden sm:inline">Remover</span>

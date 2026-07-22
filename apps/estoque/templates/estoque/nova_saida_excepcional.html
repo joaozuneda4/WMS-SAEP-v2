@@ -68,7 +68,7 @@
       {% include "components/alert.html" with variant="danger" id="aviso-duplicidade" icone=False message="" aria_live="assertive" class="hidden mb-3" %}
 
       {# Container de linhas — alvo do HTMX swap #}
-      <div id="itens-container" class="flex flex-col gap-3">
+      <div id="itens-container" class="flex flex-col gap-3" x-data="itensFormset()">
         {% for item_form in formset %}
           {% include "components/item_form_row.html" with material_id_field=item_form.material_id material_label_field=item_form.material_label quantidade_field=item_form.quantidade quantidade_label="Quantidade" quantidade_min="0.001" quantidade_step="any" autocomplete_url_name="estoque:buscar_materiais_saida_excepcional" autocomplete_item_template="estoque/partials/_autocomplete_item_material.html" delete_field=item_form.DELETE form_index=forloop.counter0 habilitar_veto_duplicidade=True %}
         {% endfor %}
@@ -107,10 +107,6 @@
 
 {% block extra_scripts %}
 <script>
-  function podRemoverItem() {
-    return document.querySelectorAll('.item-form-row:not([style*="display: none"])').length > 1;
-  }
-
   // Incrementa TOTAL_FORMS após adicionar nova linha via HTMX
   function incrementarTotalForms(event) {
     if (event && event.detail?.xhr?.status !== 200) return;
