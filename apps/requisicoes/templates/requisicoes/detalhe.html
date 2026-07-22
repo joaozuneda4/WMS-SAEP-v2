@@ -21,10 +21,10 @@
 <div class="max-w-screen-xl mx-auto">
 
   {# --- 1. Cabeçalho --- #}
-  <section class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+  <section class="mb-6 rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-6">
     <div class="flex items-start justify-between gap-3 flex-wrap">
       <div class="min-w-0">
-        <p class="text-xs text-slate-500 sm:text-sm">
+        <p class="text-xs text-text-tertiary sm:text-sm">
           Criada em {{ requisicao.criado_em|date:"d/m/Y \à\s H:i" }}
         </p>
       </div>
@@ -35,44 +35,44 @@
 
     <dl class="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:mt-5 sm:grid-cols-2 sm:gap-y-4">
       <div>
-        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Beneficiário</dt>
-        <dd class="mt-0.5 text-slate-900">
+        <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Beneficiário</dt>
+        <dd class="mt-0.5 text-text-primary">
           {{ requisicao.beneficiario.nome }}
-          <span class="text-slate-400">({{ requisicao.beneficiario.matricula }})</span>
+          <span class="text-text-disabled">({{ requisicao.beneficiario.matricula }})</span>
         </dd>
       </div>
       <div>
-        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Setor</dt>
-        <dd class="mt-0.5 text-slate-900">{{ requisicao.setor_beneficiario.nome }}</dd>
+        <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Setor</dt>
+        <dd class="mt-0.5 text-text-primary">{{ requisicao.setor_beneficiario.nome }}</dd>
       </div>
       <div>
-        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Criador</dt>
-        <dd class="mt-0.5 text-slate-900">
+        <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Criador</dt>
+        <dd class="mt-0.5 text-text-primary">
           {{ requisicao.criador.nome }}
-          <span class="text-slate-400">({{ requisicao.criador.matricula }})</span>
+          <span class="text-text-disabled">({{ requisicao.criador.matricula }})</span>
         </dd>
       </div>
       {% if enviada_em %}
       <div>
-        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Enviada em</dt>
-        <dd class="mt-0.5 text-slate-900">{{ enviada_em|date:"d/m/Y H:i" }}</dd>
+        <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Enviada em</dt>
+        <dd class="mt-0.5 text-text-primary">{{ enviada_em|date:"d/m/Y H:i" }}</dd>
       </div>
       {% endif %}
       {% if requisicao.observacao_geral %}
         <div class="sm:col-span-2">
-          <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Observação</dt>
-          <dd class="mt-0.5 text-slate-700 whitespace-pre-line">{{ requisicao.observacao_geral }}</dd>
+          <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Observação</dt>
+          <dd class="mt-0.5 text-text-secondary whitespace-pre-line">{{ requisicao.observacao_geral }}</dd>
         </div>
       {% endif %}
     </dl>
   </section>
 
   {# --- 2. Itens (seção operacional principal) --- #}
-  <section class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-md ring-1 ring-slate-100 sm:p-6">
+  <section class="mb-6 rounded-xl border border-border bg-surface p-4 shadow-md ring-1 ring-bg-subtle sm:p-6">
     <div class="mb-4 flex items-baseline justify-between gap-3">
-      <h2 class="text-xl font-semibold text-slate-900">Itens</h2>
+      <h2 class="text-xl font-semibold text-text-primary">Itens</h2>
       {% if itens %}
-        <span class="text-xs font-medium text-slate-500">
+        <span class="text-xs font-medium text-text-tertiary">
           {{ itens|length }} {{ itens|length|pluralize:"item,itens" }}
         </span>
       {% endif %}
@@ -81,40 +81,40 @@
     {% if itens %}
       {% with estado=requisicao.estado %}
         <div class="overflow-x-auto scroll-shadow-x rounded-sm">
-          <table class="min-w-full divide-y divide-slate-200 text-sm">
+          <table class="min-w-full divide-y divide-border text-sm">
             <caption class="sr-only">Itens da requisição com material, quantidade solicitada e, quando aplicável, autorizada e entregue.</caption>
-            <thead class="bg-slate-50">
+            <thead class="bg-bg-page">
               <tr>
-                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Material</th>
-                <th scope="col" class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Solicitada</th>
+                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Material</th>
+                <th scope="col" class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">Solicitada</th>
                 {% if estado == 'autorizada' or estado == 'pronta_para_retirada' or estado == 'atendida' or estado == 'estornada' or estado == 'cancelada' %}
-                  <th scope="col" class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Autorizada</th>
+                  <th scope="col" class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">Autorizada</th>
                 {% endif %}
                 {% if estado == 'atendida' or estado == 'estornada' %}
-                  <th scope="col" class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Entregue</th>
+                  <th scope="col" class="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">Entregue</th>
                 {% endif %}
                 {% if pode_devolver %}
-                  <th scope="col" class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Ações</th>
+                  <th scope="col" class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Ações</th>
                 {% endif %}
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody class="divide-y divide-border">
               {% for item in itens %}
                 <tr>
-                  <td class="px-3 py-2 text-slate-900">
+                  <td class="px-3 py-2 text-text-primary">
                     <span class="font-medium">{{ item.material.codigo }}</span>
-                    <span class="text-slate-600">— {{ item.material.nome }}</span>
-                    <span class="text-xs text-slate-400">({{ item.material.get_unidade_display }})</span>
+                    <span class="text-text-secondary">— {{ item.material.nome }}</span>
+                    <span class="text-xs text-text-disabled">({{ item.material.get_unidade_display }})</span>
                   </td>
-                  <td class="px-3 py-2 text-right tabular-nums text-slate-900">{{ item.quantidade_solicitada|formatar_quantidade:item.material.unidade }}</td>
+                  <td class="px-3 py-2 text-right tabular-nums text-text-primary">{{ item.quantidade_solicitada|formatar_quantidade:item.material.unidade }}</td>
                   {% if estado == 'autorizada' or estado == 'pronta_para_retirada' or estado == 'atendida' or estado == 'estornada' or estado == 'cancelada' %}
-                    <td class="px-3 py-2 text-right tabular-nums text-slate-900">
-                      {% if item.quantidade_autorizada is not None %}{{ item.quantidade_autorizada|formatar_quantidade:item.material.unidade }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+                    <td class="px-3 py-2 text-right tabular-nums text-text-primary">
+                      {% if item.quantidade_autorizada is not None %}{{ item.quantidade_autorizada|formatar_quantidade:item.material.unidade }}{% else %}<span class="text-text-disabled">—</span>{% endif %}
                     </td>
                   {% endif %}
                   {% if estado == 'atendida' or estado == 'estornada' %}
-                    <td class="px-3 py-2 text-right tabular-nums text-slate-900">
-                      {% if item.quantidade_entregue is not None %}{{ item.quantidade_entregue|formatar_quantidade:item.material.unidade }}{% else %}<span class="text-slate-300">—</span>{% endif %}
+                    <td class="px-3 py-2 text-right tabular-nums text-text-primary">
+                      {% if item.quantidade_entregue is not None %}{{ item.quantidade_entregue|formatar_quantidade:item.material.unidade }}{% else %}<span class="text-text-disabled">—</span>{% endif %}
                     </td>
                   {% endif %}
                   {% if pode_devolver %}
@@ -124,7 +124,7 @@
                           type="button"
                           onclick="document.getElementById('{{ item.modal_devolver_id }}').showModal()"
                           aria-haspopup="dialog"
-                          class="inline-flex items-center gap-1 rounded-md border border-teal-200 bg-white px-2.5 py-1 text-xs font-medium text-teal-700 shadow-sm hover:bg-teal-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1"
+                          class="inline-flex items-center gap-1 rounded-md border border-return-border bg-surface px-2.5 py-1 text-xs font-medium text-return-text shadow-sm hover:bg-return-subtle cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-return focus-visible:ring-offset-1"
                         >
                           Registrar devolução
                         </button>
@@ -148,22 +148,22 @@
         {% endif %}
       {% endwith %}
     {% else %}
-      <p class="text-sm text-slate-500">Sem itens registrados.</p>
+      <p class="text-sm text-text-tertiary">Sem itens registrados.</p>
     {% endif %}
   </section>
 
   {# --- 2b. Ações primárias (depois do contexto) --- #}
   {% if pode_enviar or pode_editar %}
     <section
-      class="mb-6 rounded-xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm sm:p-5"
+      class="mb-6 rounded-xl border border-warning-border bg-warning-subtle/60 p-4 shadow-sm sm:p-6"
       aria-labelledby="acoes-titulo"
     >
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="min-w-0">
-          <h2 id="acoes-titulo" class="text-sm font-semibold text-amber-900">
+          <h2 id="acoes-titulo" class="text-sm font-semibold text-warning-text-strong">
             {% if pode_enviar %}Pronto para enviar?{% else %}Continue editando o rascunho{% endif %}
           </h2>
-          <p class="mt-0.5 text-xs text-amber-800/80">
+          <p class="mt-0.5 text-xs text-warning-text/80">
             {% if pode_enviar %}
               Revise os itens acima. O envio gera o número público e bloqueia novas edições até retornar para rascunho.
             {% else %}
@@ -175,7 +175,7 @@
           {% if pode_editar %}
             <a
               href="{% url 'requisicoes:editar_rascunho' requisicao.pk %}"
-              class="inline-flex items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1"
+              class="inline-flex items-center justify-center gap-1.5 rounded-md border border-border-strong bg-surface px-4 py-2 text-sm font-medium text-text-secondary shadow-sm hover:bg-bg-page focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-1"
             >
               <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.379-8.379-2.828-2.828Z"/>
@@ -205,18 +205,18 @@
 
   {% if pode_autorizar or pode_retornar or pode_recusar %}
     <section
-      class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      class="mb-6 rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-6"
       aria-labelledby="decisao-autorizacao-titulo"
     >
       <div class="mb-4">
-        <h2 id="decisao-autorizacao-titulo" class="text-sm font-semibold text-slate-900">
+        <h2 id="decisao-autorizacao-titulo" class="text-sm font-semibold text-text-primary">
           {% if pode_retornar and not pode_autorizar and not pode_recusar %}
             Retorno para rascunho
           {% else %}
             Decisão de autorização
           {% endif %}
         </h2>
-        <p class="mt-1 text-sm text-slate-600">
+        <p class="mt-1 text-sm text-text-secondary">
           {% if pode_retornar and not pode_autorizar and not pode_recusar %}
             Use este bloco para devolver a requisição ao criador com observação opcional.
           {% else %}
@@ -227,11 +227,11 @@
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {% if pode_autorizar %}
-          <div x-data="modalController({ id: 'confirmar-autorizar' })" class="rounded-lg border border-blue-200 bg-blue-50 p-4">
-            <h3 class="block text-sm font-medium text-blue-950">
+          <div x-data="modalController({ id: 'confirmar-autorizar' })" class="rounded-lg border border-primary-border bg-primary-subtle p-4">
+            <h3 class="block text-sm font-medium text-primary-text-strong">
               Autorização integral
             </h3>
-            <p class="mt-1 text-xs text-blue-900">
+            <p class="mt-1 text-xs text-primary-text-strong">
               Aprove a requisição e reserve o saldo necessário para todos os itens.
             </p>
             {% include "components/button.html" with variant="primary" label="Autorizar" data_modal_trigger="confirmar-autorizar" full_width_mobile=True class="mt-3" %}
@@ -241,18 +241,18 @@
         {% endif %}
 
         {% if pode_retornar %}
-          <div x-data="modalController({ id: 'confirmar-retornar' })" class="rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <h3 class="block text-sm font-medium text-amber-950">
+          <div x-data="modalController({ id: 'confirmar-retornar' })" class="rounded-lg border border-warning-border bg-warning-subtle p-4">
+            <h3 class="block text-sm font-medium text-warning-text-strong">
               Retornar para rascunho
             </h3>
-            <p class="mt-1 text-xs text-amber-900">
+            <p class="mt-1 text-xs text-warning-text-strong">
               Peça ajustes ao criador antes de decidir. Observação opcional.
             </p>
             <button
               type="button"
               data-modal-trigger="confirmar-retornar"
               @click="abrir($event)"
-              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-amber-700 bg-white px-4 py-2 text-sm font-semibold text-amber-900 shadow-sm hover:bg-amber-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-1 sm:w-auto"
+              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-warning-border-strong bg-surface px-4 py-2 text-sm font-semibold text-warning-text-strong shadow-sm hover:bg-warning-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning focus-visible:ring-offset-1 sm:w-auto"
             >
               Retornar
             </button>
@@ -262,11 +262,11 @@
         {% endif %}
 
         {% if pode_recusar %}
-          <div x-data="modalController({ id: 'confirmar-recusar', abrirAoCarregar: {{ recusa_erro|yesno:'true,false' }} })" class="rounded-lg border border-red-200 bg-red-50 p-4">
-            <h3 class="block text-sm font-medium text-red-950">
+          <div x-data="modalController({ id: 'confirmar-recusar', abrirAoCarregar: {{ recusa_erro|yesno:'true,false' }} })" class="rounded-lg border border-danger-border bg-danger-subtle p-4">
+            <h3 class="block text-sm font-medium text-danger-text-strong">
               Recusar requisição
             </h3>
-            <p class="mt-1 text-xs text-red-900">
+            <p class="mt-1 text-xs text-danger-text-strong">
               Recuse informando o motivo. Nenhum saldo é reservado ou baixado.
             </p>
             {% include "components/button.html" with variant="danger-outline" label="Recusar" data_modal_trigger="confirmar-recusar" full_width_mobile=True class="mt-3" %}
@@ -280,14 +280,14 @@
 
   {% if pode_atender_retirada %}
     <section
-      class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      class="mb-6 rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-6"
       aria-labelledby="atender-retirada-titulo"
     >
       <div class="mb-4">
-        <h2 id="atender-retirada-titulo" class="text-sm font-semibold text-slate-900">
+        <h2 id="atender-retirada-titulo" class="text-sm font-semibold text-text-primary">
           Registrar retirada
         </h2>
-        <p class="mt-1 text-sm text-slate-600">
+        <p class="mt-1 text-sm text-text-secondary">
           Confirme as quantidades efetivamente entregues. Baixa físico apenas o entregue;
           a reserva não entregue é liberada automaticamente.
         </p>
@@ -302,16 +302,16 @@
   {% if pode_cancelar and requisicao.estado != 'rascunho' %}
     {% cancelamento_copy cancelamento_info requisicao.estado as cancelamento_copy_texto %}
     <section
-      class="mb-6 rounded-xl border border-red-200 bg-red-50/70 p-4 shadow-sm sm:p-5"
+      class="mb-6 rounded-xl border border-danger-border bg-danger-subtle/70 p-4 shadow-sm sm:p-6"
       aria-labelledby="cancelamento-titulo"
       x-data="modalController({ id: 'confirmar-cancelar', abrirAoCarregar: {{ cancelamento_modal_aberto|yesno:'true,false' }} })"
     >
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="min-w-0">
-          <h2 id="cancelamento-titulo" class="text-sm font-semibold text-red-950">
+          <h2 id="cancelamento-titulo" class="text-sm font-semibold text-danger-text-strong">
             {{ cancelamento_copy_texto.titulo }}
           </h2>
-          <p class="mt-1 text-sm text-red-900/80">
+          <p class="mt-1 text-sm text-danger-text-strong/80">
             {{ cancelamento_copy_texto.descricao }}
           </p>
         </div>
@@ -324,21 +324,21 @@
 
   {% if pode_separar_retirada %}
     <section
-      class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      class="mb-6 rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-6"
       aria-labelledby="separacao-retirada-titulo"
       x-data="modalController({ id: 'confirmar-separar' })"
     >
       <div class="mb-4">
-        <h2 id="separacao-retirada-titulo" class="text-sm font-semibold text-slate-900">
+        <h2 id="separacao-retirada-titulo" class="text-sm font-semibold text-text-primary">
           Separação para retirada
         </h2>
-        <p class="mt-1 text-sm text-slate-600">
+        <p class="mt-1 text-sm text-text-secondary">
           Marque a requisição como pronta para retirada. O saldo reservado é mantido sem baixa física.
         </p>
       </div>
 
-      <div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
-        <p class="text-xs text-blue-900">
+      <div class="rounded-lg border border-primary-border bg-primary-subtle p-4">
+        <p class="text-xs text-primary-text-strong">
           Marque como pronta assim que a separação física estiver concluída.
         </p>
         {% include "components/button.html" with variant="primary" label="Separar para retirada" data_modal_trigger="confirmar-separar" full_width_mobile=True class="mt-3" %}
@@ -353,13 +353,13 @@
       {% url 'requisicoes:estornar' requisicao.pk as estornar_url %}
       {% include "components/modal.html" with id="estornar-modal" titulo="Estornar requisição" descricao="O estorno reverte toda a entregue líquida ao saldo físico e encerra definitivamente a requisição. Esta operação é irreversível." action_url=estornar_url confirm_label="Confirmar estorno" confirm_variant="danger" form=estorno_form form_body_template="requisicoes/partials/_modal_form_estorno.html" %}
       <section
-        class="mb-6 rounded-xl border border-red-200 bg-red-50/60 p-4 shadow-sm sm:p-5"
+        class="mb-6 rounded-xl border border-danger-border bg-danger-subtle/60 p-4 shadow-sm sm:p-6"
         aria-labelledby="estornar-titulo"
       >
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="min-w-0">
-            <h2 id="estornar-titulo" class="text-sm font-semibold text-red-900">Estornar requisição</h2>
-            <p class="mt-0.5 text-xs text-red-800/80">
+            <h2 id="estornar-titulo" class="text-sm font-semibold text-danger-text-strong">Estornar requisição</h2>
+            <p class="mt-0.5 text-xs text-danger-text-emphasis/80">
               Reverte toda a entregue líquida atual ao saldo físico do estoque e encerra a requisição.
               A justificativa é obrigatória e fica registrada na timeline.
             </p>
@@ -369,7 +369,7 @@
             data-modal-trigger="estornar-modal"
             @click="abrir($event)"
             aria-haspopup="dialog"
-            class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-danger-border-strong bg-surface px-4 py-2 text-sm font-medium text-danger-text shadow-sm hover:bg-danger-subtle cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-border-input focus-visible:ring-offset-1"
           >
             <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 3.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" />
@@ -383,20 +383,20 @@
 
   {% if pode_copiar %}
     <section
-      class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      class="mb-6 rounded-xl border border-border bg-surface p-4 shadow-sm sm:p-6"
       aria-labelledby="copiar-titulo"
     >
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="min-w-0">
-          <h2 id="copiar-titulo" class="text-sm font-semibold text-slate-900">Repetir esta requisição</h2>
-          <p class="mt-0.5 text-xs text-slate-500">
+          <h2 id="copiar-titulo" class="text-sm font-semibold text-text-primary">Repetir esta requisição</h2>
+          <p class="mt-0.5 text-xs text-text-tertiary">
             Cria novo rascunho com os mesmos materiais e quantidades solicitadas.
             Itens sem saldo ou com divergência serão marcados para revisão antes do envio.
           </p>
         </div>
         <a
           href="{% url 'requisicoes:copiar' requisicao.pk %}"
-          class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-strong bg-surface px-4 py-2 text-sm font-medium text-text-secondary shadow-sm hover:bg-bg-page focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-1"
         >
           {% icon "copiar" class="h-4 w-4" %}
           Repetir requisição
@@ -406,8 +406,8 @@
   {% endif %}
 
   {# --- 3. Timeline (suporte/auditoria, peso secundário) --- #}
-  <section class="mb-6 rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-6">
-    <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Histórico</h2>
+  <section class="mb-6 rounded-xl border border-border bg-bg-page/60 p-4 sm:p-6">
+    <h2 class="mb-4 text-sm font-semibold uppercase tracking-wide text-text-tertiary">Histórico</h2>
     {% include "requisicoes/partials/_timeline.html" with eventos=eventos %}
   </section>
 

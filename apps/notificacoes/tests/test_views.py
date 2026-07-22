@@ -120,7 +120,8 @@ def test_lista_notificacoes_sem_requisicao_preserva_altura_da_linha(
     html = resp.content.decode('utf-8')
     assert 'Requisição' not in html
     assert (
-        '<span class="text-xs text-slate-500" aria-hidden="true">&nbsp;</span>' in html
+        '<span class="text-xs text-text-tertiary" aria-hidden="true">&nbsp;</span>'
+        in html
     )
 
 

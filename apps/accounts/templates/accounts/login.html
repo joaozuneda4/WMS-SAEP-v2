@@ -5,15 +5,15 @@
 {% block body %}
 <main>
   {% include "core/partials/_messages.html" %}
-  <div class="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 sm:px-6">
-    <section class="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8" aria-labelledby="login-title">
+  <div class="flex min-h-screen items-center justify-center bg-bg-page px-4 py-10 sm:px-6">
+    <section class="w-full max-w-sm rounded-lg border border-border bg-surface p-6 shadow-sm" aria-labelledby="login-title">
       <div class="mb-8 text-center">
-        <p class="text-xs font-semibold uppercase tracking-wide text-blue-700">Acesso institucional</p>
-        <h1 id="login-title" class="mt-2 text-2xl font-semibold text-slate-900">WMS SAEP</h1>
-        <p class="mt-2 text-sm text-slate-600">Sistema interno de gestão de materiais</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-primary-text">Acesso institucional</p>
+        <h1 id="login-title" class="mt-2 text-2xl font-semibold text-text-primary">WMS SAEP</h1>
+        <p class="mt-2 text-sm text-text-secondary">Sistema interno de gestão de materiais</p>
       </div>
 
-      <p class="mb-6 text-sm text-slate-700">Acesse com sua matrícula e senha.</p>
+      <p class="mb-6 text-sm text-text-secondary">Acesse com sua matrícula e senha.</p>
 
       {% if form.non_field_errors %}
         {% include "components/alert.html" with variant="danger" id="login-error" body_template="accounts/partials/_alert_login_erro_corpo.html" class="mb-5" %}
@@ -23,12 +23,12 @@
         {% csrf_token %}
         <div class="space-y-5">
           <div>
-            <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-slate-800">
+            <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-text-primary">
               {{ form.username.label }}
             </label>
             {{ form.username }}
             {% if form.username.errors %}
-              <div id="username-error" class="mt-2 text-sm text-red-700" role="alert">
+              <div id="username-error" class="mt-2 text-sm text-danger-text" role="alert">
                 {% for error in form.username.errors %}
                   <p>{{ error }}</p>
                 {% endfor %}
@@ -37,12 +37,12 @@
           </div>
 
           <div>
-            <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-slate-800">
+            <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-text-primary">
               {{ form.password.label }}
             </label>
             {{ form.password }}
             {% if form.password.errors %}
-              <div id="password-error" class="mt-2 text-sm text-red-700" role="alert">
+              <div id="password-error" class="mt-2 text-sm text-danger-text" role="alert">
                 {% for error in form.password.errors %}
                   <p>{{ error }}</p>
                 {% endfor %}
@@ -56,7 +56,7 @@
         {% include "components/button.html" with variant="primary" type="submit" label="Entrar" label_bind="submitting ? 'Entrando…' : 'Entrar'" x_disabled="submitting" class="mt-6 w-full transition-colors" %}
       </form>
 
-      <p class="mt-6 text-center text-xs text-slate-500">Acesso restrito a funcionários autorizados.</p>
+      <p class="mt-6 text-center text-xs text-text-tertiary">Acesso restrito a funcionários autorizados.</p>
     </section>
   </div>
 </main>

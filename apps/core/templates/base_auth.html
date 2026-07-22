@@ -16,7 +16,7 @@
   {% endcomment %}
   <header class="app-bar" role="banner" x-data="{ menuOpen: false }" @keydown.escape.window="menuOpen = false">
     <div
-      class="fixed inset-0 z-30 bg-slate-900/40"
+      class="fixed inset-0 z-30 bg-surface-overlay"
       x-show="menuOpen"
       x-cloak
       x-transition:enter="transition ease-out duration-150"
@@ -125,27 +125,14 @@
 
         {% if user.is_authenticated %}
           {# app-bar__action-icon: botão circular 40×40 do design system para ações de ícone #}
-          <a href="{% url 'notificacoes:lista' %}" class="app-bar__action-icon" style="position:relative" aria-label="Notificações{% if notificacoes_nao_lidas %} — {{ notificacoes_nao_lidas }} não lida{{ notificacoes_nao_lidas|pluralize:'s' }}{% endif %}">
+          <a href="{% url 'notificacoes:lista' %}" class="app-bar__action-icon relative" aria-label="Notificações{% if notificacoes_nao_lidas %} — {{ notificacoes_nao_lidas }} não lida{{ notificacoes_nao_lidas|pluralize:'s' }}{% endif %}">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6V11c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
             </svg>
             {% if notificacoes_nao_lidas %}
               <span
                 aria-hidden="true"
-                style="
-                  position: absolute;
-                  top: 6px; right: 6px;
-                  min-width: 1rem; height: 1rem;
-                  padding: 0 3px;
-                  border-radius: 9999px;
-                  background: #dc2626;
-                  color: #fff;
-                  font-size: 10px;
-                  font-weight: 700;
-                  line-height: 1rem;
-                  text-align: center;
-                  white-space: nowrap;
-                "
+                class="absolute top-1.5 right-1.5 min-w-4 h-4 rounded-full bg-danger px-[3px] text-[10px] font-bold leading-4 whitespace-nowrap text-center text-text-on-primary"
               >{{ notificacoes_nao_lidas }}</span>
             {% endif %}
           </a>
@@ -159,15 +146,15 @@
 
   <div class="lg:flex">
     {% if user.is_authenticated %}
-    <aside class="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:sticky lg:top-[var(--app-bar-height)] lg:h-[calc(100vh-var(--app-bar-height))] border-r border-slate-200 bg-white" aria-label="Barra de navegação lateral">
+    <aside class="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:sticky lg:top-[var(--app-bar-height)] lg:h-[calc(100vh-var(--app-bar-height))] border-r border-border bg-surface" aria-label="Barra de navegação lateral">
       <nav class="flex-1 overflow-y-auto py-4 px-3" aria-label="Navegação principal">
         {% with current=request.resolver_match.view_name %}
           <a
             href="{% url 'core:home' %}"
-            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium {% if current == 'core:home' %}bg-slate-100 text-slate-900{% else %}text-slate-700 hover:bg-slate-50{% endif %}"
+            class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium {% if current == 'core:home' %}bg-bg-subtle text-text-primary{% else %}text-text-secondary hover:bg-bg-page{% endif %}"
             {% if current == 'core:home' %}aria-current="page"{% endif %}
           >
-            <svg class="h-5 w-5 shrink-0 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <svg class="h-5 w-5 shrink-0 text-text-disabled" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 3 2 11h3v8h6v-6h2v6h6v-8h3L12 3z"/>
             </svg>
             Início
@@ -177,16 +164,16 @@
           {% endblock %}
         {% endwith %}
       </nav>
-      <div class="shrink-0 border-t border-slate-200 p-4">
-        <p class="truncate text-sm font-medium text-slate-900">{{ user.nome }}</p>
-        <p class="truncate text-xs text-slate-500">Matrícula {{ user.matricula }}</p>
+      <div class="shrink-0 border-t border-border p-4">
+        <p class="truncate text-sm font-medium text-text-primary">{{ user.nome }}</p>
+        <p class="truncate text-xs text-text-tertiary">Matrícula {{ user.matricula }}</p>
         <form method="post" action="{% url 'accounts:logout' %}" class="mt-3">
           {% csrf_token %}
           <button
             type="submit"
-            class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
+            class="app-bar__menu-item app-bar__menu-item--danger rounded-md cursor-pointer"
           >
-            <svg class="h-5 w-5 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <svg class="app-bar__menu-icon h-5 w-5 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
             </svg>
             Sair

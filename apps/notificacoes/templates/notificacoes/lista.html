@@ -3,11 +3,11 @@
 {% block content %}
 <div class="space-y-4">
   <div class="flex items-center justify-between">
-    <h1 class="text-xl font-semibold text-slate-800">Notificações</h1>
+    <h1 class="text-xl font-semibold text-text-primary">Notificações</h1>
     {% if notificacoes %}
       <form method="post" action="{% url 'notificacoes:marcar_todas_lidas' %}">
         {% csrf_token %}
-        <button type="submit" class="text-sm text-blue-600 hover:underline cursor-pointer">
+        <button type="submit" class="text-sm text-primary hover:underline cursor-pointer">
           Marcar todas como lidas
         </button>
       </form>
@@ -15,31 +15,31 @@
   </div>
 
   {% if not notificacoes %}
-    <p class="text-slate-500 text-sm">Nenhuma notificação.</p>
+    <p class="text-text-tertiary text-sm">Nenhuma notificação.</p>
   {% else %}
-    <ul class="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+    <ul class="divide-y divide-border rounded-lg border border-border bg-surface">
       {% for notificacao in notificacoes %}
-        <li class="flex items-start gap-4 p-4 {% if not notificacao.lida %}bg-blue-50{% endif %}">
+        <li class="flex items-start gap-4 p-4 {% if not notificacao.lida %}bg-primary-subtle{% endif %}">
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-slate-800">{{ notificacao.get_tipo_display }}</p>
+            <p class="text-sm font-medium text-text-primary">{{ notificacao.get_tipo_display }}</p>
             {% if notificacao.requisicao_id %}
               <a
                 href="{% url 'requisicoes:detalhe' pk=notificacao.requisicao_id %}"
-                class="text-xs text-slate-500 hover:underline"
+                class="text-xs text-text-tertiary hover:underline"
               >
                 Requisição {{ notificacao.numero_publico_exibicao }}
               </a>
             {% else %}
-              <span class="text-xs text-slate-500" aria-hidden="true">&nbsp;</span>
+              <span class="text-xs text-text-tertiary" aria-hidden="true">&nbsp;</span>
             {% endif %}
-            <p class="text-xs text-slate-400 mt-1">{{ notificacao.criado_em|date:"d/m/Y H:i" }}</p>
+            <p class="text-xs text-text-disabled mt-1">{{ notificacao.criado_em|date:"d/m/Y H:i" }}</p>
           </div>
           {% if not notificacao.lida %}
             <form method="post" action="{% url 'notificacoes:marcar_lida' notificacao.pk %}">
               {% csrf_token %}
               <button
                 type="submit"
-                class="text-xs text-blue-600 hover:underline cursor-pointer shrink-0"
+                class="text-xs text-primary hover:underline cursor-pointer shrink-0"
                 hx-post="{% url 'notificacoes:marcar_lida' notificacao.pk %}"
                 hx-swap="outerHTML"
                 hx-target="closest li"

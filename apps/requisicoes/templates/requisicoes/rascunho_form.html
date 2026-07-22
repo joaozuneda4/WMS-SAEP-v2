@@ -25,7 +25,7 @@
 <div class="max-w-3xl mx-auto pb-20 sm:pb-0">
 
   {% if modo == 'editar' and requisicao %}
-    <p class="mb-6 text-sm text-slate-500">
+    <p class="mb-6 text-sm text-text-tertiary">
       {{ requisicao }}
       &nbsp;·&nbsp;
       Criada em {{ requisicao.criado_em|date:"d/m/Y \à\s H:i" }}
@@ -36,32 +36,32 @@
     {% csrf_token %}
 
     {# --- Seção 1: Beneficiário --- #}
-    <section class="mb-6 rounded-xl border {% if form.modo_criacao.errors or form.beneficiario_id.errors %}border-red-300 bg-red-50{% else %}border-slate-200 bg-white{% endif %} p-5 shadow-sm">
-      <h2 class="text-base font-medium text-slate-800 mb-4">
-        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold mr-1.5">1</span>
+    <section class="mb-6 rounded-xl border {% if form.modo_criacao.errors or form.beneficiario_id.errors %}border-danger-border-strong bg-danger-subtle{% else %}border-border bg-surface{% endif %} p-6 shadow-sm">
+      <h2 class="text-base font-medium text-text-primary mb-4">
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-bg-subtle text-text-tertiary text-xs font-semibold mr-1.5">1</span>
         Beneficiário
       </h2>
 
       {% if modo == 'editar' and requisicao %}
         {# Edição: beneficiário é imutável — exibir como texto #}
-        <div class="flex items-start gap-6 text-sm text-slate-700">
+        <div class="flex items-start gap-6 text-sm text-text-secondary">
           <div>
-            <span class="block text-xs font-medium text-slate-500 mb-0.5">Beneficiário</span>
+            <span class="block text-xs font-medium text-text-tertiary mb-0.5">Beneficiário</span>
             <span class="font-medium">{{ requisicao.beneficiario.nome }}</span>
-            <span class="text-slate-500">({{ requisicao.beneficiario.matricula }})</span>
+            <span class="text-text-tertiary">({{ requisicao.beneficiario.matricula }})</span>
           </div>
           <div>
-            <span class="block text-xs font-medium text-slate-500 mb-0.5">Setor</span>
+            <span class="block text-xs font-medium text-text-tertiary mb-0.5">Setor</span>
             <span>{{ requisicao.setor_beneficiario.nome }}</span>
           </div>
         </div>
 
       {% elif escopo.modo_beneficiario == 'proprio' %}
         {# Solicitante puro: sem seleção #}
-        <div class="text-sm text-slate-700">
-          <span class="block text-xs font-medium text-slate-500 mb-0.5">Beneficiário</span>
+        <div class="text-sm text-text-secondary">
+          <span class="block text-xs font-medium text-text-tertiary mb-0.5">Beneficiário</span>
           <span class="font-medium">{{ request.user.nome }}</span>
-          <span class="text-slate-500">({{ request.user.matricula }})</span>
+          <span class="text-text-tertiary">({{ request.user.matricula }})</span>
           {% if request.user.setor %}
             &nbsp;·&nbsp;{{ request.user.setor.nome }}
           {% endif %}
@@ -74,21 +74,21 @@
           {# Radio: para mim / para outro #}
           <div class="flex gap-6 mb-4">
             {% for radio in form.modo_criacao %}
-              <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+              <label class="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
                 <input
                   type="radio"
                   name="{{ form.modo_criacao.html_name }}"
                   value="{{ radio.data.value }}"
                   {% if radio.data.selected %}checked{% endif %}
                   x-model="modoCriacao"
-                  class="accent-blue-600"
+                  class="accent-primary"
                 >
                 {{ radio.choice_label }}
               </label>
             {% endfor %}
           </div>
           {% if form.modo_criacao.errors %}
-            <p class="mb-3 text-xs text-red-600" role="alert">{{ form.modo_criacao.errors|join:", " }}</p>
+            <p class="mb-3 text-xs text-danger" role="alert">{{ form.modo_criacao.errors|join:", " }}</p>
           {% endif %}
 
           {# Autocomplete de terceiros (só quando "outro") — HTMX+Alpine com debounce #}
@@ -113,7 +113,7 @@
             />
             {% include "components/autocomplete.html" with label="Selecione o beneficiário" placeholder="Buscar por nome ou matrícula…" item_template="requisicoes/partials/_autocomplete_item_beneficiario.html" sem_resultados_label="Nenhum beneficiário encontrado." com_erro=form.beneficiario_id.errors erro_id=form.beneficiario_id.id_for_label|add:"-erro" %}
             {% if form.beneficiario_id.errors %}
-              <p id="{{ form.beneficiario_id.id_for_label }}-erro" class="mt-1 text-xs text-red-600" role="alert">{{ form.beneficiario_id.errors|join:", " }}</p>
+              <p id="{{ form.beneficiario_id.id_for_label }}-erro" class="mt-1 text-xs text-danger" role="alert">{{ form.beneficiario_id.errors|join:", " }}</p>
             {% endif %}
           </div>
           {% endwith %}
@@ -123,12 +123,12 @@
     </section>
 
     {# --- Seção 2: Itens --- #}
-    <section class="mb-6 rounded-xl border {% if formset.non_form_errors or formset.total_error_count %}border-red-300 bg-red-50{% else %}border-slate-200 bg-white{% endif %} p-5 shadow-sm">
-      <h2 class="text-base font-medium text-slate-800 mb-1">
-        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold mr-1.5">2</span>
+    <section class="mb-6 rounded-xl border {% if formset.non_form_errors or formset.total_error_count %}border-danger-border-strong bg-danger-subtle{% else %}border-border bg-surface{% endif %} p-6 shadow-sm">
+      <h2 class="text-base font-medium text-text-primary mb-1">
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-bg-subtle text-text-tertiary text-xs font-semibold mr-1.5">2</span>
         Itens
       </h2>
-      <p class="aviso_quantidade text-xs text-slate-500 mb-4">Adicione ao menos um material com quantidade solicitada.</p>
+      <p class="aviso_quantidade text-xs text-text-tertiary mb-4">Adicione ao menos um material com quantidade solicitada.</p>
 
       {% if tem_item_inelegivel %}
         {% include "components/alert.html" with variant="warning" body_template="requisicoes/partials/_alert_itens_inelegiveis_corpo.html" class="mb-4" %}
@@ -154,7 +154,7 @@
       {# Botão adicionar item via HTMX #}
       <button
         type="button"
-        class="mt-6 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer transition-colors"
+        class="mt-6 flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-active cursor-pointer transition-colors"
         hx-get="{% url 'requisicoes:nova_linha_item' %}"
         hx-target="#itens-container"
         hx-swap="beforeend"
@@ -168,9 +168,9 @@
     </section>
 
     {# --- Seção 3: Observação geral --- #}
-    <section class="mb-6 rounded-xl border {% if form.observacao_geral.errors %}border-red-300 bg-red-50{% else %}border-slate-200 bg-white{% endif %} p-5 shadow-sm">
-      <h2 class="text-base font-medium text-slate-800 mb-3">
-        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold mr-1.5">3</span>
+    <section class="mb-6 rounded-xl border {% if form.observacao_geral.errors %}border-danger-border-strong bg-danger-subtle{% else %}border-border bg-surface{% endif %} p-6 shadow-sm">
+      <h2 class="text-base font-medium text-text-primary mb-3">
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-bg-subtle text-text-tertiary text-xs font-semibold mr-1.5">3</span>
         Observação geral
       </h2>
       {% include "components/form_field.html" with field=form.observacao_geral label_class="sr-only" %}
@@ -189,14 +189,14 @@
       default ao pressionar Enter. Visualmente, envio fica à direita via flex order.
 
     {% endcomment %}
-    <div class="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 px-4 py-2 flex flex-nowrap items-center justify-end gap-2 sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+    <div class="fixed bottom-0 inset-x-0 z-30 bg-surface border-t border-border px-4 py-2 flex flex-nowrap items-center justify-end gap-2 sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
       {% if modo == 'criar' %}
         <button
           type="submit"
           name="acao"
           value="rascunho"
           data-submit-loading-label="Salvando…"
-          class="order-1 inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          class="order-1 inline-flex shrink-0 items-center justify-center rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-page cursor-pointer focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
           <span data-submit-text>Salvar rascunho</span>
         </button>

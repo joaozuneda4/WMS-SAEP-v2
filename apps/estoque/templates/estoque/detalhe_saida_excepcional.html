@@ -10,11 +10,11 @@
 <div class="max-w-screen-xl mx-auto space-y-6" x-data="modalController({ id: 'estornar-saida' })">
 
   {# Cabeçalho do documento #}
-  <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+  <div class="rounded-xl border border-border bg-surface p-6 shadow-sm">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-3">
-          <h2 class="text-xl font-semibold text-slate-900">
+          <h2 class="text-xl font-semibold text-text-primary">
             {{ saida.numero_publico|default:"—" }}
           </h2>
           {% include "estoque/partials/_badge_estado_saida.html" with saida=saida %}
@@ -30,46 +30,46 @@
     {# Dados do documento #}
     <dl class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <div>
-        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Motivo</dt>
-        <dd class="mt-1 text-sm text-slate-800">{{ saida.motivo }}</dd>
+        <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Motivo</dt>
+        <dd class="mt-1 text-sm text-text-primary">{{ saida.motivo }}</dd>
       </div>
       {% if saida.observacao %}
         <div class="sm:col-span-2">
-          <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Observação</dt>
-          <dd class="mt-1 text-sm text-slate-800">{{ saida.observacao }}</dd>
+          <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Observação</dt>
+          <dd class="mt-1 text-sm text-text-primary">{{ saida.observacao }}</dd>
         </div>
       {% endif %}
       <div>
-        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Estoque</dt>
-        <dd class="mt-1 text-sm text-slate-800">{{ saida.estoque.nome }}</dd>
+        <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Estoque</dt>
+        <dd class="mt-1 text-sm text-text-primary">{{ saida.estoque.nome }}</dd>
       </div>
       <div>
-        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Registrado por</dt>
-        <dd class="mt-1 text-sm text-slate-800">{{ saida.registrado_por.nome }}</dd>
+        <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Registrado por</dt>
+        <dd class="mt-1 text-sm text-text-primary">{{ saida.registrado_por.nome }}</dd>
       </div>
       <div>
-        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Data de registro</dt>
-        <dd class="mt-1 text-sm tabular-nums text-slate-800">{{ saida.criado_em|date:"d/m/Y H:i" }}</dd>
+        <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Data de registro</dt>
+        <dd class="mt-1 text-sm tabular-nums text-text-primary">{{ saida.criado_em|date:"d/m/Y H:i" }}</dd>
       </div>
       <div>
-        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Total de itens</dt>
-        <dd class="mt-1 text-sm tabular-nums text-slate-800">{{ saida.itens.count }}</dd>
+        <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Total de itens</dt>
+        <dd class="mt-1 text-sm tabular-nums text-text-primary">{{ saida.itens.count }}</dd>
       </div>
     </dl>
   </div>
 
   {# Tabela de itens #}
-  <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-100 px-6 py-4">
-      <h3 class="text-sm font-semibold text-slate-800">Itens baixados</h3>
+  <div class="rounded-xl border border-border bg-surface shadow-sm">
+    <div class="border-b border-border px-6 py-4">
+      <h3 class="text-sm font-semibold text-text-primary">Itens baixados</h3>
     </div>
 
     {# Mobile: cards #}
-    <div class="divide-y divide-slate-100 sm:hidden">
+    <div class="divide-y divide-border sm:hidden">
       {% for item in saida.itens.all %}
         <div class="px-4 py-4">
-          <p class="text-sm font-medium text-slate-900">{{ item.material.nome }}</p>
-          <dl class="mt-2 space-y-1 text-xs text-slate-600">
+          <p class="text-sm font-medium text-text-primary">{{ item.material.nome }}</p>
+          <dl class="mt-2 space-y-1 text-xs text-text-secondary">
             <div class="flex justify-between">
               <dt>Código</dt>
               <dd class="font-mono">{{ item.material.codigo }}</dd>
@@ -80,38 +80,38 @@
             </div>
             <div class="flex justify-between">
               <dt>Quantidade baixada</dt>
-              <dd class="tabular-nums font-semibold text-slate-800">{{ item.quantidade }}</dd>
+              <dd class="tabular-nums font-semibold text-text-primary">{{ item.quantidade }}</dd>
             </div>
           </dl>
         </div>
       {% empty %}
-        <p class="px-6 py-4 text-sm text-slate-500">Nenhum item registrado.</p>
+        <p class="px-6 py-4 text-sm text-text-tertiary">Nenhum item registrado.</p>
       {% endfor %}
     </div>
 
     {# Desktop: tabela #}
     <div class="hidden overflow-x-auto sm:block">
-      <table class="min-w-full divide-y divide-slate-100">
+      <table class="min-w-full divide-y divide-border">
         <caption class="sr-only">Itens da saída excepcional {{ saida.numero_publico }}</caption>
-        <thead class="bg-slate-50">
+        <thead class="bg-bg-page">
           <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Material</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Código</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Unidade</th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Qtd. baixada</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Material</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Código</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Unidade</th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">Qtd. baixada</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100 bg-white">
+        <tbody class="divide-y divide-border bg-surface">
           {% for item in saida.itens.all %}
             <tr>
-              <td class="px-6 py-3 text-sm text-slate-900">{{ item.material.nome }}</td>
-              <td class="px-6 py-3 font-mono text-sm text-slate-600">{{ item.material.codigo }}</td>
-              <td class="px-6 py-3 text-sm text-slate-600">{{ item.material.get_unidade_display }}</td>
-              <td class="px-6 py-3 text-right text-sm tabular-nums font-semibold text-slate-800">{{ item.quantidade }}</td>
+              <td class="px-6 py-3 text-sm text-text-primary">{{ item.material.nome }}</td>
+              <td class="px-6 py-3 font-mono text-sm text-text-secondary">{{ item.material.codigo }}</td>
+              <td class="px-6 py-3 text-sm text-text-secondary">{{ item.material.get_unidade_display }}</td>
+              <td class="px-6 py-3 text-right text-sm tabular-nums font-semibold text-text-primary">{{ item.quantidade }}</td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="4" class="px-6 py-4 text-sm text-slate-500">Nenhum item registrado.</td>
+              <td colspan="4" class="px-6 py-4 text-sm text-text-tertiary">Nenhum item registrado.</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -120,48 +120,48 @@
   </div>
 
   {# Timeline #}
-  <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-    <h3 class="mb-4 text-sm font-semibold text-slate-800">Histórico</h3>
-    <ol class="relative border-l border-slate-200 space-y-6 pl-6">
+  <div class="rounded-xl border border-border bg-surface p-6 shadow-sm">
+    <h3 class="mb-4 text-sm font-semibold text-text-primary">Histórico</h3>
+    <ol class="relative border-l border-border space-y-6 pl-6">
       {% if saida.estado == 'estornada' and saida.estornado_em %}
         <li>
-          <span class="absolute -left-1.5 mt-0.5 h-3 w-3 rounded-full border-2 border-white bg-teal-500" aria-hidden="true"></span>
-          <div class="text-xs text-slate-500 tabular-nums">{{ saida.estornado_em|date:"d/m/Y H:i" }}</div>
-          <p class="mt-0.5 text-sm font-medium text-slate-800">Estorno registrado</p>
+          <span class="absolute -left-1.5 mt-0.5 h-3 w-3 rounded-full border-2 border-surface bg-return" aria-hidden="true"></span>
+          <div class="text-xs text-text-tertiary tabular-nums">{{ saida.estornado_em|date:"d/m/Y H:i" }}</div>
+          <p class="mt-0.5 text-sm font-medium text-text-primary">Estorno registrado</p>
           {% if saida.estornado_por %}
-            <p class="mt-0.5 text-xs text-slate-500">por {{ saida.estornado_por.nome }}</p>
+            <p class="mt-0.5 text-xs text-text-tertiary">por {{ saida.estornado_por.nome }}</p>
           {% endif %}
           {% if saida.justificativa_estorno %}
-            <p class="mt-1 text-xs text-slate-600 italic">"{{ saida.justificativa_estorno }}"</p>
+            <p class="mt-1 text-xs text-text-secondary italic">"{{ saida.justificativa_estorno }}"</p>
           {% endif %}
         </li>
       {% endif %}
       <li>
-        <span class="absolute -left-1.5 mt-0.5 h-3 w-3 rounded-full border-2 border-white bg-blue-500" aria-hidden="true"></span>
-        <div class="text-xs text-slate-500 tabular-nums">{{ saida.criado_em|date:"d/m/Y H:i" }}</div>
-        <p class="mt-0.5 text-sm font-medium text-slate-800">Saída registrada</p>
-        <p class="mt-0.5 text-xs text-slate-500">por {{ saida.registrado_por.nome }}</p>
+        <span class="absolute -left-1.5 mt-0.5 h-3 w-3 rounded-full border-2 border-surface bg-primary" aria-hidden="true"></span>
+        <div class="text-xs text-text-tertiary tabular-nums">{{ saida.criado_em|date:"d/m/Y H:i" }}</div>
+        <p class="mt-0.5 text-sm font-medium text-text-primary">Saída registrada</p>
+        <p class="mt-0.5 text-xs text-text-tertiary">por {{ saida.registrado_por.nome }}</p>
       </li>
     </ol>
   </div>
 
   {# Dados de estorno (quando ESTORNADA) #}
   {% if saida.estado == 'estornada' %}
-    <div class="rounded-xl border border-teal-200 bg-teal-50 p-6">
-      <h3 class="mb-3 text-sm font-semibold text-teal-800">Dados do estorno</h3>
+    <div class="rounded-xl border border-return-border bg-return-subtle p-6">
+      <h3 class="mb-3 text-sm font-semibold text-return-text-strong">Dados do estorno</h3>
       <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <dt class="text-xs font-medium uppercase tracking-wide text-teal-700">Estornado por</dt>
-          <dd class="mt-1 text-sm text-teal-900">{{ saida.estornado_por.nome|default:"—" }}</dd>
+          <dt class="text-xs font-medium uppercase tracking-wide text-return-text">Estornado por</dt>
+          <dd class="mt-1 text-sm text-return-text-strong">{{ saida.estornado_por.nome|default:"—" }}</dd>
         </div>
         <div>
-          <dt class="text-xs font-medium uppercase tracking-wide text-teal-700">Data do estorno</dt>
-          <dd class="mt-1 text-sm tabular-nums text-teal-900">{{ saida.estornado_em|date:"d/m/Y H:i"|default:"—" }}</dd>
+          <dt class="text-xs font-medium uppercase tracking-wide text-return-text">Data do estorno</dt>
+          <dd class="mt-1 text-sm tabular-nums text-return-text-strong">{{ saida.estornado_em|date:"d/m/Y H:i"|default:"—" }}</dd>
         </div>
         {% if saida.justificativa_estorno %}
           <div class="sm:col-span-2">
-            <dt class="text-xs font-medium uppercase tracking-wide text-teal-700">Justificativa</dt>
-            <dd class="mt-1 text-sm text-teal-900">{{ saida.justificativa_estorno }}</dd>
+            <dt class="text-xs font-medium uppercase tracking-wide text-return-text">Justificativa</dt>
+            <dd class="mt-1 text-sm text-return-text-strong">{{ saida.justificativa_estorno }}</dd>
           </div>
         {% endif %}
       </dl>
@@ -172,7 +172,7 @@
   <div>
     <a
       href="{% url 'estoque:listar_saidas_excepcionais' %}"
-      class="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+      class="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-page hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-1"
     >
       <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd" />

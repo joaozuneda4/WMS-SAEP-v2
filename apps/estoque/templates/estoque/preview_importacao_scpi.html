@@ -10,19 +10,19 @@
 {% block content %}
 <div class="max-w-5xl mx-auto">
 
-  <p class="mb-6 max-w-2xl text-sm text-slate-600">
+  <p class="mb-6 max-w-2xl text-sm text-text-secondary">
     Envie o CSV bruto do SCPI para conferir os saldos antes de confirmar qualquer importação.
-    <strong class="font-medium text-slate-800">Nenhuma alteração é realizada nesta etapa.</strong>
+    <strong class="font-medium text-text-primary">Nenhuma alteração é realizada nesta etapa.</strong>
   </p>
 
   {# ── Upload (estado inicial) ─────────────────────────────────────────── #}
   {% if not linhas and not erro_arquivo %}
     <section
-      class="mb-8 rounded-xl border-2 border-dashed border-slate-200 bg-white px-6 py-10 shadow-sm
+      class="mb-8 rounded-xl border-2 border-dashed border-border bg-surface px-6 py-10 shadow-sm
              transition-colors duration-150 motion-reduce:transition-none"
       aria-label="Formulário de upload do CSV SCPI"
       x-data="{ arrastando: false, enviando: false }"
-      :class="arrastando ? 'border-blue-400 bg-blue-50' : ''"
+      :class="arrastando ? 'border-border-focus bg-primary-subtle' : ''"
       @dragover.prevent="arrastando = true"
       @dragleave.prevent="arrastando = false"
       @drop.prevent="arrastando = false; $refs.arquivo.files = $event.dataTransfer.files; $refs.form.submit()"
@@ -30,11 +30,11 @@
       <div class="mx-auto max-w-md text-center">
         <div
           class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full
-                 bg-slate-100 transition-colors duration-150"
-          :class="arrastando ? 'bg-blue-100' : ''"
+                 bg-bg-subtle transition-colors duration-150"
+          :class="arrastando ? 'bg-primary-muted' : ''"
           aria-hidden="true"
         >
-          <svg class="h-7 w-7 text-slate-400" :class="arrastando ? 'text-blue-500' : ''" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="h-7 w-7 text-text-disabled" :class="arrastando ? 'text-primary' : ''" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
             <line x1="12" y1="18" x2="12" y2="12"/>
@@ -42,8 +42,8 @@
           </svg>
         </div>
 
-        <h2 class="text-base font-semibold text-slate-800">Carregar arquivo CSV do SCPI</h2>
-        <p class="mt-1 text-sm text-slate-500">Arraste o arquivo aqui ou clique para selecionar.</p>
+        <h2 class="text-base font-semibold text-text-primary">Carregar arquivo CSV do SCPI</h2>
+        <p class="mt-1 text-sm text-text-tertiary">Arraste o arquivo aqui ou clique para selecionar.</p>
 
         <form
           method="post"
@@ -57,15 +57,15 @@
           <div>
             <label
               for="arquivo"
-              class="mb-1.5 block text-left text-sm font-medium text-slate-700"
+              class="mb-1.5 block text-left text-sm font-medium text-text-secondary"
             >
               Arquivo CSV
-              <span class="ml-0.5 text-red-500" aria-hidden="true">*</span>
+              <span class="ml-0.5 text-danger-accent" aria-hidden="true">*</span>
             </label>
-            <p id="arquivo-ajuda" class="mb-2 text-left text-xs text-slate-500">
+            <p id="arquivo-ajuda" class="mb-2 text-left text-xs text-text-tertiary">
               Formato esperado: delimitado por ponto-e-vírgula, com colunas
-              <code class="rounded bg-slate-100 px-1 font-mono" translate="no">CADPRO</code> e
-              <code class="rounded bg-slate-100 px-1 font-mono" translate="no">QUANTIDADE</code>.
+              <code class="rounded bg-bg-subtle px-1 font-mono" translate="no">CADPRO</code> e
+              <code class="rounded bg-bg-subtle px-1 font-mono" translate="no">QUANTIDADE</code>.
             </p>
             <input
               id="arquivo"
@@ -76,13 +76,13 @@
               aria-required="true"
               aria-describedby="arquivo-ajuda"
               x-ref="arquivo"
-              class="block w-full cursor-pointer rounded-lg border border-slate-300 bg-white
-                     px-3 py-2 text-sm text-slate-700
+              class="block w-full cursor-pointer rounded-lg border border-border-strong bg-surface
+                     px-3 py-2 text-sm text-text-secondary
                      file:mr-4 file:cursor-pointer file:rounded-md file:border-0
-                     file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-700
-                     hover:file:bg-blue-100
-                     focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
-                     focus-visible:ring-2 focus-visible:ring-blue-500"
+                     file:bg-primary-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-text
+                     hover:file:bg-primary-muted
+                     focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1
+                     focus-visible:ring-2 focus-visible:ring-border-focus"
             >
           </div>
 
@@ -98,16 +98,16 @@
     <form
       method="post"
       enctype="multipart/form-data"
-      class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      class="mb-6 rounded-xl border border-border bg-surface p-4 shadow-sm"
       x-data="{ enviando: false }"
       @submit="enviando = true"
     >
       {% csrf_token %}
       <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div class="flex-1">
-          <label for="arquivo-retry" class="mb-1.5 block text-sm font-medium text-slate-700">
+          <label for="arquivo-retry" class="mb-1.5 block text-sm font-medium text-text-secondary">
             Arquivo CSV
-            <span class="ml-0.5 text-red-500" aria-hidden="true">*</span>
+            <span class="ml-0.5 text-danger-accent" aria-hidden="true">*</span>
           </label>
           <input
             id="arquivo-retry"
@@ -118,11 +118,11 @@
             aria-required="true"
             aria-invalid="true"
             autofocus
-            class="block w-full cursor-pointer rounded-lg border border-red-300 bg-white
-                   px-3 py-2 text-sm text-slate-700
+            class="block w-full cursor-pointer rounded-lg border border-danger-border-strong bg-surface
+                   px-3 py-2 text-sm text-text-secondary
                    file:mr-4 file:cursor-pointer file:rounded-md file:border-0
-                   file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-700
-                   focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   file:bg-primary-subtle file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-text
+                   focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
           >
         </div>
         {% include "components/button.html" with variant="primary" type="submit" label="Tentar novamente" x_disabled="enviando" x_aria_busy="enviando" spinner_show="enviando" class="transition-colors duration-150 motion-reduce:transition-none touch-manipulation" %}
@@ -139,29 +139,29 @@
       aria-live="polite"
       aria-label="Resumo: {{ total }} linha{{ total|pluralize:'s' }}, {{ divergencias }} divergência{{ divergencias|pluralize:'s' }}, {{ novos }} materia{{ novos|pluralize:'l,is' }} novo{{ novos|pluralize:'s' }}"
     >
-      <div class="flex min-w-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
-        <span class="text-lg font-bold tabular-nums text-slate-800">{{ total }}</span>
-        <span class="text-sm text-slate-500">linha{{ total|pluralize:"s" }}</span>
+      <div class="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 shadow-sm">
+        <span class="text-lg font-bold tabular-nums text-text-primary">{{ total }}</span>
+        <span class="text-sm text-text-tertiary">linha{{ total|pluralize:"s" }}</span>
       </div>
 
-      <div class="flex min-w-0 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 shadow-sm">
-        <svg class="h-4 w-4 shrink-0 text-amber-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <div class="flex min-w-0 items-center gap-2 rounded-lg border border-warning-border bg-warning-subtle px-4 py-2.5 shadow-sm">
+        <svg class="h-4 w-4 shrink-0 text-warning" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
         </svg>
-        <span class="text-lg font-bold tabular-nums text-amber-800">{{ divergencias }}</span>
-        <span class="text-sm text-amber-700">divergênc{{ divergencias|pluralize:"ia,ias" }}</span>
+        <span class="text-lg font-bold tabular-nums text-warning-text">{{ divergencias }}</span>
+        <span class="text-sm text-warning-text-subtle">divergênc{{ divergencias|pluralize:"ia,ias" }}</span>
       </div>
 
-      <div class="flex min-w-0 items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 shadow-sm">
-        <svg class="h-4 w-4 shrink-0 text-teal-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <div class="flex min-w-0 items-center gap-2 rounded-lg border border-return-border bg-return-subtle px-4 py-2.5 shadow-sm">
+        <svg class="h-4 w-4 shrink-0 text-return" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clip-rule="evenodd"/>
         </svg>
-        <span class="text-lg font-bold tabular-nums text-teal-800">{{ novos }}</span>
-        <span class="text-sm text-teal-700">materia{{ novos|pluralize:"l,is" }} novo{{ novos|pluralize:"s" }}</span>
+        <span class="text-lg font-bold tabular-nums text-return-text-strong">{{ novos }}</span>
+        <span class="text-sm text-return-text">materia{{ novos|pluralize:"l,is" }} novo{{ novos|pluralize:"s" }}</span>
       </div>
 
       <div class="ml-auto flex shrink-0 items-center gap-2">
-        <span class="hidden max-w-[12rem] truncate text-xs text-slate-400 sm:block" title="{{ nome_arquivo }}">
+        <span class="hidden max-w-[12rem] truncate text-xs text-text-disabled sm:block" title="{{ nome_arquivo }}">
           {{ nome_arquivo }}
         </span>
         <form method="post" enctype="multipart/form-data" class="inline">
@@ -169,9 +169,9 @@
           <label
             for="arquivo-novo"
             class="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-md
-                   border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700
-                   hover:bg-slate-50 hover:text-slate-900
-                   focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-1
+                   border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary
+                   hover:bg-bg-page hover:text-text-primary
+                   focus-within:outline-none focus-within:ring-2 focus-within:ring-border-focus focus-within:ring-offset-1
                    transition-colors duration-150 motion-reduce:transition-none touch-manipulation"
           >
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -192,17 +192,17 @@
     </div>
 
     {# Legenda #}
-    <div class="mb-3 flex flex-wrap gap-4 text-xs text-slate-600" aria-label="Legenda de status">
+    <div class="mb-3 flex flex-wrap gap-4 text-xs text-text-secondary" aria-label="Legenda de status">
       <span class="flex items-center gap-1.5">
-        <span class="inline-block h-3 w-3 rounded-sm bg-green-100 ring-1 ring-green-200" aria-hidden="true"></span>
+        <span class="inline-block h-3 w-3 rounded-sm bg-success-muted ring-1 ring-success-border" aria-hidden="true"></span>
         Saldo igual
       </span>
       <span class="flex items-center gap-1.5">
-        <span class="inline-block h-3 w-3 rounded-sm bg-amber-100 ring-1 ring-amber-200" aria-hidden="true"></span>
+        <span class="inline-block h-3 w-3 rounded-sm bg-warning-muted ring-1 ring-warning-border" aria-hidden="true"></span>
         Divergência (SCPI ≠ WMS)
       </span>
       <span class="flex items-center gap-1.5">
-        <span class="inline-block h-3 w-3 rounded-sm bg-teal-100 ring-1 ring-teal-200" aria-hidden="true"></span>
+        <span class="inline-block h-3 w-3 rounded-sm bg-return-muted ring-1 ring-return-border" aria-hidden="true"></span>
         Material novo (apenas no SCPI)
       </span>
     </div>
@@ -210,65 +210,65 @@
     {% if linhas %}
 
       {# ── Desktop: tabela ─────────────────────────────────────────────── #}
-      <div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm sm:block">
-        <table class="min-w-full divide-y divide-slate-200">
+      <div class="hidden overflow-x-auto rounded-xl border border-border bg-surface shadow-sm sm:block">
+        <table class="min-w-full divide-y divide-border">
           <caption class="sr-only">
             Pré-visualização da importação SCPI.
             {{ total }} linha{{ total|pluralize:"s" }},
             {{ divergencias }} divergênc{{ divergencias|pluralize:"ia,ias" }},
             {{ novos }} materia{{ novos|pluralize:"l,is" }} novo{{ novos|pluralize:"s" }}.
           </caption>
-          <thead class="sticky top-0 bg-slate-50 shadow-[0_1px_0_0] shadow-slate-200">
+          <thead class="sticky top-0 bg-bg-page shadow-[0_1px_0_0] shadow-border">
             <tr>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">CADPRO</th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Material</th>
-              <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">CADPRO</th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Material</th>
+              <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">
                 <abbr title="Saldo físico no WMS" class="no-underline cursor-help">Saldo WMS</abbr>
               </th>
-              <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">
                 <abbr title="Quantidade no arquivo SCPI" class="no-underline cursor-help">Saldo SCPI</abbr>
               </th>
-              <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-tertiary">
                 <abbr title="SCPI − WMS" class="no-underline cursor-help">Delta</abbr>
               </th>
-              <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-tertiary">Status</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 bg-white">
+          <tbody class="divide-y divide-border bg-surface">
             {% for linha in linhas %}
               <tr
                 class="transition-colors duration-100 motion-reduce:transition-none
-                  {% if linha.status == 'divergente' %}bg-amber-50 hover:bg-amber-100
-                  {% elif linha.status == 'novo' %}bg-teal-50 hover:bg-teal-100
-                  {% else %}hover:bg-slate-50{% endif %}"
+                  {% if linha.status == 'divergente' %}bg-warning-subtle hover:bg-warning-muted
+                  {% elif linha.status == 'novo' %}bg-return-subtle hover:bg-return-muted
+                  {% else %}hover:bg-bg-page{% endif %}"
               >
-                <td class="whitespace-nowrap px-4 py-3 font-mono text-sm font-medium text-slate-900">
+                <td class="whitespace-nowrap px-4 py-3 font-mono text-sm font-medium text-text-primary">
                   {{ linha.cadpro }}
                 </td>
-                <td class="px-4 py-3 text-sm text-slate-700">
+                <td class="px-4 py-3 text-sm text-text-secondary">
                   {% if linha.nome_material %}
                     {{ linha.nome_material }}
                   {% else %}
-                    <em class="not-italic text-teal-700">Novo material (a criar)</em>
+                    <em class="not-italic text-return-text">Novo material (a criar)</em>
                   {% endif %}
                 </td>
-                <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm tabular-nums text-slate-700">
+                <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm tabular-nums text-text-secondary">
                   {{ linha.saldo_wms }}
                 </td>
-                <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm tabular-nums text-slate-700">
+                <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm tabular-nums text-text-secondary">
                   {{ linha.saldo_scpi }}
                 </td>
                 <td class="whitespace-nowrap px-4 py-3 text-right font-mono text-sm tabular-nums font-semibold">
                   {% if linha.delta > 0 %}
-                    <span class="text-green-700" aria-label="Delta positivo: +{{ linha.delta }}">
+                    <span class="text-success-text" aria-label="Delta positivo: +{{ linha.delta }}">
                       ▲ +{{ linha.delta }}
                     </span>
                   {% elif linha.delta < 0 %}
-                    <span class="text-red-700" aria-label="Delta negativo: {{ linha.delta }}">
+                    <span class="text-danger-text" aria-label="Delta negativo: {{ linha.delta }}">
                       ▼ {{ linha.delta }}
                     </span>
                   {% else %}
-                    <span class="text-slate-400">—</span>
+                    <span class="text-text-disabled">—</span>
                   {% endif %}
                 </td>
                 <td class="whitespace-nowrap px-4 py-3 text-sm">
@@ -291,12 +291,12 @@
         {% for linha in linhas %}
           <article
             class="rounded-xl border px-4 py-4 shadow-sm
-              {% if linha.status == 'divergente' %}border-amber-200 bg-amber-50
-              {% elif linha.status == 'novo' %}border-teal-200 bg-teal-50
-              {% else %}border-slate-200 bg-white{% endif %}"
+              {% if linha.status == 'divergente' %}border-warning-border bg-warning-subtle
+              {% elif linha.status == 'novo' %}border-return-border bg-return-subtle
+              {% else %}border-border bg-surface{% endif %}"
           >
             <div class="flex items-start justify-between gap-3">
-              <code class="font-mono text-sm font-semibold text-slate-900">{{ linha.cadpro }}</code>
+              <code class="font-mono text-sm font-semibold text-text-primary">{{ linha.cadpro }}</code>
               <span class="shrink-0">
                 {% if linha.status == 'ok' %}
                   {% include "components/badge.html" with variant="green" label="OK" %}
@@ -307,22 +307,22 @@
                 {% endif %}
               </span>
             </div>
-            <p class="mt-1 text-sm text-slate-600">
-              {% if linha.nome_material %}{{ linha.nome_material }}{% else %}<em class="not-italic text-teal-700">Novo material</em>{% endif %}
+            <p class="mt-1 text-sm text-text-secondary">
+              {% if linha.nome_material %}{{ linha.nome_material }}{% else %}<em class="not-italic text-return-text">Novo material</em>{% endif %}
             </p>
             <dl class="mt-3 grid grid-cols-3 gap-2 text-sm">
               <div>
-                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">WMS</dt>
-                <dd class="mt-0.5 font-mono tabular-nums text-slate-800">{{ linha.saldo_wms }}</dd>
+                <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">WMS</dt>
+                <dd class="mt-0.5 font-mono tabular-nums text-text-primary">{{ linha.saldo_wms }}</dd>
               </div>
               <div>
-                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">SCPI</dt>
-                <dd class="mt-0.5 font-mono tabular-nums text-slate-800">{{ linha.saldo_scpi }}</dd>
+                <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">SCPI</dt>
+                <dd class="mt-0.5 font-mono tabular-nums text-text-primary">{{ linha.saldo_scpi }}</dd>
               </div>
               <div>
-                <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">Delta</dt>
+                <dt class="text-xs font-medium uppercase tracking-wide text-text-tertiary">Delta</dt>
                 <dd class="mt-0.5 font-mono tabular-nums font-semibold
-                  {% if linha.delta > 0 %}text-green-700{% elif linha.delta < 0 %}text-red-700{% else %}text-slate-400{% endif %}">
+                  {% if linha.delta > 0 %}text-success-text{% elif linha.delta < 0 %}text-danger-text{% else %}text-text-disabled{% endif %}">
                   {% if linha.delta > 0 %}▲ +{{ linha.delta }}{% elif linha.delta < 0 %}▼ {{ linha.delta }}{% else %}—{% endif %}
                 </dd>
               </div>
@@ -332,9 +332,9 @@
       </div>
 
     {% else %}
-      <div class="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-        <p class="text-sm text-slate-500">O arquivo não contém linhas de dados após o cabeçalho.</p>
-        <p class="mt-1 text-xs text-slate-400">Verifique se o arquivo possui registros abaixo do cabeçalho.</p>
+      <div class="rounded-xl border border-dashed border-border-strong bg-surface px-6 py-12 text-center">
+        <p class="text-sm text-text-tertiary">O arquivo não contém linhas de dados após o cabeçalho.</p>
+        <p class="mt-1 text-xs text-text-disabled">Verifique se o arquivo possui registros abaixo do cabeçalho.</p>
       </div>
     {% endif %}
 
