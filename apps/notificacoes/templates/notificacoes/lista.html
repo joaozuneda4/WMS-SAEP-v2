@@ -1,9 +1,11 @@
 {% extends "base_auth.html" %}
 
+{% block title %}Notificações — WMS-SAEP{% endblock %}
+
 {% block content %}
 <div class="space-y-4">
   <div class="flex items-center justify-between">
-    <h1 class="text-xl font-semibold text-text-primary">Notificações</h1>
+    <h1 class="app-bar__title">Notificações</h1>
     {% if notificacoes %}
       <form method="post" action="{% url 'notificacoes:marcar_todas_lidas' %}">
         {% csrf_token %}

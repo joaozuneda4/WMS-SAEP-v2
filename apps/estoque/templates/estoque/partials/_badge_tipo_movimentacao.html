@@ -5,19 +5,19 @@ textual é sempre o portador primário do significado (acessibilidade: cor nunca
 é o único portador). Mapeia para variant do componente global badge.html.
 {% endcomment %}
 {% if tipo == 'reserva' %}
-  {% include "components/badge.html" with variant="blue" label=rotulo %}
+  {% include "components/badge.html" with variant="blue" label=rotulo role="status" aria_label="Tipo de movimentação: "|add:rotulo %}
 {% elif tipo == 'liberacao' %}
-  {% include "components/badge.html" with variant="slate" label=rotulo %}
+  {% include "components/badge.html" with variant="slate" label=rotulo role="status" aria_label="Tipo de movimentação: "|add:rotulo %}
 {% elif tipo == 'consumo' %}
-  {% include "components/badge.html" with variant="indigo" label=rotulo %}
+  {% include "components/badge.html" with variant="indigo" label=rotulo role="status" aria_label="Tipo de movimentação: "|add:rotulo %}
 {% elif tipo == 'saida_excepcional' %}
-  {% include "components/badge.html" with variant="red" label=rotulo %}
+  {% include "components/badge.html" with variant="red" label=rotulo role="status" aria_label="Tipo de movimentação: "|add:rotulo %}
 {% elif tipo == 'estorno_saida' %}
-  {% include "components/badge.html" with variant="amber" label=rotulo %}
+  {% include "components/badge.html" with variant="amber" label=rotulo role="status" aria_label="Tipo de movimentação: "|add:rotulo %}
 {% elif tipo == 'devolucao' %}
-  {% include "components/badge.html" with variant="teal" label=rotulo %}
+  {% include "components/badge.html" with variant="teal" label=rotulo role="status" aria_label="Tipo de movimentação: "|add:rotulo %}
 {% elif tipo == 'estorno_requisicao' %}
-  {% include "components/badge.html" with variant="violet" label=rotulo %}
+  {% include "components/badge.html" with variant="violet" label=rotulo role="status" aria_label="Tipo de movimentação: "|add:rotulo %}
 {% else %}
-  {% include "components/badge.html" with variant="slate" label=rotulo %}
+  {% include "components/badge.html" with variant="slate" label=rotulo role="status" aria_label="Tipo de movimentação: "|add:rotulo %}
 {% endif %}

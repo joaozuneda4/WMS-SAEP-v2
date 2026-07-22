@@ -27,7 +27,7 @@
                 {{ saida.criado_em|date:"d/m/Y H:i" }}
               </p>
             </div>
-            <span class="shrink-0">{% include "estoque/partials/_badge_estado_saida.html" with saida=saida %}</span>
+            <span class="shrink-0">{% include "estoque/partials/_estado_saida_badge.html" with saida=saida %}</span>
           </div>
 
           <dl class="mt-4 space-y-3 text-sm">
@@ -83,7 +83,7 @@
               {{ saida.motivo }}
             </td>
             <td class="whitespace-nowrap px-4 py-3 text-sm">
-              {% include "estoque/partials/_badge_estado_saida.html" with saida=saida %}
+              {% include "estoque/partials/_estado_saida_badge.html" with saida=saida %}
             </td>
             <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700">
               {{ saida.registrado_por.nome }}

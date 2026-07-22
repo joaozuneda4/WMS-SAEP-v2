@@ -1,7 +1,23 @@
 """Testes diretos de components/alert.html (sem DB, sem view)."""
 
+import copy
+from pathlib import Path
+
 import pytest
+from django.conf import settings
 from django.template.loader import render_to_string
+from django.test import override_settings
+
+FIXTURES_DIR = Path(__file__).resolve().parent / 'fixtures'
+
+
+def _templates_com_fixtures():
+    templates = copy.deepcopy(settings.TEMPLATES)
+    templates[0]['DIRS'] = [FIXTURES_DIR]
+    return templates
+
+
+com_fixture_body_template = override_settings(TEMPLATES=_templates_com_fixtures())
 
 
 def _render(**ctx):
@@ -70,13 +86,14 @@ def test_message_e_autoescapado():
     assert '&lt;script&gt;' in html
 
 
+@com_fixture_body_template
 def test_body_template_inclui_conteudo_e_herda_contexto():
     html = render_to_string(
         'components/alert.html',
         {
             'variant': 'danger',
             'icone': False,
-            'body_template': 'core/partials/_fixture_teste_body_template.html',
+            'body_template': '_fixture_teste_body_template.html',
             'valor_herdado': 'valor-vindo-do-contexto-do-chamador',
         },
     )
@@ -85,12 +102,13 @@ def test_body_template_inclui_conteudo_e_herda_contexto():
     assert 'valor-vindo-do-contexto-do-chamador' in html
 
 
+@com_fixture_body_template
 def test_body_template_sem_message_nao_exige_message():
     html = render_to_string(
         'components/alert.html',
         {
             'variant': 'warning',
-            'body_template': 'core/partials/_fixture_teste_body_template.html',
+            'body_template': '_fixture_teste_body_template.html',
             'valor_herdado': 'valor-sem-message',
         },
     )
@@ -98,12 +116,13 @@ def test_body_template_sem_message_nao_exige_message():
     assert 'valor-sem-message' in html
 
 
+@com_fixture_body_template
 def test_body_template_tem_precedencia_sobre_message():
     html = render_to_string(
         'components/alert.html',
         {
             'message': 'mensagem que nao deveria aparecer',
-            'body_template': 'core/partials/_fixture_teste_body_template.html',
+            'body_template': '_fixture_teste_body_template.html',
             'valor_herdado': 'valor-do-body-template',
         },
     )
