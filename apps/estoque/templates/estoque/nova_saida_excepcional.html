@@ -83,7 +83,7 @@
         hx-swap="beforeend"
         hx-include="#id_itens-TOTAL_FORMS"
         hx-vals='js:{"index": document.querySelectorAll(".item-form-row").length}'
-        @htmx:afterRequest="incrementarTotalForms($event)"
+        hx-on::after-request="incrementarTotalForms(event)"
       >
         {% icon "adicionar" class="h-4 w-4" %}
         Adicionar material
