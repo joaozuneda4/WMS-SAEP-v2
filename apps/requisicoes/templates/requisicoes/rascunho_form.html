@@ -143,7 +143,7 @@
       {% endif %}
 
       {# Container de linhas — alvo do HTMX swap #}
-      <div id="itens-container" class="flex flex-col gap-3">
+      <div id="itens-container" class="flex flex-col gap-3" x-data="itensFormset()">
         {% for item_form in formset %}
           {% with saldo_item=saldo_info|get_item:item_form.material_id.value %}
           {% include "components/item_form_row.html" with material_id_field=item_form.material_id material_label_field=item_form.material_label quantidade_field=item_form.quantidade_solicitada quantidade_label="Quantidade" quantidade_min="1" quantidade_step="1" autocomplete_url_name="requisicoes:buscar_materiais" autocomplete_item_template="estoque/partials/_autocomplete_item_material.html" delete_field=item_form.DELETE form_index=forloop.counter0 saldo_item=saldo_item %}
@@ -212,10 +212,6 @@
 
 {% block extra_scripts %}
 <script>
-  function podRemoverItem() {
-    return document.querySelectorAll('.item-form-row:not([style*="display: none"])').length > 1;
-  }
-
   // Incrementa TOTAL_FORMS após adicionar nova linha via HTMX
   function incrementarTotalForms(event) {
     if (event && event.detail?.xhr?.status !== 200) return;
