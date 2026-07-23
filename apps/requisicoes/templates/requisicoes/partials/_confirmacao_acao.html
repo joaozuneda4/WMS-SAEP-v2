@@ -8,8 +8,8 @@ Parâmetros:
   layout          "card" (cartão dentro do grid de decisão, renderizado via
                    components/alert.html) ou "banner" (seção completa,
                    título+descrição à esquerda e botão à direita — usado por
-                   cancelamento e estorno; alert.html não reproduz esse
-                   layout em linha, então a seção é montada diretamente aqui)
+                   cancelamento e estorno; renderizado pelo layout="row" de
+                   components/alert.html)
   variant_token   token de cor (primary | warning | danger) repassado como
                    variant a components/alert.html — "primary" cai no ramo
                    `{% else %}` do alert.html (mesmas classes de "info")
