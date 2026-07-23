@@ -16,17 +16,47 @@ Parâmetros:
                  tem precedência e message é ignorado.
   body_template  (opcional) caminho de partial incluído no corpo — herda o
                  contexto do chamador, como form_body_template em modal.html.
-  icone          (opcional, boolean, default=True)
-  role           (opcional) sobrescreve o role padrão (ex. "note")
+  icone          (opcional, boolean, default=True) — sem efeito em layout="row"
+  role           (opcional) sobrescreve o role padrão (ex. "note"). Em
+                 layout="row" não há default automático — só emite role se
+                 explicitamente passado.
   aria_live      (opcional) valor de aria-live — sem default automático
   id             (opcional) — necessário para cascas hidratadas por JS do
                  chamador via getElementById (ex. caixa de duplicidade)
   class          (opcional) passthrough para ajuste de layout do chamador
+  bg_class       (opcional) sobrescreve a classe de fundo padrão da variant
+                 (ex. para opacidade customizada)
+
+  layout          (opcional, default="stack") "stack": ícone (opcional) +
+                 conteúdo empilhado, banner estático de mensagem. "row":
+                 conteúdo à esquerda + slot de ação à direita — cartão/seção
+                 de confirmação com um controle persistente (ex. botão que
+                 abre um modal), sem ícone e sem role automático.
+  Os parâmetros abaixo só têm efeito em layout="row":
+  action_template (opcional) partial incluído como slot de ação (ex. botão) —
+                 herda o contexto do chamador, como body_template
+  heading_id     (opcional) id do heading dentro de body_template — usado
+                 para aria-labelledby na section
 
 Uso:
   {% include "components/alert.html" with variant="danger" message=erro_geral %}
   {% include "components/alert.html" with variant="warning" body_template="requisicoes/partials/_alert_itens_inelegiveis_corpo.html" %}
+  {% include "components/alert.html" with layout="row" variant="danger" heading_id="estornar-titulo" body_template="requisicoes/partials/_confirmacao_acao_banner_corpo.html" action_template="requisicoes/partials/_confirmacao_acao_banner_botao.html" bg_class="bg-danger-subtle/60" class="mb-6" %}
 {% endcomment %}
+{% if layout == 'row' %}
+<section
+  {% if id %}id="{{ id }}"{% endif %}
+  {% if heading_id %}aria-labelledby="{{ heading_id }}"{% endif %}
+  {% if role %}role="{{ role }}"{% endif %}
+  {% if aria_live %}aria-live="{{ aria_live }}"{% endif %}
+  class="flex flex-col gap-3 rounded-xl border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6 {% if bg_class %}{{ bg_class }}{% elif variant == 'success' %}bg-success-subtle{% elif variant == 'warning' %}bg-warning-subtle{% elif variant == 'danger' %}bg-danger-subtle{% else %}bg-primary-subtle{% endif %} {% if variant == 'success' %}border-success-border{% elif variant == 'warning' %}border-warning-border{% elif variant == 'danger' %}border-danger-border{% else %}border-primary-border{% endif %}{% if class %} {{ class }}{% endif %}"
+>
+  <div class="min-w-0">
+    {% if body_template %}{% include body_template %}{% else %}{{ message }}{% endif %}
+  </div>
+  {% if action_template %}<div class="shrink-0">{% include action_template %}</div>{% endif %}
+</section>
+{% else %}
 <div
   {% if id %}id="{{ id }}"{% endif %}
   {% if role %}role="{{ role }}"{% elif variant == 'warning' or variant == 'danger' %}role="alert"{% else %}role="status"{% endif %}
@@ -50,3 +80,4 @@ Uso:
     {% if body_template %}{% include body_template %}{% else %}{{ message }}{% endif %}
   </div>
 </div>
+{% endif %}

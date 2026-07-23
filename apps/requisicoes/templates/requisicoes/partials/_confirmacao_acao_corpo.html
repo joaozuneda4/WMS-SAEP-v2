@@ -1,0 +1,11 @@
+{% comment %}
+Corpo (título + descrição + botão de disparo) de um card de confirmação de
+ação, incluído como body_template de components/alert.html a partir de
+requisicoes/partials/_confirmacao_acao.html (layout="card"). Espera do
+contexto herdado: variant_token, titulo, conteudo, botao_label,
+botao_variant, botao_icon, modal_id. desc_class é opcional (override da
+cor/tamanho do parágrafo de descrição; default deriva de variant_token).
+{% endcomment %}
+<h3 class="block text-sm font-medium {% if variant_token == 'primary' %}text-primary-text-strong{% elif variant_token == 'warning' %}text-warning-text-strong{% elif variant_token == 'danger' %}text-danger-text-strong{% endif %}">{{ titulo }}</h3>
+<p class="mt-1 text-xs {% if desc_class %}{{ desc_class }}{% elif variant_token == 'primary' %}text-primary-text-strong{% elif variant_token == 'warning' %}text-warning-text-strong{% elif variant_token == 'danger' %}text-danger-text-strong{% endif %}">{{ conteudo }}</p>
+{% include "components/button.html" with variant=botao_variant label=botao_label data_modal_trigger=modal_id icon_template=botao_icon full_width_mobile=True class="mt-3" %}

@@ -1,0 +1,8 @@
+{% comment %}
+Corpo (título + descrição) do banner de confirmação de ação, incluído como
+body_template de components/alert.html (layout="row") a partir de
+requisicoes/partials/_confirmacao_acao.html (layout="banner"). Espera do
+contexto herdado: variant_token, heading_id, titulo, conteudo, desc_class.
+{% endcomment %}
+<h2 id="{{ heading_id }}" class="text-sm font-semibold {% if variant_token == 'primary' %}text-primary-text-strong{% elif variant_token == 'warning' %}text-warning-text-strong{% elif variant_token == 'danger' %}text-danger-text-strong{% endif %}">{{ titulo }}</h2>
+<p class="{{ desc_class }}">{{ conteudo }}</p>

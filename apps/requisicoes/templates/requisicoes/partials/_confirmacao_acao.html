@@ -1,0 +1,72 @@
+{% comment %}
+Bloco de confirmação de uma ação de fluxo da requisição (autorizar, recusar,
+cancelar, estornar, retornar). Cada instância é autocontida: título +
+descrição + botão de disparo + modal de confirmação, envolvidos no mesmo
+x-data="modalController(...)".
+
+Parâmetros:
+  layout          "card" (cartão dentro do grid de decisão, renderizado via
+                   components/alert.html) ou "banner" (seção completa,
+                   título+descrição à esquerda e botão à direita — usado por
+                   cancelamento e estorno; alert.html não reproduz esse
+                   layout em linha, então a seção é montada diretamente aqui)
+  variant_token   token de cor (primary | warning | danger) repassado como
+                   variant a components/alert.html — "primary" cai no ramo
+                   `{% else %}` do alert.html (mesmas classes de "info")
+  modal_id        id do modal (usado em x-data, data-modal-trigger e no id
+                   do components/modal.html)
+  abrir_ao_carregar_expr  (opcional) expressão já resolvida (ex.:
+                   `erro|yesno:"true,false"`) para abrirAoCarregar no x-data
+  heading_id      (obrigatório em layout="banner") id do h2 para
+                   aria-labelledby da section
+  titulo          texto do título (h3 no card, h2 no banner)
+  conteudo        texto da descrição
+  desc_class      (obrigatório em layout="banner") classe completa do
+                   parágrafo de descrição
+  bg_class        (opcional, só layout="banner") classe de fundo da section —
+                   default bg-{variant_token}-subtle
+  botao_label     texto do botão de disparo
+  botao_variant   variant repassado a components/button.html
+  botao_icon      (opcional) icon_template repassado a components/button.html
+  botao_class     (opcional, só layout="banner") class extra repassada a
+                   components/button.html (ex.: "shrink-0")
+  botao_aria_haspopup  (opcional, só layout="banner") aria_haspopup repassado
+                   a components/button.html (ex.: "dialog")
+
+  Os parâmetros abaixo são repassados diretamente a components/modal.html:
+  modal_titulo, modal_descricao, action_url, confirm_label, confirm_variant,
+  icon_variant, form_body_template, hidden_inputs, erro, motivo_recusa, form
+
+Uso (card):
+  {% include "requisicoes/partials/_confirmacao_acao.html" with
+     layout="card" variant_token="primary"
+     modal_id="confirmar-autorizar" titulo="Autorização integral"
+     conteudo="Aprove a requisição e reserve o saldo necessário para todos os itens."
+     botao_label="Autorizar" botao_variant="primary"
+     modal_titulo="Autorizar requisição?" modal_descricao="..."
+     action_url=autorizar_url confirm_label="Confirmar autorização"
+     confirm_variant="primary" icon_variant="info" hidden_inputs=autorizar_hidden_inputs %}
+
+Uso (banner):
+  {% include "requisicoes/partials/_confirmacao_acao.html" with
+     layout="banner" variant_token="danger" heading_id="estornar-titulo"
+     modal_id="estornar-modal" titulo="Estornar requisição" conteudo="..."
+     desc_class="mt-0.5 text-xs text-danger-text-emphasis/80"
+     botao_label="Estornar requisição" botao_variant="danger-outline"
+     botao_icon="components/icons/estornar.svg"
+     modal_titulo="Estornar requisição" modal_descricao="..."
+     action_url=estornar_url confirm_label="Confirmar estorno"
+     confirm_variant="danger" form=estorno_form
+     form_body_template="requisicoes/partials/_modal_form_estorno.html" %}
+{% endcomment %}
+{% if layout == 'banner' %}
+<div x-data="modalController({ id: '{{ modal_id }}'{% if abrir_ao_carregar_expr %}, abrirAoCarregar: {{ abrir_ao_carregar_expr }}{% endif %} })">
+  {% include "components/alert.html" with layout="row" variant=variant_token bg_class=bg_class heading_id=heading_id class="mb-6" body_template="requisicoes/partials/_confirmacao_acao_banner_corpo.html" action_template="requisicoes/partials/_confirmacao_acao_banner_botao.html" %}
+  {% include "components/modal.html" with id=modal_id titulo=modal_titulo descricao=modal_descricao action_url=action_url confirm_label=confirm_label confirm_variant=confirm_variant icon_variant=icon_variant form_body_template=form_body_template hidden_inputs=hidden_inputs erro=erro motivo_recusa=motivo_recusa form=form %}
+</div>
+{% else %}
+<div x-data="modalController({ id: '{{ modal_id }}'{% if abrir_ao_carregar_expr %}, abrirAoCarregar: {{ abrir_ao_carregar_expr }}{% endif %} })">
+  {% include "components/alert.html" with variant=variant_token icone=False role="group" body_template="requisicoes/partials/_confirmacao_acao_corpo.html" %}
+  {% include "components/modal.html" with id=modal_id titulo=modal_titulo descricao=modal_descricao action_url=action_url confirm_label=confirm_label confirm_variant=confirm_variant icon_variant=icon_variant form_body_template=form_body_template hidden_inputs=hidden_inputs erro=erro motivo_recusa=motivo_recusa form=form %}
+</div>
+{% endif %}

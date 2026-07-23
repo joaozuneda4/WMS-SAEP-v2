@@ -227,52 +227,18 @@
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {% if pode_autorizar %}
-          <div x-data="modalController({ id: 'confirmar-autorizar' })" class="rounded-lg border border-primary-border bg-primary-subtle p-4">
-            <h3 class="block text-sm font-medium text-primary-text-strong">
-              Autorização integral
-            </h3>
-            <p class="mt-1 text-xs text-primary-text-strong">
-              Aprove a requisição e reserve o saldo necessário para todos os itens.
-            </p>
-            {% include "components/button.html" with variant="primary" label="Autorizar" data_modal_trigger="confirmar-autorizar" full_width_mobile=True class="mt-3" %}
-            {% url 'requisicoes:autorizar' requisicao.pk as autorizar_url %}
-            {% include "components/modal.html" with id="confirmar-autorizar" titulo="Autorizar requisição?" descricao="Reserva o saldo necessário para todos os itens sem alterar o saldo físico." action_url=autorizar_url confirm_label="Confirmar autorização" confirm_variant="primary" icon_variant="info" hidden_inputs=autorizar_hidden_inputs %}
-          </div>
+          {% url 'requisicoes:autorizar' requisicao.pk as autorizar_url %}
+          {% include "requisicoes/partials/_confirmacao_acao.html" with layout="card" variant_token="primary" modal_id="confirmar-autorizar" titulo="Autorização integral" conteudo="Aprove a requisição e reserve o saldo necessário para todos os itens." botao_label="Autorizar" botao_variant="primary" modal_titulo="Autorizar requisição?" modal_descricao="Reserva o saldo necessário para todos os itens sem alterar o saldo físico." action_url=autorizar_url confirm_label="Confirmar autorização" confirm_variant="primary" icon_variant="info" hidden_inputs=autorizar_hidden_inputs %}
         {% endif %}
 
         {% if pode_retornar %}
-          <div x-data="modalController({ id: 'confirmar-retornar' })" class="rounded-lg border border-warning-border bg-warning-subtle p-4">
-            <h3 class="block text-sm font-medium text-warning-text-strong">
-              Retornar para rascunho
-            </h3>
-            <p class="mt-1 text-xs text-warning-text-strong">
-              Peça ajustes ao criador antes de decidir. Observação opcional.
-            </p>
-            <button
-              type="button"
-              data-modal-trigger="confirmar-retornar"
-              @click="abrir($event)"
-              class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-warning-border-strong bg-surface px-4 py-2 text-sm font-semibold text-warning-text-strong shadow-sm hover:bg-warning-muted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning focus-visible:ring-offset-1 sm:w-auto"
-            >
-              Retornar
-            </button>
-            {% url 'requisicoes:retornar_rascunho' requisicao.pk as retornar_url %}
-            {% include "components/modal.html" with id="confirmar-retornar" titulo="Retornar para rascunho?" descricao="A requisição volta a ser rascunho visível apenas ao criador." action_url=retornar_url confirm_label="Confirmar retorno" confirm_variant="secondary" icon_variant="warning" form_body_template="requisicoes/partials/_modal_form_retornar.html" hidden_inputs=retornar_hidden_inputs %}
-          </div>
+          {% url 'requisicoes:retornar_rascunho' requisicao.pk as retornar_url %}
+          {% include "requisicoes/partials/_confirmacao_acao.html" with layout="card" variant_token="warning" modal_id="confirmar-retornar" titulo="Retornar para rascunho" conteudo="Peça ajustes ao criador antes de decidir. Observação opcional." botao_label="Retornar" botao_variant="warning-outline" modal_titulo="Retornar para rascunho?" modal_descricao="A requisição volta a ser rascunho visível apenas ao criador." action_url=retornar_url confirm_label="Confirmar retorno" confirm_variant="secondary" icon_variant="warning" form_body_template="requisicoes/partials/_modal_form_retornar.html" hidden_inputs=retornar_hidden_inputs %}
         {% endif %}
 
         {% if pode_recusar %}
-          <div x-data="modalController({ id: 'confirmar-recusar', abrirAoCarregar: {{ recusa_erro|yesno:'true,false' }} })" class="rounded-lg border border-danger-border bg-danger-subtle p-4">
-            <h3 class="block text-sm font-medium text-danger-text-strong">
-              Recusar requisição
-            </h3>
-            <p class="mt-1 text-xs text-danger-text-strong">
-              Recuse informando o motivo. Nenhum saldo é reservado ou baixado.
-            </p>
-            {% include "components/button.html" with variant="danger-outline" label="Recusar" data_modal_trigger="confirmar-recusar" full_width_mobile=True class="mt-3" %}
-            {% url 'requisicoes:recusar' requisicao.pk as recusar_url %}
-            {% include "components/modal.html" with id="confirmar-recusar" titulo="Recusar requisição?" descricao="A recusa encerra a requisição sem reservar ou baixar estoque." action_url=recusar_url confirm_label="Confirmar recusa" confirm_variant="danger" icon_variant="danger" form_body_template="requisicoes/partials/_modal_form_recusar.html" erro=recusa_erro motivo_recusa=motivo_recusa hidden_inputs=recusar_hidden_inputs %}
-          </div>
+          {% url 'requisicoes:recusar' requisicao.pk as recusar_url %}
+          {% include "requisicoes/partials/_confirmacao_acao.html" with layout="card" variant_token="danger" modal_id="confirmar-recusar" abrir_ao_carregar_expr=recusa_erro|yesno:"true,false" titulo="Recusar requisição" conteudo="Recuse informando o motivo. Nenhum saldo é reservado ou baixado." botao_label="Recusar" botao_variant="danger-outline" modal_titulo="Recusar requisição?" modal_descricao="A recusa encerra a requisição sem reservar ou baixar estoque." action_url=recusar_url confirm_label="Confirmar recusa" confirm_variant="danger" icon_variant="danger" form_body_template="requisicoes/partials/_modal_form_recusar.html" erro=recusa_erro motivo_recusa=motivo_recusa hidden_inputs=recusar_hidden_inputs %}
         {% endif %}
       </div>
     </section>
@@ -301,25 +267,8 @@
 
   {% if pode_cancelar and requisicao.estado != 'rascunho' %}
     {% cancelamento_copy cancelamento_info requisicao.estado as cancelamento_copy_texto %}
-    <section
-      class="mb-6 rounded-xl border border-danger-border bg-danger-subtle/70 p-4 shadow-sm sm:p-6"
-      aria-labelledby="cancelamento-titulo"
-      x-data="modalController({ id: 'confirmar-cancelar', abrirAoCarregar: {{ cancelamento_modal_aberto|yesno:'true,false' }} })"
-    >
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="min-w-0">
-          <h2 id="cancelamento-titulo" class="text-sm font-semibold text-danger-text-strong">
-            {{ cancelamento_copy_texto.titulo }}
-          </h2>
-          <p class="mt-1 text-sm text-danger-text-strong/80">
-            {{ cancelamento_copy_texto.descricao }}
-          </p>
-        </div>
-        {% include "components/button.html" with variant="danger-outline" label=cancelamento_copy_texto.trigger data_modal_trigger="confirmar-cancelar" icon_template="components/icons/lixeira.svg" %}
-      </div>
-      {% url 'requisicoes:cancelar' requisicao.pk as cancelar_url %}
-      {% include "components/modal.html" with id="confirmar-cancelar" titulo=cancelamento_copy_texto.titulo descricao=cancelamento_copy_texto.descricao action_url=cancelar_url confirm_label=cancelamento_copy_texto.confirmar confirm_variant="danger" icon_variant="danger" form_body_template="requisicoes/partials/_modal_form_cancelar.html" erro=cancelamento_erro hidden_inputs=cancelamento_hidden_inputs %}
-    </section>
+    {% url 'requisicoes:cancelar' requisicao.pk as cancelar_url %}
+    {% include "requisicoes/partials/_confirmacao_acao.html" with layout="banner" variant_token="danger" bg_class="bg-danger-subtle/70" heading_id="cancelamento-titulo" modal_id="confirmar-cancelar" abrir_ao_carregar_expr=cancelamento_modal_aberto|yesno:"true,false" titulo=cancelamento_copy_texto.titulo conteudo=cancelamento_copy_texto.descricao desc_class="mt-1 text-sm text-danger-text-strong/80" botao_label=cancelamento_copy_texto.trigger botao_variant="danger-outline" botao_icon="components/icons/lixeira.svg" modal_titulo=cancelamento_copy_texto.titulo modal_descricao=cancelamento_copy_texto.descricao action_url=cancelar_url confirm_label=cancelamento_copy_texto.confirmar confirm_variant="danger" icon_variant="danger" form_body_template="requisicoes/partials/_modal_form_cancelar.html" erro=cancelamento_erro hidden_inputs=cancelamento_hidden_inputs %}
   {% endif %}
 
   {% if pode_separar_retirada %}
@@ -349,36 +298,8 @@
   {% endif %}
 
   {% if pode_estornar %}
-    <div x-data="modalController({ id: 'estornar-modal' })">
-      {% url 'requisicoes:estornar' requisicao.pk as estornar_url %}
-      {% include "components/modal.html" with id="estornar-modal" titulo="Estornar requisição" descricao="O estorno reverte toda a entregue líquida ao saldo físico e encerra definitivamente a requisição. Esta operação é irreversível." action_url=estornar_url confirm_label="Confirmar estorno" confirm_variant="danger" form=estorno_form form_body_template="requisicoes/partials/_modal_form_estorno.html" %}
-      <section
-        class="mb-6 rounded-xl border border-danger-border bg-danger-subtle/60 p-4 shadow-sm sm:p-6"
-        aria-labelledby="estornar-titulo"
-      >
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div class="min-w-0">
-            <h2 id="estornar-titulo" class="text-sm font-semibold text-danger-text-strong">Estornar requisição</h2>
-            <p class="mt-0.5 text-xs text-danger-text-emphasis/80">
-              Reverte toda a entregue líquida atual ao saldo físico do estoque e encerra a requisição.
-              A justificativa é obrigatória e fica registrada na timeline.
-            </p>
-          </div>
-          <button
-            type="button"
-            data-modal-trigger="estornar-modal"
-            @click="abrir($event)"
-            aria-haspopup="dialog"
-            class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-danger-border-strong bg-surface px-4 py-2 text-sm font-medium text-danger-text shadow-sm hover:bg-danger-subtle cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-border-input focus-visible:ring-offset-1"
-          >
-            <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 3.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" />
-            </svg>
-            Estornar requisição
-          </button>
-        </div>
-      </section>
-    </div>
+    {% url 'requisicoes:estornar' requisicao.pk as estornar_url %}
+    {% include "requisicoes/partials/_confirmacao_acao.html" with layout="banner" variant_token="danger" bg_class="bg-danger-subtle/60" heading_id="estornar-titulo" modal_id="estornar-modal" titulo="Estornar requisição" conteudo="Reverte toda a entregue líquida atual ao saldo físico do estoque e encerra a requisição. A justificativa é obrigatória e fica registrada na timeline." desc_class="mt-0.5 text-xs text-danger-text-emphasis/80" botao_label="Estornar requisição" botao_variant="danger-outline" botao_icon="components/icons/estornar.svg" botao_class="shrink-0" botao_aria_haspopup="dialog" modal_titulo="Estornar requisição" modal_descricao="O estorno reverte toda a entregue líquida ao saldo físico e encerra definitivamente a requisição. Esta operação é irreversível." action_url=estornar_url confirm_label="Confirmar estorno" confirm_variant="danger" form=estorno_form form_body_template="requisicoes/partials/_modal_form_estorno.html" %}
   {% endif %}
 
   {% if pode_copiar %}

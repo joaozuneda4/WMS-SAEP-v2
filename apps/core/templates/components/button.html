@@ -5,7 +5,7 @@ visual e passthrough de atributos. Partials de domínio compõem `label`,
 
 Parâmetros:
   variant            (opcional, default=primary) primary, secondary, danger,
-                     danger-outline, ghost, link
+                     danger-outline, warning-outline, ghost, link
   size               (opcional, default=md) sm, md
   type               (opcional, default=button) button, submit — só se href ausente
   name/value         (opcionais) atributos padrão do <button> — usados quando o
@@ -18,6 +18,7 @@ Parâmetros:
   icon_class         (opcional, default="h-4 w-4") classe repassada ao `icon_template`
   full_width_mobile  (opcional, boolean) aplica w-full sm:w-auto
   aria_label         (opcional) sobrescreve o nome acessível
+  aria_haspopup      (opcional) valor de `aria-haspopup` (ex: "dialog")
   class              (opcional) passthrough para ajuste de layout do chamador
   hx_get/hx_post/hx_target/hx_swap  (opcionais) passthrough HTMX literal,
                      renderizados como hx-get/hx-post/hx-target/hx-swap
@@ -48,8 +49,9 @@ Uso:
 {% if href %}
 <a
   href="{{ href }}"
-  class="{% if variant == 'link' %}inline-flex items-center rounded{% else %}inline-flex items-center justify-center min-h-11 rounded-md{% endif %} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 {% if variant == 'secondary' %}bg-surface text-text-secondary border border-border-strong hover:bg-bg-page hover:text-text-primary focus-visible:ring-border-focus{% elif variant == 'danger' %}bg-danger text-white hover:bg-danger-hover active:bg-danger-active focus-visible:ring-danger-accent{% elif variant == 'danger-outline' %}bg-surface text-danger-text border border-danger-border-strong hover:bg-danger-subtle focus-visible:ring-danger-accent{% elif variant == 'ghost' %}bg-transparent text-text-secondary hover:bg-bg-subtle focus-visible:ring-border-focus{% elif variant == 'link' %}bg-transparent text-primary-text hover:underline focus-visible:ring-border-focus{% else %}bg-primary text-white hover:bg-primary-hover active:bg-primary-active focus-visible:ring-border-focus{% endif %} {% if size == 'sm' %}px-3 py-2 text-xs{% else %}px-3 py-2 text-sm{% endif %}{% if full_width_mobile %} w-full sm:w-auto{% endif %}{% if class %} {{ class }}{% endif %}"
+  class="{% if variant == 'link' %}inline-flex items-center rounded{% else %}inline-flex items-center justify-center min-h-11 rounded-md{% endif %} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 {% if variant == 'secondary' %}bg-surface text-text-secondary border border-border-strong hover:bg-bg-page hover:text-text-primary focus-visible:ring-border-focus{% elif variant == 'danger' %}bg-danger text-white hover:bg-danger-hover active:bg-danger-active focus-visible:ring-danger-accent{% elif variant == 'danger-outline' %}bg-surface text-danger-text border border-danger-border-strong hover:bg-danger-subtle focus-visible:ring-danger-accent{% elif variant == 'warning-outline' %}bg-surface text-warning-text-strong border border-warning-border-strong hover:bg-warning-muted focus-visible:ring-warning{% elif variant == 'ghost' %}bg-transparent text-text-secondary hover:bg-bg-subtle focus-visible:ring-border-focus{% elif variant == 'link' %}bg-transparent text-primary-text hover:underline focus-visible:ring-border-focus{% else %}bg-primary text-white hover:bg-primary-hover active:bg-primary-active focus-visible:ring-border-focus{% endif %} {% if size == 'sm' %}px-3 py-2 text-xs{% else %}px-3 py-2 text-sm{% endif %}{% if full_width_mobile %} w-full sm:w-auto{% endif %}{% if class %} {{ class }}{% endif %}"
   {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+  {% if aria_haspopup %}aria-haspopup="{{ aria_haspopup }}"{% endif %}
   {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
   {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
   {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
@@ -62,8 +64,9 @@ Uso:
   {% if name %}name="{{ name }}"{% endif %}
   {% if value is not None %}value="{{ value }}"{% endif %}
   {% if x_disabled %}:disabled="{{ x_disabled }}"{% elif disabled %}disabled{% endif %}
-  class="{% if variant == 'link' %}inline-flex items-center rounded{% else %}inline-flex items-center justify-center min-h-11 rounded-md{% endif %} cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 {% if variant == 'secondary' %}bg-surface text-text-secondary border border-border-strong hover:bg-bg-page hover:text-text-primary focus-visible:ring-border-focus{% elif variant == 'danger' %}bg-danger text-white hover:bg-danger-hover active:bg-danger-active focus-visible:ring-danger-accent{% elif variant == 'danger-outline' %}bg-surface text-danger-text border border-danger-border-strong hover:bg-danger-subtle focus-visible:ring-danger-accent{% elif variant == 'ghost' %}bg-transparent text-text-secondary hover:bg-bg-subtle focus-visible:ring-border-focus{% elif variant == 'link' %}bg-transparent text-primary-text hover:underline focus-visible:ring-border-focus{% else %}bg-primary text-white hover:bg-primary-hover active:bg-primary-active focus-visible:ring-border-focus{% endif %} {% if size == 'sm' %}px-3 py-2 text-xs{% else %}px-3 py-2 text-sm{% endif %}{% if full_width_mobile %} w-full sm:w-auto{% endif %}{% if class %} {{ class }}{% endif %}"
+  class="{% if variant == 'link' %}inline-flex items-center rounded{% else %}inline-flex items-center justify-center min-h-11 rounded-md{% endif %} cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 {% if variant == 'secondary' %}bg-surface text-text-secondary border border-border-strong hover:bg-bg-page hover:text-text-primary focus-visible:ring-border-focus{% elif variant == 'danger' %}bg-danger text-white hover:bg-danger-hover active:bg-danger-active focus-visible:ring-danger-accent{% elif variant == 'danger-outline' %}bg-surface text-danger-text border border-danger-border-strong hover:bg-danger-subtle focus-visible:ring-danger-accent{% elif variant == 'warning-outline' %}bg-surface text-warning-text-strong border border-warning-border-strong hover:bg-warning-muted focus-visible:ring-warning{% elif variant == 'ghost' %}bg-transparent text-text-secondary hover:bg-bg-subtle focus-visible:ring-border-focus{% elif variant == 'link' %}bg-transparent text-primary-text hover:underline focus-visible:ring-border-focus{% else %}bg-primary text-white hover:bg-primary-hover active:bg-primary-active focus-visible:ring-border-focus{% endif %} {% if size == 'sm' %}px-3 py-2 text-xs{% else %}px-3 py-2 text-sm{% endif %}{% if full_width_mobile %} w-full sm:w-auto{% endif %}{% if class %} {{ class }}{% endif %}"
   {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
+  {% if aria_haspopup %}aria-haspopup="{{ aria_haspopup }}"{% endif %}
   {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
   {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
   {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}

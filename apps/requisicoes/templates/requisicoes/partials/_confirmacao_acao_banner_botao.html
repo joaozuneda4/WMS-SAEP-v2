@@ -1,0 +1,8 @@
+{% comment %}
+Botão de disparo do banner de confirmação de ação, incluído como
+action_template de components/alert.html (layout="row") a partir de
+requisicoes/partials/_confirmacao_acao.html (layout="banner"). Espera do
+contexto herdado: botao_variant, botao_label, modal_id, botao_icon,
+botao_class, botao_aria_haspopup.
+{% endcomment %}
+{% include "components/button.html" with variant=botao_variant label=botao_label data_modal_trigger=modal_id icon_template=botao_icon class=botao_class aria_haspopup=botao_aria_haspopup %}
