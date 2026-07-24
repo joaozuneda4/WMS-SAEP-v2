@@ -42,7 +42,7 @@ Enquanto vigorar:
 
 1. Existe exatamente um `Estoque` ativo. A criação de um segundo é barrada no
    admin (`EstoqueAdmin.has_add_permission`) e conferida por checklist de
-   go-live; uma query de detecção
+   go-live (`docs/checklist-go-live.md`, item GL-01); uma query de detecção
    (`GROUP BY material_id HAVING count(*) > 1` em `SaldoEstoque`) evidencia
    violação.
 2. Não se adota `UniqueConstraint`/`CheckConstraint` de estoque único no banco,

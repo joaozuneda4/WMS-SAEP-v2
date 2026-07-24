@@ -75,6 +75,16 @@ class EstoqueAdmin(admin.ModelAdmin):
     search_fields = ('codigo', 'nome')
     ordering = ('nome',)
 
+    def has_add_permission(self, request):
+        """Barra a criação de um segundo Estoque (ADR-0017).
+
+        Os services de estoque assumem um único `Estoque` nesta fase: localizam
+        saldo só por `material_id` e tratam multiplicidade como erro. Um segundo
+        estoque com saldo para material já usado quebraria autorização,
+        separação, atendimento e cancelamento de qualquer setor.
+        """
+        return super().has_add_permission(request) and not Estoque.objects.exists()
+
 
 @admin.register(SaldoEstoque)
 class SaldoEstoqueAdmin(admin.ModelAdmin):
