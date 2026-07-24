@@ -1,6 +1,6 @@
 # Plano — Guard de estoque único no admin (#102)
 
-## Scope
+## Escopo
 
 Impedir, pela interface do admin, a criação de um segundo `Estoque` enquanto
 vigorar a suposição de estoque único dos services (ADR-0017), e registrar o
@@ -31,14 +31,18 @@ item de go-live com a query de detecção.
   tratando multiplicidade como erro. A causa-raiz (roteamento
   requisição→estoque) é feature futura, fora do escopo do issue.
 - `confirmar_importacao_scpi_view` (`apps/requisicoes/views.py:1103`) —
-  `Estoque.objects.filter(ativo=True).first()` permanece; com o guard ativo há
-  no máximo um estoque, então o `.first()` é determinístico.
+  `Estoque.objects.filter(ativo=True).first()` permanece como está. O guard só
+  fecha o caminho do admin: estoques criados por shell, `seed_dev` ou migration
+  antes/depois dele continuam existindo, e a janela de concorrência descrita em
+  "Riscos" também. Com mais de um estoque ativo o `.first()` segue escolhendo
+  arbitrariamente (por `ordering = ('nome',)`) — é a query de detecção do
+  checklist de go-live que cobre esse caso, não o guard.
 - Criação por shell / `seed_dev` / migration — permanece responsabilidade do
   operador, conforme a seção "Consequências" da ADR-0017.
 - Mensagens de erro dos services (`saldo_ambiguo`, `separacao_bloqueada`) — o
   issue pede prevenção, não melhoria de diagnóstico.
 
-## Files touched
+## Arquivos alterados
 
 | Arquivo | Ação |
 |---|---|
@@ -74,10 +78,11 @@ Três decisões que o código embute:
    pega. Ver "Invariantes" abaixo para o conflito aparente com PER-05.
 
 `has_add_permission` de `ModelAdmin` tem assinatura `(self, request)` — a
-variante com `obj` é de `InlineModelAdmin` (confirmado na documentação do
-Django 6).
+variante com `obj` é de `InlineModelAdmin`. Confirmado na documentação da versão
+fixada em `pyproject.toml` (`django>=6.0,<6.1`; resolvida em 6.0.5 no
+`uv.lock`).
 
-## Test strategy
+## Estratégia de testes
 
 Arquivo novo `apps/estoque/tests/test_admin.py`. ADR-0010 não lista
 `test_admin.py` na organização de arquivos por app porque nenhuma regra vivia
@@ -116,7 +121,7 @@ domínio; estoque único é limitação de fase documentada em ADR, não invaria
 permanente — por isso vive no checklist de go-live e não em
 `docs/matriz-invariantes.md`.
 
-## Risks
+## Riscos
 
 | Risco | Avaliação |
 |---|---|
@@ -125,5 +130,5 @@ permanente — por isso vive no checklist de go-live e não em
 | Query extra por request no admin | Um `EXISTS` na tela de changelist/add de `Estoque`. Tela de admin de baixa frequência. Irrelevante. |
 | Contrato OpenAPI | Projeto é server-rendered sem camada REST. Não se aplica. |
 | Concorrência | Duas criações simultâneas pelo admin poderiam passar as duas checagens. Aceito: ADR-0017 declara a proteção como não-hermética ("cobre o caminho acidental via interface"); a alternativa hermética é a constraint de banco que a ADR recusa. |
-| Operador precisa trocar o estoque legítimo | Guard não é one-shot: é reavaliado a cada request. Apagar o estoque existente reabre a adição. Trocar = apagar e recriar, na ordem. |
+| Operador precisa trocar o estoque legítimo | Guard não é one-shot: é reavaliado a cada request, então volta a liberar a adição se a contagem chegar a zero. Este plano **não** prescreve o caminho da troca: apagar um `Estoque` com `SaldoEstoque`/`MovimentacaoEstoque` associados é operação destrutiva com dependências de FK, e não há service que a suporte. Trocar estoque exige runbook próprio (pré-condições, backup, migração de saldos e ledger) — fora do escopo do issue. Renomear o estoque existente resolve o caso comum sem apagar nada. |
 | Máquina de estados / transições | Não tocada. |
