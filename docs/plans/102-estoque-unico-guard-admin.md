@@ -34,7 +34,7 @@ item de go-live com a query de detecção.
   `Estoque.objects.filter(ativo=True).first()` permanece como está. O guard só
   fecha o caminho do admin: estoques criados por shell, `seed_dev` ou migration
   antes/depois dele continuam existindo, e a janela de concorrência descrita em
-  "Riscos" também. Com mais de um estoque ativo o `.first()` segue escolhendo
+  "Riscos" também. Com mais de um estoque ativo, o `.first()` segue escolhendo
   arbitrariamente (por `ordering = ('nome',)`) — é a query de detecção do
   checklist de go-live que cobre esse caso, não o guard.
 - Criação por shell / `seed_dev` / migration — permanece responsabilidade do
